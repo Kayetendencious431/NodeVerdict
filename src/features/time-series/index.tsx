@@ -110,6 +110,10 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
       .selectAll('text')
       .attr('font-size', '10px');
 
+    // Make axis elements respond to CSS color (dark mode)
+    g.selectAll('.domain, .tick line').attr('stroke', 'currentColor');
+    g.selectAll('.tick text').attr('fill', 'currentColor');
+
     // Labels
     g.append('text')
       .attr('x', w / 2)
@@ -123,7 +127,7 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
 
   return (
     <div ref={containerRef} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-      {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />}
+      {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block text-gray-600 dark:text-gray-300" />}
     </div>
   );
 }
@@ -216,11 +220,15 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
       .selectAll('text')
       .attr('font-size', '10px');
 
+    // Make axis elements respond to CSS color (dark mode)
+    g.selectAll('.domain, .tick line').attr('stroke', 'currentColor');
+    g.selectAll('.tick text').attr('fill', 'currentColor');
+
   }, [histogram, dimensions]);
 
   return (
     <div ref={containerRef} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-      {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />}
+      {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block text-gray-600 dark:text-gray-300" />}
     </div>
   );
 }
@@ -274,7 +282,7 @@ export function TimeSeriesPage() {
       <div className="grid grid-cols-4 gap-3 mb-4">
         <StatCard title="Throughput" value={`${(tracingAnalysis.totalEvents / ((tracingAnalysis.timeRange.end - tracingAnalysis.timeRange.start) / 1000)).toFixed(1)}/s`} subtitle="events per second" />
         <StatCard title="Avg Latency" value={avgDuration.toFixed(1) + 'ms'} />
-        <StatCard title="P95 Latency" value={p95.toFixed(1) + 'ms'} color={p95 > 100 ? 'text-orange-600' : ''} />
+        <StatCard title="P95 Latency" value={p95.toFixed(1) + 'ms'} color={p95 > 100 ? 'text-orange-600 dark:text-orange-400' : undefined} />
         <StatCard title="Operations" value={tracingAnalysis.totalOperations.toLocaleString()} />
       </div>
 

@@ -127,25 +127,19 @@ export function App() {
     }
   }, [darkMode]);
 
-  const pageContent = (() => {
-    switch (currentPage) {
-      case 'event-viewer': return <EventViewerPage />;
-      case 'trace-viewer': return <TraceViewerPage />;
-      case 'validator': return <ValidatorPage />;
-      case 'heap-analyzer': return <HeapAnalyzerPage />;
-      case 'heap-diff': return <HeapDiffPage />;
-      case 'report': return <ReportPage />;
-      case 'cpu-profiler': return <CpuProfilerPage />;
-      case 'search-filter': return <SearchFilterPage />;
-      case 'time-series': return <TimeSeriesPage />;
-      case 'perf-compare': return <PerfComparePage />;
-      default: return <HomePage />;
-    }
-  })();
-
   return (
     <AppShell>
-      {pageContent}
+      <div style={{ display: currentPage === 'home' ? 'block' : 'none' }}><HomePage /></div>
+      <div style={{ display: currentPage === 'event-viewer' ? 'block' : 'none' }}><EventViewerPage /></div>
+      <div style={{ display: currentPage === 'trace-viewer' ? 'block' : 'none' }}><TraceViewerPage /></div>
+      <div style={{ display: currentPage === 'validator' ? 'block' : 'none' }}><ValidatorPage /></div>
+      <div style={{ display: currentPage === 'heap-analyzer' ? 'block' : 'none' }}><HeapAnalyzerPage /></div>
+      <div style={{ display: currentPage === 'heap-diff' ? 'block' : 'none' }}><HeapDiffPage /></div>
+      <div style={{ display: currentPage === 'report' ? 'block' : 'none' }}><ReportPage /></div>
+      <div style={{ display: currentPage === 'cpu-profiler' ? 'block' : 'none' }}><CpuProfilerPage /></div>
+      <div style={{ display: currentPage === 'search-filter' ? 'block' : 'none' }}><SearchFilterPage /></div>
+      <div style={{ display: currentPage === 'time-series' ? 'block' : 'none' }}><TimeSeriesPage /></div>
+      <div style={{ display: currentPage === 'perf-compare' ? 'block' : 'none' }}><PerfComparePage /></div>
     </AppShell>
   );
 }

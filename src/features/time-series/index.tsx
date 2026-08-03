@@ -13,9 +13,13 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    // Measure the actual container size immediately
-    const rect = containerRef.current.getBoundingClientRect();
-    setDimensions({ width: rect.width, height: 250 });
+    // Measure the content area width (excluding padding & border) to match ResizeObserver's contentRect
+    const style = getComputedStyle(containerRef.current);
+    const px = (v: string) => parseFloat(v);
+    const hPadding = px(style.paddingLeft) + px(style.paddingRight);
+    const hBorder = px(style.borderLeftWidth) + px(style.borderRightWidth);
+    const contentWidth = containerRef.current.getBoundingClientRect().width - hPadding - hBorder;
+    setDimensions({ width: contentWidth, height: 250 });
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         setDimensions({ width: entry.contentRect.width, height: 250 });
@@ -61,25 +65,24 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
 
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const x = d3.scaleLinear()
-      .domain([d3.min(chartData, d => d.time)!, d3.max(chartData, d => d.time)!])
-      .range([0, w]);
+    const x = d3.scaleBand()
+      .domain(chartData.map(d => String(Math.round(d.time))))
+      .range([0, w])
+      .padding(0.1);
 
     const y = d3.scaleLinear()
       .domain([0, d3.max(chartData, d => d.count)! * 1.1])
       .range([h, 0]);
 
     // Bars
-    const barWidth = Math.max(1, w / chartData.length - 2);
-
     g.selectAll('rect.bar')
       .data(chartData)
       .enter()
       .append('rect')
       .attr('class', 'bar')
-      .attr('x', d => x(d.time) - barWidth / 2)
+      .attr('x', d => x(String(Math.round(d.time)))!)
       .attr('y', d => y(d.count))
-      .attr('width', barWidth)
+      .attr('width', x.bandwidth())
       .attr('height', d => h - y(d.count))
       .attr('fill', 'currentColor')
       .attr('opacity', 0.7);
@@ -90,9 +93,9 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
       .enter()
       .append('rect')
       .attr('class', 'error')
-      .attr('x', d => x(d.time) - barWidth / 2)
+      .attr('x', d => x(String(Math.round(d.time)))!)
       .attr('y', d => y(d.errors) - 3)
-      .attr('width', barWidth)
+      .attr('width', x.bandwidth())
       .attr('height', d => 6)
       .attr('fill', 'currentColor')
       .attr('opacity', 0.8);
@@ -100,7 +103,9 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
     // X axis
     g.append('g')
       .attr('transform', `translate(0,${h})`)
-      .call(d3.axisBottom(x).ticks(8).tickFormat(d => `${((d as number) - analysis.timeRange.start) / 1000}s`))
+      .call(d3.axisBottom(x).tickValues(
+        chartData.filter((_, i) => i % Math.max(1, Math.floor(chartData.length / 8)) === 0).map(d => String(Math.round(d.time)))
+      ).tickFormat(d => `${((Number(d) - analysis.timeRange.start) / 1000).toFixed(1)}s`))
       .selectAll('text')
       .attr('font-size', '10px');
 
@@ -139,8 +144,13 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setDimensions({ width: rect.width, height: 250 });
+    // Measure the content area width (excluding padding & border) to match ResizeObserver's contentRect
+    const style = getComputedStyle(containerRef.current);
+    const px = (v: string) => parseFloat(v);
+    const hPadding = px(style.paddingLeft) + px(style.paddingRight);
+    const hBorder = px(style.borderLeftWidth) + px(style.borderRightWidth);
+    const contentWidth = containerRef.current.getBoundingClientRect().width - hPadding - hBorder;
+    setDimensions({ width: contentWidth, height: 250 });
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         setDimensions({ width: entry.contentRect.width, height: 250 });

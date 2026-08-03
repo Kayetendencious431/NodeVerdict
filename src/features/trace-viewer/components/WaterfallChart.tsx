@@ -31,10 +31,14 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
       .range([0, width]);
 
     // Grid lines
-    g.append('g')
+    const axisG = g.append('g')
       .attr('transform', `translate(0, ${totalHeight})`)
       .call(d3.axisBottom(xScale).ticks(5))
       .attr('font-size', '10px');
+
+    // Make axis responsive to CSS color (dark mode)
+    axisG.selectAll('.domain, .tick line').attr('stroke', 'currentColor');
+    axisG.selectAll('.tick text').attr('fill', 'currentColor');
 
     // Render each span
     spans.forEach((span, i) => {
@@ -91,7 +95,7 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
 
   return (
     <div className="overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-2">
-      <svg ref={svgRef} className="w-full" style={{ minHeight: '200px' }} />
+      <svg ref={svgRef} className="w-full text-gray-700 dark:text-gray-300" style={{ minHeight: '200px' }} />
     </div>
   );
 }

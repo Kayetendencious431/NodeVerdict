@@ -42,8 +42,8 @@ export function TutorialPage() {
                 );
               }
               return (
-                <pre className="mb-3 p-3 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-x-auto text-xs leading-relaxed">
-                  <code className={className} {...props}>{children}</code>
+                <pre className="mb-3 p-3 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto text-xs leading-relaxed">
+                  <code className={`${className ?? ''} text-gray-800 dark:text-gray-200`} {...props}>{children}</code>
                 </pre>
               );
             },

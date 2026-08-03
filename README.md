@@ -5,6 +5,7 @@
 ![NodeVerdict](./introduction/NodeVerdict.png)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-snowleopard--io.github.io%2FNodeVerdict-brightgreen?logo=github)](https://snowleopard-io.github.io/NodeVerdict/)
 
 ---
 

@@ -1,6 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import tutorialMd from './tutorial.md?raw';
+import tutorialMd from './TUTORIAL.md?raw';
 
 export function TutorialPage() {
   return (

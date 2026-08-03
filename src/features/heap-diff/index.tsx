@@ -151,7 +151,7 @@ export function HeapDiffPage() {
         <StatCard
           title="Size Delta"
           value={`${diffResult.totalSizeDelta >= 0 ? '+' : ''}${formatBytes(Math.abs(diffResult.totalSizeDelta))}`}
-          color={diffResult.totalSizeDelta > 0 ? 'text-red-600' : diffResult.totalSizeDelta < 0 ? 'text-emerald-600' : 'text-gray-900'}
+          color={diffResult.totalSizeDelta > 0 ? 'text-red-600 dark:text-red-400' : diffResult.totalSizeDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'}
         />
         <StatCard
           title="Object Delta"
@@ -203,14 +203,14 @@ export function HeapDiffPage() {
                   <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-200 max-w-xs truncate">{node.name}</td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{node.type}</td>
                   <td className={`px-4 py-2 text-right font-mono text-xs ${
-                    node.countDelta > 0 ? 'text-red-600 dark:text-red-400' : node.countDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : ''
+                    node.countDelta > 0 ? 'text-red-600 dark:text-red-400' : node.countDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300'
                   }`}>
                     {node.countDelta > 0 ? '+' : ''}{node.countDelta.toLocaleString()}
                   </td>
                   <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(node.beforeSize)}</td>
                   <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(node.afterSize)}</td>
                   <td className={`px-4 py-2 text-right font-mono text-xs ${
-                    node.sizeDelta > 0 ? 'text-red-600 dark:text-red-400 font-medium' : node.sizeDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : ''
+                    node.sizeDelta > 0 ? 'text-red-600 dark:text-red-400 font-medium' : node.sizeDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300'
                   }`}>
                     {node.sizeDelta > 0 ? '+' : ''}{formatBytes(node.sizeDelta)}
                   </td>

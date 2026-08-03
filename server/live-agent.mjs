@@ -70,6 +70,7 @@ function startServer(port) {
 
   wss.on('connection', (ws) => {
     console.log('[agent] Client connected');
+    send(ws, { type: 'hello', agent: 'nodeverdict-live-agent', version: 1, pid: process.pid });
     send(ws, { type: 'status', message: `Connected to NodeVerdict agent (PID ${process.pid})` });
     send(ws, { type: 'status', message: `Available channels: ${channelsToWatch.join(', ')}` });
     send(ws, { type: 'memory-usage', data: getMemoryUsage() });

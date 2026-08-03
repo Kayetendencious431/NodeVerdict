@@ -15,7 +15,7 @@ export function EventSummary({ analysis }: EventSummaryProps) {
         title="Error Rate"
         value={formatPercent(analysis.errorRate)}
         subtitle={`${analysis.operations.filter(o => o.status === 'error').length} errors`}
-        color={analysis.errorRate > 0.05 ? 'text-red-600' : 'text-gray-900'}
+        color={analysis.errorRate > 0.05 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}
       />
       <StatCard
         title="Time Range"

@@ -213,7 +213,7 @@ export function EventDetail({ event, onClose }: EventDetailProps) {
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-gray-500 dark:text-gray-400">Channel</span>
-          <span className="font-medium">{event.channel}</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{event.channel}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500 dark:text-gray-400">Type</span>
@@ -223,12 +223,12 @@ export function EventDetail({ event, onClose }: EventDetailProps) {
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500 dark:text-gray-400">Timestamp</span>
-          <span className="font-mono text-xs">{formatTimestamp(event.timestamp)}</span>
+          <span className="font-mono text-xs text-gray-600 dark:text-gray-300">{formatTimestamp(event.timestamp)}</span>
         </div>
         {event.duration !== undefined && (
           <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">Duration</span>
-            <span className="font-medium">{event.duration.toFixed(2)}ms</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{event.duration.toFixed(2)}ms</span>
           </div>
         )}
         {event.error && (
@@ -247,7 +247,7 @@ export function EventDetail({ event, onClose }: EventDetailProps) {
 
       {event.context && Object.keys(event.context).length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-medium text-gray-500 mb-1">Context</p>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Context</p>
           <SmartContext context={event.context} channel={event.channel} />
         </div>
       )}

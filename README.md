@@ -92,7 +92,7 @@ Upload `.cpuprofile` files from Node.js (`--cpu-prof`) or Chrome DevTools to vis
 - **Call Stack Visualization** — Full call tree traversal with colorful function blocks proportional to CPU time
 - **Realistic Sample Data** — Includes `examples/cpu-profile-sample.cpuprofile` with typical Express app traffic patterns
 
-![CPU Profiler](./introduction/NodeVerdict.png)
+![CPU Profiler](./introduction/CPUProfileAnalysis.png)
 
 ### 4. Heap Snapshot Analyzer
 
@@ -113,6 +113,8 @@ Compare two `.heapsnapshot` files side-by-side to identify memory growth and new
 - **New / Growing / Removed** — Three categorized lists showing newly created object types, growing constructors, and freed types
 - **Full Diff Table** — Sorted by absolute size delta, showing count and size changes for each constructor type
 
+![Heap Diff Results](./introduction/HeapDiffResults.png)
+
 ### 6. Time Series Analysis (NEW)
 
 Visualize event throughput, latency distribution, and performance trends over time.
@@ -122,6 +124,8 @@ Visualize event throughput, latency distribution, and performance trends over ti
 - **Channel Latency Breakdown** — Table with P50, P95, P99, min, max, and average latency per channel
 - **Summary Metrics** — Events/second throughput, average latency, P95 latency
 
+![Time Series Analysis](./introduction/TimeSeriesAnalysis.png)
+
 ### 7. Performance Comparison (NEW)
 
 Compare two sets of tracing data to identify performance regressions or improvements.
@@ -130,6 +134,8 @@ Compare two sets of tracing data to identify performance regressions or improvem
 - **Side-by-side Statistics** — Events, operations, error rate, and total duration for each dataset
 - **Channel Comparison Table** — Per-channel average latency, delta, percentage change, and error count comparison
 - **Visual Indicators** — Red for regressions (>5% slower), green for improvements (>5% faster)
+
+![Performance Comparison](./introduction/PerformanceComparison.png)
 
 ### 8. Event Validator
 
@@ -154,6 +160,8 @@ Advanced search and filtering across all tracing events.
 - **Time Range Filter** — Numerical timestamp range filtering
 - **Real-time Results** — Live count of matching vs total events
 
+![Search & Filter](./introduction/Search&Filter.png)
+
 ### 10. Shareable Diagnostic Reports
 
 Generate compressed reports encoded in the URL — share via GitHub Issues, Slack, or documentation.
@@ -164,6 +172,47 @@ Generate compressed reports encoded in the URL — share via GitHub Issues, Slac
 - **Offline HTML Export (NEW)** — Download a standalone HTML file with all data and charts embedded, styled like a professional report, no server needed to view
 
 ![Diagnostic Report](./introduction/DiagnosticReport.png)
+
+### 11. Memory Timeline (NEW)
+
+Upload `process.memoryUsage()` time series data to visualize memory growth trends over time.
+
+- **D3.js Line Chart** — Three overlaid lines (RSS, heapUsed, external) with relative time axis (seconds) and MB scale
+- **Growth Rate Alert** — Linear regression calculation to detect abnormal memory growth (>1 MB/s flagged as anomaly)
+- **Data Table** — Scrollable detail table of all memory snapshots for precise inspection
+
+![Memory Timeline](./introduction/MemoryTimeline.png)
+
+### 12. GC Log Analyzer (NEW)
+
+Parse V8 `--trace-gc` log files to analyze garbage collection behavior and external memory pressure.
+
+- **GC Statistics Cards** — Total GC events, Major (Mark-sweep) count, Minor (Scavenge) count, total pause time
+- **External Memory Warning** — Flags heap growth >50MB as potential unmanaged memory
+- **Event Table** — Chronological list of all GC events with type, pause time, and heap size delta
+
+![GC Log Analyzer](./introduction/GCLogAnalyzer.png)
+
+### 13. Live Monitor (NEW)
+
+Connect to a running Node.js process in real-time via WebSocket — no restart, no dump file needed.
+
+- **Real-time Memory Polling** — RSS, heapUsed, heapTotal, external displayed on live-updating StatCards
+- **Live TracingChannel Events** — Streaming event display with channel badges and timestamps
+- **On-demand Diagnostics** — Take heap snapshot or CPU profile at any time, download as files
+- **Agent Protocol** — Uses the `NodeVerdict Live Agent` (`server/live-agent.mjs`) which subscribes to `diagnostics_channel` events and inspector APIs
+
+![Live Monitor](./introduction/LiveMonitor.png)
+
+### 14. Tutorial
+
+Built-in interactive guide covering how to generate diagnostic data from Node.js projects and use all NodeVerdict features.
+
+- **Markdown-based** — Step-by-step instructions with code examples for TracingChannel, CPU profiling, heap snapshots, and more
+- **Feature Walkthrough** — Detailed usage guides for every page in the app
+- **Sample File Reference** — Complete table of all 17 example files with recommended learning path
+
+![NodeVerdict Tutorial](./introduction/NodeVerdictTutorial.png)
 
 ---
 
@@ -232,13 +281,17 @@ Navigate to any feature page, upload your diagnostic file, and start exploring:
 | **Event Viewer** | Tracing events JSON | Browsing individual events, filtering by channel, smart context inspection |
 | **Trace Viewer** | Tracing events JSON | Understanding async operation chains and bottlenecks |
 | **CPU Profiler** | `.cpuprofile` | Finding hot functions, flame graph visualization |
-| **Heap Analyzer** | `.heapsnapshot` | Memory leak investigation, hot object analysis |
+| **Heap Analyzer** | `.heapsnapshot` | Memory leak investigation, hot object analysis, string analysis |
 | **Heap Diff** | `.heapsnapshot` (×2) | Comparing memory before/after to find growth |
 | **Time Series** | Tracing events JSON | Throughput and latency distribution over time |
 | **Perf Compare** | Tracing events JSON (×2) | A/B performance comparison, regression detection |
 | **Validator** | Tracing events JSON | Debugging TracingChannel library implementations |
 | **Search & Filter** | Tracing events JSON | Full-text search, regex, duration/status filtering |
 | **Report** | Tracing events JSON | Generating shareable diagnostic summaries |
+| **Memory Timeline** | `memory-timeline.json` | Visualizing RSS/heap/external memory growth trends |
+| **GC Log Analyzer** | `--trace-gc` log files | Analyzing GC pause times and external memory pressure |
+| **Live Monitor** | WebSocket (live) | Real-time memory monitoring, on-demand heap/CPU diagnostics |
+| **Tutorial** | Built-in MD guide | Learning how to generate and use diagnostic data |
 
 ### 3. Share Results
 
@@ -257,12 +310,14 @@ src/
 │   │   ├── tracing.ts               # TracingChannel event types
 │   │   ├── heap.ts                  # Heap snapshot types
 │   │   ├── cpu-profile.ts           # CPU profile & flame graph types
+│   │   ├── memory.ts                # Memory analysis types
 │   │   └── report.ts                # Report data types
 │   ├── engine/                      # Pipeline parsing engine (pure functions)
 │   │   ├── tracing-parser.ts        # Tracing event parsing pipeline
 │   │   ├── trace-aggregator.ts      # Waterfall building & bottleneck detection
 │   │   ├── heap-parser.ts           # Heap snapshot parsing
 │   │   ├── heap-diff.ts             # Heap snapshot comparison engine
+│   │   ├── memory-analyzer.ts       # String/external memory/GC log analysis
 │   │   ├── cpu-profile-parser.ts    # CPU profile parsing & flame tree building
 │   │   ├── validator.ts             # Event format validator
 │   │   └── report-generator.ts      # Report generation & compression
@@ -274,12 +329,16 @@ src/
 │   ├── event-viewer/                # Diagnostic Event Viewer
 │   ├── trace-viewer/                # Waterfall & bottleneck analysis
 │   ├── cpu-profiler/                # CPU Profile & flame graph
-│   ├── heap-analyzer/               # Heap snapshot analyzer
+│   ├── heap-analyzer/               # Heap snapshot analyzer (incl. string/external memory)
 │   ├── heap-diff/                   # Heap snapshot comparison
 │   ├── time-series/                 # Time series & throughput analysis
 │   ├── perf-compare/                # A/B performance comparison
+│   ├── memory-timeline/             # Memory usage timeline chart
+│   ├── gc-log/                      # GC log parser & analyzer
+│   ├── live-monitor/                # Live WebSocket agent monitor
 │   ├── validator/                   # Event format validator
 │   ├── search-filter/               # Advanced search & filtering
+│   ├── tutorial/                    # Interactive markdown tutorial
 │   └── report/                      # Report generation & sharing
 ├── stores/                          # Zustand state management
 └── app/                             # App shell, entry point, navigation
@@ -371,6 +430,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 10. **Memory Timeline** → Upload `examples/memory-timeline.json` to visualize external memory growth and RSS/heap trends over time
 11. **GC Log Analysis** → Upload `examples/gc-trace-gc.log` to analyze GC pause times and external memory pressure
 12. **String Leak Detection** → Upload `examples/heap-string-leak.heapsnapshot` in Heap Analyzer to see external memory stats and string analysis
+13. **Live Monitor** → Start `node server/live-agent.mjs --port 9876`, connect from the Live Monitor page, and monitor a running Node.js process in real-time
 
 ---
 
@@ -411,13 +471,13 @@ Sample data files are available in the [`examples/`](./examples) directory:
 ## FAQ
 
 **Q: Does this send my data anywhere?**  
-A: No. All analysis runs entirely in your browser. No data is uploaded to any server.
+A: No. All analysis runs entirely in your browser. No data is uploaded to any server. The Live Monitor feature connects to a local agent via WebSocket, but data stays within your local network.
 
 **Q: What file formats are supported?**  
-A: JSON files for TracingChannel events (up to 50MB), `.heapsnapshot` files for heap analysis (up to 200MB), `.cpuprofile` files for CPU profiling (up to 50MB), memory usage JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
+A: JSON files for TracingChannel events (up to 3GB, streamed via Web Worker), `.heapsnapshot` files for heap analysis (up to 3GB), `.cpuprofile` files for CPU profiling (up to 3GB), `process.memoryUsage()` JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
 
 **Q: Can I use this for production monitoring?**  
-A: No. This is designed for development debugging, offline analysis, and post-mortem investigation. It complements rather than replaces production APM tools.
+A: The Live Monitor feature provides real-time diagnostics via WebSocket without restarting your process — useful for on-demand debugging in staging or production. For persistent production monitoring, consider dedicated APM tools.
 
 **Q: How do I generate TracingChannel events from my Node.js application?**  
 A: Subscribe to `diagnostics_channel` channels in your Node.js application and export the captured events as JSON. See [Node.js diagnostics_channel docs](https://nodejs.org/api/diagnostics_channel.html) for details.

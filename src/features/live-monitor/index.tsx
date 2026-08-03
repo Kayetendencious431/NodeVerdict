@@ -3,7 +3,7 @@ import { StatCard } from '../../shared/components';
 import { formatBytes, formatTimestamp } from '../../shared/utils';
 
 interface WebSocketMessage {
-  type: 'event' | 'memory-usage' | 'status' | 'error' | 'heap-snapshot-chunk' | 'cpu-profile-chunk';
+  type?: string;
   data?: any;
   message?: string;
   command?: string;
@@ -12,6 +12,10 @@ interface WebSocketMessage {
   channel?: string;
   eventType?: string;
   timestamp?: number;
+  agent?: string;
+  version?: number;
+  pid?: number;
+  [key: string]: any;
 }
 
 interface LogEntry {
@@ -118,81 +122,164 @@ export function LiveMonitorPage() {
     }
   }
 
-  // WebSocket message handler
+  // WebSocket message handler — broadly compatible with any agent protocol
   const handleMessage = useCallback((event: MessageEvent) => {
-    let msg: WebSocketMessage;
+    let msg: Record<string, any>;
     try {
-      msg = JSON.parse(event.data) as WebSocketMessage;
+      msg = JSON.parse(event.data as string);
     } catch {
       addLog('Failed to parse message: ' + event.data, 'error');
       return;
     }
 
-    switch (msg.type) {
-      case 'status':
-        addLog(msg.message ?? '');
-        if (msg.data?.pid) {
-          setAgentPid(msg.data.pid);
+    // Try to detect and extract memory data from any message shape
+    tryExtractMemory(msg);
+
+    // Try to detect and extract tracing events from any message shape
+    tryExtractEvent(msg);
+
+    // Try to detect and handle chunked file transfers
+    tryExtractChunk(msg);
+
+    // Handle known protocol messages
+    const msgType = msg.type ?? '';
+    switch (msgType) {
+      case 'hello':
+        if (msg.agent) {
+          addLog(`Connected to ${msg.agent} v${msg.version ?? '?'} (PID ${msg.pid ?? '?'})`);
+          if (msg.pid) setAgentPid(msg.pid);
         }
+        break;
+      case 'status':
+      case 'info':
+      case 'log':
+        addLog(msg.message ?? msg.text ?? msg.data ?? '');
         break;
       case 'error':
-        addLog(msg.message ?? 'Unknown error', 'error');
+        addLog(msg.message ?? msg.text ?? 'Error', 'error');
         break;
       case 'memory-usage':
-        if (msg.data) {
-          setMemoryData({
-            rss: msg.data.rss ?? 0,
-            heapTotal: msg.data.heapTotal ?? 0,
-            heapUsed: msg.data.heapUsed ?? 0,
-            external: msg.data.external ?? 0,
-          });
-        }
+      case 'memory':
+      case 'mem':
+        // Already handled by tryExtractMemory above
         break;
       case 'event':
-        setTracingEvents(prev => {
-          const next = [
-            {
-              channel: msg.channel ?? msg.data?.channel ?? 'unknown',
-              eventType: msg.eventType ?? msg.data?.eventType ?? 'unknown',
-              timestamp: msg.timestamp ?? msg.data?.timestamp ?? Date.now(),
-            },
-            ...prev,
-          ];
-          return next.slice(0, 100);
-        });
+      case 'trace':
+      case 'tracing':
+        // Already handled by tryExtractEvent above
         break;
       case 'heap-snapshot-chunk':
-        if (snapState === 'idle') setSnapState('receiving');
-        assembleChunk(
-          msg.index ?? 0,
-          msg.total ?? 0,
-          msg.data ?? '',
-          snapBufferRef,
-          (url) => {
-            setSnapDownloadUrl(url);
-            setSnapState('ready');
-            addLog('Heap snapshot ready');
-          },
-        );
-        break;
       case 'cpu-profile-chunk':
-        if (cpuProfileState === 'idle') setCpuProfileState('receiving');
-        assembleChunk(
-          msg.index ?? 0,
-          msg.total ?? 0,
-          msg.data ?? '',
-          cpuProfileBufferRef,
-          (url) => {
-            setCpuProfileDownloadUrl(url);
-            setCpuProfileState('ready');
-            addLog('CPU profile ready');
-          },
-        );
+        // Already handled by tryExtractChunk above
+        break;
+      case 'chunk':
+        // Already handled by tryExtractChunk above
         break;
       default:
-        addLog('Unknown message type: ' + msg.type);
+         // Silently ignore unknown types — no noisy logs
+         break;
+     }
+   }, []);
+
+  /** Attempt to extract memory usage data from any message shape */
+  function tryExtractMemory(msg: Record<string, any>) {
+    // Look for memory data in various shapes
+    const mem = msg.data ?? msg;
+    const rss = mem.rss ?? mem.RSS ?? mem.memoryRss ?? mem.mem_rss;
+    const heapUsed = mem.heapUsed ?? mem.heap_used ?? mem.heapUsedBytes ?? mem.usedHeap;
+    const heapTotal = mem.heapTotal ?? mem.heap_total ?? mem.heapTotalBytes ?? mem.totalHeap;
+    const external = mem.external ?? mem.externalMemory ?? mem.external_memory;
+
+    if (rss != null && heapUsed != null) {
+      setMemoryData({
+        rss: Number(rss),
+        heapTotal: Number(heapTotal ?? 0),
+        heapUsed: Number(heapUsed),
+        external: Number(external ?? 0),
+      });
+      return true;
     }
-  }, [snapState, cpuProfileState]);
+    // Deeper search: check if any nested object has memory-like fields
+    if (msg.data && typeof msg.data === 'object') {
+      for (const key of Object.keys(msg.data)) {
+        const val = msg.data[key];
+        if (val && typeof val === 'object' && val.rss != null) {
+          setMemoryData({
+            rss: Number(val.rss),
+            heapTotal: Number(val.heapTotal ?? 0),
+            heapUsed: Number(val.heapUsed ?? 0),
+            external: Number(val.external ?? 0),
+          });
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Attempt to extract tracing events from any message shape */
+  function tryExtractEvent(msg: Record<string, any>) {
+    const data = msg.data ?? msg;
+    const channel = msg.channel ?? data.channel ?? data.name;
+    const eventType = msg.eventType ?? data.eventType ?? data.type ?? data.event ?? msgTypeName(msg);
+
+    if (channel && eventType && typeof channel === 'string') {
+      setTracingEvents(prev => {
+        const next = [{
+          channel,
+          eventType: String(eventType),
+          timestamp: msg.timestamp ?? data.timestamp ?? Date.now(),
+        }, ...prev];
+        return next.slice(0, 100);
+      });
+      return true;
+    }
+    return false;
+  }
+
+  /** Attempt to extract chunked file data from any message shape */
+  function tryExtractChunk(msg: Record<string, any>) {
+    const data = msg.data ?? '';
+    const index = msg.index ?? msg.seq ?? msg.part ?? msg.chunkIndex;
+    const total = msg.total ?? msg.count ?? msg.parts ?? msg.totalChunks;
+
+    // Check if this looks like a chunk message
+    if (index != null && total != null && total > 1) {
+      const idx = Number(index);
+      const tot = Number(total);
+
+      // Determine if this is a heap snapshot or CPU profile chunk
+      if (msg.type?.includes('snapshot') || msg.type?.includes('heap')) {
+        if (snapState === 'idle') setSnapState('receiving');
+        assembleChunk(idx, tot, String(data), snapBufferRef, (url) => {
+          setSnapDownloadUrl(url);
+          setSnapState('ready');
+          addLog('Heap snapshot ready');
+        });
+      } else if (msg.type?.includes('cpu') || msg.type?.includes('profile')) {
+        if (cpuProfileState === 'idle') setCpuProfileState('receiving');
+        assembleChunk(idx, tot, String(data), cpuProfileBufferRef, (url) => {
+          setCpuProfileDownloadUrl(url);
+          setCpuProfileState('ready');
+          addLog('CPU profile ready');
+        });
+      } else {
+        // Generic chunk — try heap snapshot first
+        if (snapState === 'idle') setSnapState('receiving');
+        assembleChunk(idx, tot, String(data), snapBufferRef, (url) => {
+          setSnapDownloadUrl(url);
+          setSnapState('ready');
+          addLog('File chunk assembly complete');
+        });
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function msgTypeName(msg: Record<string, any>): string {
+    return msg.type ?? msg.event ?? msg.name ?? 'message';
+  }
 
   function connect() {
     const url = `ws://${host}:${port}`;

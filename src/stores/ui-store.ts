@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type Page = 'home' | 'event-viewer' | 'trace-viewer' | 'validator' | 'heap-analyzer' | 'report' | 'cpu-profiler' | 'heap-diff' | 'search-filter' | 'time-series' | 'perf-compare' | 'tutorial';
+type Page = 'home' | 'event-viewer' | 'trace-viewer' | 'validator' | 'heap-analyzer' | 'report' | 'cpu-profiler' | 'heap-diff' | 'search-filter' | 'time-series' | 'perf-compare' | 'tutorial' | 'memory-timeline' | 'gc-log';
 
 interface UIState {
   currentPage: Page;

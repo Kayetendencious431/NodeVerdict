@@ -1,0 +1,330 @@
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useRootStore } from '../../stores';
+import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { parseMemoryTimeline, calculateGrowthRate } from '../../shared/engine';
+import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
+import { formatBytes, formatDuration } from '../../shared/utils';
+import type { MemoryTimeline, MemoryGrowthRate } from '../../shared/types';
+import * as d3 from 'd3';
+
+function MemoryChart({ timeline }: { timeline: MemoryTimeline }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const style = getComputedStyle(containerRef.current);
+    const px = (v: string) => parseFloat(v);
+    const hPadding = px(style.paddingLeft) + px(style.paddingRight);
+    const hBorder = px(style.borderLeftWidth) + px(style.borderRightWidth);
+    const contentWidth = containerRef.current.getBoundingClientRect().width - hPadding - hBorder;
+    setDimensions({ width: contentWidth, height: 300 });
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setDimensions({ width: entry.contentRect.width, height: 300 });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const chartData = useMemo(() => {
+    const t0 = timeline.snapshots[0].timestamp;
+    return timeline.snapshots.map(s => ({
+      timeSec: (s.timestamp - t0) / 1000,
+      rss: s.rss / (1024 * 1024),
+      heapUsed: s.heapUsed / (1024 * 1024),
+      external: s.external / (1024 * 1024),
+    }));
+  }, [timeline]);
+
+  useEffect(() => {
+    if (!svgRef.current || chartData.length === 0 || !dimensions) return;
+
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+
+    const margin = { top: 30, right: 20, bottom: 40, left: 60 };
+    const w = dimensions.width - margin.left - margin.right;
+    const h = dimensions.height - margin.top - margin.bottom;
+
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleLinear()
+      .domain([0, d3.max(chartData, d => d.timeSec)! * 1.05])
+      .range([0, w]);
+
+    const maxY = d3.max(chartData, d => Math.max(d.rss, d.heapUsed, d.external))! * 1.1;
+    const y = d3.scaleLinear()
+      .domain([0, maxY])
+      .range([h, 0]);
+
+    // Line generators
+    const line = d3.line<{ timeSec: number; value: number }>()
+      .x(d => x(d.timeSec))
+      .y(d => y(d.value))
+      .curve(d3.curveMonotoneX);
+
+    // RSS line
+    g.append('path')
+      .datum(chartData.map(d => ({ timeSec: d.timeSec, value: d.rss })))
+      .attr('fill', 'none')
+      .attr('stroke', '#3b82f6')
+      .attr('stroke-width', 2)
+      .attr('d', line);
+
+    // heapUsed line
+    g.append('path')
+      .datum(chartData.map(d => ({ timeSec: d.timeSec, value: d.heapUsed })))
+      .attr('fill', 'none')
+      .attr('stroke', '#22c55e')
+      .attr('stroke-width', 2)
+      .attr('d', line);
+
+    // external line
+    g.append('path')
+      .datum(chartData.map(d => ({ timeSec: d.timeSec, value: d.external })))
+      .attr('fill', 'none')
+      .attr('stroke', '#f97316')
+      .attr('stroke-width', 2)
+      .attr('d', line);
+
+    // X axis
+    g.append('g')
+      .attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).ticks(8).tickFormat(d => `${d}s`))
+      .selectAll('text')
+      .attr('font-size', '10px');
+
+    // Y axis
+    g.append('g')
+      .call(d3.axisLeft(y).ticks(6).tickFormat(d => `${d} MB`))
+      .selectAll('text')
+      .attr('font-size', '10px');
+
+    // Axis styling for dark mode
+    g.selectAll('.domain, .tick line').attr('stroke', 'currentColor');
+    g.selectAll('.tick text').attr('fill', 'currentColor');
+
+    // Axis labels
+    g.append('text')
+      .attr('x', w / 2)
+      .attr('y', h + margin.bottom - 6)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '11px')
+      .attr('fill', 'currentColor')
+      .text('Time (seconds)');
+
+    g.append('text')
+      .attr('transform', 'rotate(-90)')
+      .attr('x', -h / 2)
+      .attr('y', -margin.left + 14)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '11px')
+      .attr('fill', 'currentColor')
+      .text('Memory (MB)');
+
+  }, [chartData, dimensions]);
+
+  return (
+    <div ref={containerRef} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+      {/* Legend */}
+      <div className="flex items-center gap-6 mb-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 rounded bg-blue-500 inline-block" />
+          <span className="text-gray-600 dark:text-gray-300">RSS</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 rounded bg-green-500 inline-block" />
+          <span className="text-gray-600 dark:text-gray-300">Heap Used</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 rounded bg-orange-500 inline-block" />
+          <span className="text-gray-600 dark:text-gray-300">External</span>
+        </div>
+      </div>
+      {dimensions && (
+        <svg
+          ref={svgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          className="w-full text-gray-700 dark:text-gray-300"
+        />
+      )}
+    </div>
+  );
+}
+
+export function MemoryTimelinePage() {
+  const [memoryTimeline, setMemoryTimeline] = useState<MemoryTimeline | null>(null);
+  const [growthRate, setGrowthRate] = useState<MemoryGrowthRate | null>(null);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
+    useCallback(async (content: string) => {
+      const timeline = parseMemoryTimeline(content);
+      const rate = calculateGrowthRate(timeline);
+      setMemoryTimeline(timeline);
+      setGrowthRate(rate);
+    }, []),
+    setProgress,
+  );
+
+  // Wrap the error with a more helpful message
+  const displayError = error?.includes('JSON')
+    ? 'The file format is invalid. Upload a JSON array of process.memoryUsage() snapshots. Each entry should include timestamp, rss, heapTotal, heapUsed, external, and arrayBuffers fields.'
+    : error;
+
+  function handleReset() {
+    reset();
+    setMemoryTimeline(null);
+    setGrowthRate(null);
+  }
+
+  if (!memoryTimeline) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Memory Timeline</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Upload a process.memoryUsage() time series to visualize memory trends
+          </p>
+        </div>
+        <FileUpload
+          onFile={handleFile}
+          accept=".json"
+          label="Upload memory timeline JSON"
+          maxSize={3 * 1024 * 1024 * 1024}
+          fileName={fileName}
+          fileSize={fileSize}
+          onReset={handleReset}
+          loading={loading}
+          progress={progress}
+        />
+        {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
+        <LoadingOverlay visible={loading} message="Parsing memory timeline..." />
+        <div className="mt-8">
+          <EmptyState
+            title="No memory data"
+            description="Upload a JSON array of process.memoryUsage() snapshots to visualize external, heap, and RSS trends over time."
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const { snapshots, durationMs, intervalMs } = memoryTimeline;
+
+  return (
+    <div className="p-6">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Memory Timeline</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {snapshots.length.toLocaleString()} snapshots over {formatDuration(durationMs)}
+          </p>
+        </div>
+        <div className="w-72">
+          <FileUpload
+            onFile={handleFile}
+            accept=".json"
+            label="Upload memory timeline"
+            maxSize={3 * 1024 * 1024 * 1024}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+            loading={loading}
+            progress={progress}
+          />
+        </div>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <StatCard title="Duration" value={formatDuration(durationMs)} />
+        <StatCard title="Total Snapshots" value={snapshots.length.toLocaleString()} />
+        <StatCard title="Sampling Interval" value={formatDuration(intervalMs)} />
+      </div>
+
+      {/* Growth Rate Alert */}
+      {growthRate && (
+        <div className={`mb-4 p-4 rounded-lg border ${
+          growthRate.flagged
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+            : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+        }`}>
+          <div className="flex items-start gap-3">
+            <svg className={`w-5 h-5 mt-0.5 shrink-0 ${
+              growthRate.flagged ? 'text-red-500' : 'text-emerald-500'
+            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {growthRate.flagged ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              )}
+            </svg>
+            <div>
+              <p className={`text-sm font-semibold ${
+                growthRate.flagged ? 'text-red-800 dark:text-red-300' : 'text-emerald-800 dark:text-emerald-300'
+              }`}>
+                {growthRate.flagged ? 'Growth Rate Alert' : 'Memory Growth Status'}
+              </p>
+              <p className={`text-xs mt-1 ${
+                growthRate.flagged ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
+              }`}>
+                {growthRate.summary}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chart */}
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">RSS / Heap / External Trend</h2>
+        <MemoryChart timeline={memoryTimeline} />
+      </div>
+
+      {/* Data Table */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">All Snapshots</h2>
+        </div>
+        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Time</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">RSS</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">heapUsed</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">heapTotal</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">external</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">arrayBuffers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshots.map((s, idx) => {
+                const t0 = snapshots[0].timestamp;
+                const relTime = ((s.timestamp - t0) / 1000).toFixed(2);
+                return (
+                  <tr
+                    key={idx}
+                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    <td className="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-300">{relTime}s</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(s.rss)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(s.heapUsed)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(s.heapTotal)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(s.external)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(s.arrayBuffers)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

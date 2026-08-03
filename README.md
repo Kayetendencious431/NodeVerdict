@@ -351,6 +351,9 @@ Sample data files are available in the [`examples/`](./examples) directory:
 | `examples/heap-express-app.heapsnapshot` | Realistic Express app heap: closures, event listeners, large buffers, cache entries | Heap Analyzer, Heap Diff |
 | `examples/heap-diff-before.heapsnapshot` | Before snapshot: 11 nodes with small cache (2 entries) and session store | Heap Diff |
 | `examples/heap-diff-after.heapsnapshot` | After snapshot: 18 nodes with grown cache (4 entries) + leaked event listeners | Heap Diff |
+| `examples/heap-string-leak.heapsnapshot` | 22-node heap with concatenated strings, sliced strings, and large string cache to test string analysis | Heap Analyzer |
+| `examples/memory-timeline.json` | 16-point process.memoryUsage() time series showing steady external/RSS/heap growth over 15s | Memory Timeline |
+| `examples/gc-trace-gc.log` | 33 GC events (Scavenge + Mark-sweep) over 15 seconds, showing 4x heap growth | GC Log Analyzer |
 
 ### Quick Start Guide
 
@@ -365,6 +368,9 @@ Sample data files are available in the [`examples/`](./examples) directory:
 7. **Cross-Library Trace** → Upload `examples/tracing-cross-lib.json` in Trace Viewer to see the waterfall chart
 8. **Search & Filter** → Upload `examples/tracing-search-filter.json` to test full-text search, regex, and duration filtering
 9. **Share Results** → Upload any tracing data and go to Report to generate a shareable link or download HTML
+10. **Memory Timeline** → Upload `examples/memory-timeline.json` to visualize external memory growth and RSS/heap trends over time
+11. **GC Log Analysis** → Upload `examples/gc-trace-gc.log` to analyze GC pause times and external memory pressure
+12. **String Leak Detection** → Upload `examples/heap-string-leak.heapsnapshot` in Heap Analyzer to see external memory stats and string analysis
 
 ---
 
@@ -408,7 +414,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 A: No. All analysis runs entirely in your browser. No data is uploaded to any server.
 
 **Q: What file formats are supported?**  
-A: JSON files for TracingChannel events (up to 50MB), `.heapsnapshot` files for heap analysis (up to 200MB), and `.cpuprofile` files for CPU profiling (up to 50MB).
+A: JSON files for TracingChannel events (up to 50MB), `.heapsnapshot` files for heap analysis (up to 200MB), `.cpuprofile` files for CPU profiling (up to 50MB), memory usage JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
 
 **Q: Can I use this for production monitoring?**  
 A: No. This is designed for development debugging, offline analysis, and post-mortem investigation. It complements rather than replaces production APM tools.

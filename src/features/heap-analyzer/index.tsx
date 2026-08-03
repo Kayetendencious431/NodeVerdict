@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { parseHeapSnapshot, analyzeHeap } from '../../shared/engine';
+import { parseHeapSnapshot, analyzeHeap, analyzeStrings, analyzeExternalMemory, calculateGrowthRate } from '../../shared/engine';
 import { useFileUpload } from '../../shared/hooks';
 import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import type { StringAnalysis, MemoryGrowthRate } from '../../shared/types';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
 
@@ -18,15 +19,23 @@ function severityColor(severity: string) {
 export function HeapAnalyzerPage() {
   const { heapAnalysis, setHeapAnalysis } = useRootStore();
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const [stringAnalysis, setStringAnalysis] = useState<StringAnalysis | null>(null);
+  const [externalMemory, setExternalMemory] = useState<{totalExternal: number; totalArrayBuffers: number; externalStrings: number; externalPercent: number} | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const snapshot = parseHeapSnapshot(content);
     const analysis = analyzeHeap(snapshot);
     setHeapAnalysis(analysis);
-  }, [setHeapAnalysis]), setProgress);
+    const stringResult = analyzeStrings(snapshot);
+    const externalResult = analyzeExternalMemory(snapshot);
+    setStringAnalysis(stringResult);
+    setExternalMemory(externalResult);
+  }, [setHeapAnalysis, setStringAnalysis, setExternalMemory]), setProgress);
 
   function handleReset() {
     reset();
     setHeapAnalysis(null);
+    setStringAnalysis(null);
+    setExternalMemory(null);
   }
 
   // Wrap the raw error from parseHeapSnapshot with a more helpful message
@@ -144,6 +153,93 @@ export function HeapAnalyzerPage() {
           </div>
         </div>
       )}
+
+      {/* External Memory */}
+      {externalMemory && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">External Memory</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard title="External Memory" value={formatBytes(externalMemory.totalExternal)} color="text-orange-600 dark:text-orange-400" />
+            <StatCard title="ArrayBuffers" value={formatBytes(externalMemory.totalArrayBuffers)} color="text-purple-600 dark:text-purple-400" />
+            <StatCard
+              title="External %"
+              value={externalMemory.externalPercent.toFixed(1) + '%'}
+              color={externalMemory.externalPercent > 20 ? 'text-red-600 dark:text-red-400' : undefined}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* String Analysis */}
+      {stringAnalysis && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">String Analysis</h2>
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <StatCard title="Total Strings" value={stringAnalysis.totalStrings.toLocaleString()} />
+            <StatCard title="String Size" value={formatBytes(stringAnalysis.totalSelfSize)} />
+            <StatCard title="Unique Strings" value={stringAnalysis.uniqueStrings.toLocaleString()} />
+            <StatCard title="Dedup Ratio" value={(stringAnalysis.dedupRatio * 100).toFixed(1) + '%'} />
+          </div>
+
+          {/* Top Largest Strings */}
+          <div className="mb-4">
+            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Top Largest Strings</h3>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Value</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Self Size</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Retained Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stringAnalysis.topStrings.slice(0, 20).map((item, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-200 max-w-xs truncate">{item.value}</td>
+                      <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(item.selfSize)}</td>
+                      <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(item.retainedSize)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Strings by Type */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Strings by Type</h3>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Count</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stringAnalysis.byType.map((item, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-200 capitalize">{item.type.replace('-', ' ')}</td>
+                      <td className="px-4 py-2 text-right text-xs text-gray-600 dark:text-gray-300">{item.count.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{formatBytes(item.size)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Memory Growth Rate */}
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Memory Growth Rate</h2>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Upload a memory usage timeline (Memory Timeline page) to calculate growth rates.</p>
+        </div>
+      </div>
 
       <LoadingOverlay visible={loading} />
     </div>

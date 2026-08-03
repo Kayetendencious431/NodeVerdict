@@ -7,3 +7,4 @@ export type { ValidationResult, ValidationIssue } from './validator';
 export { parseCpuProfile, buildFlameTree, extractHotFunctions, analyzeCpuProfile } from './cpu-profile-parser';
 export { diffHeapSnapshots } from './heap-diff';
 export type { HeapDiffNode, HeapDiffResult } from './heap-diff';
+export { analyzeStrings, analyzeExternalMemory, parseMemoryTimeline, calculateGrowthRate, parseGcLog } from './memory-analyzer';

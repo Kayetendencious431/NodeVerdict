@@ -1,0 +1,501 @@
+[
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710001000000,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/users/999999",
+      "http.requestId": "req-err-001"
+    },
+    "operationId": "express:req:err:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000001,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/users/999999"
+    },
+    "operationId": "express:req:err:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "start",
+    "timestamp": 1710001000005,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = $1",
+      "values": [999999],
+      "server.address": "pg-primary.example.com",
+      "server.port": 5432,
+      "db.name": "app_production"
+    },
+    "operationId": "pg:query:err:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000006,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = $1",
+      "values": [999999]
+    },
+    "operationId": "pg:query:err:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "end",
+    "timestamp": 1710001000015,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = $1",
+      "values": [999999],
+      "rowCount": 0
+    },
+    "duration": 10,
+    "operationId": "pg:query:err:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001000016,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = $1",
+      "values": [999999]
+    },
+    "operationId": "pg:query:err:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710001000020,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/users/999999",
+      "http.statusCode": 404,
+      "http.responseTime": 20
+    },
+    "duration": 20,
+    "operationId": "express:req:err:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001000021,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/users/999999"
+    },
+    "operationId": "express:req:err:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710001000100,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders",
+      "http.requestId": "req-err-002"
+    },
+    "operationId": "express:req:err:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000101,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders"
+    },
+    "operationId": "express:req:err:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710001000105,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:err:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000106,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99]
+    },
+    "operationId": "mysql2:query:err:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "error",
+    "timestamp": 1710001000120,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99]
+    },
+    "error": {
+      "message": "Cannot add or update a child row: a foreign key constraint fails",
+      "code": "ER_NO_REFERENCED_ROW_2",
+      "errno": 1452,
+      "sqlState": "23000"
+    },
+    "operationId": "mysql2:query:err:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710001000125,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders",
+      "http.statusCode": 400,
+      "http.responseTime": 25
+    },
+    "duration": 25,
+    "operationId": "express:req:err:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001000126,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders"
+    },
+    "operationId": "express:req:err:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710001000200,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/admin/panel",
+      "http.requestId": "req-err-003"
+    },
+    "operationId": "express:req:err:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000201,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/admin/panel"
+    },
+    "operationId": "express:req:err:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710001000205,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/admin/panel",
+      "http.statusCode": 403
+    },
+    "duration": 5,
+    "operationId": "express:req:err:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001000206,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/admin/panel"
+    },
+    "operationId": "express:req:err:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710001000300,
+    "context": {
+      "http.method": "PUT",
+      "http.url": "/api/profile",
+      "http.requestId": "req-err-004"
+    },
+    "operationId": "express:req:err:4"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000301,
+    "context": {
+      "http.method": "PUT",
+      "http.url": "/api/profile"
+    },
+    "operationId": "express:req:err:4"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710001000305,
+    "context": {
+      "query": "UPDATE users SET email = ? WHERE id = ?",
+      "values": ["newemail@example.com", 42],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:err:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710001000306,
+    "context": {
+      "query": "UPDATE users SET email = ? WHERE id = ?",
+      "values": ["newemail@example.com", 42]
+    },
+    "operationId": "mysql2:query:err:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "end",
+    "timestamp": 1710001000310,
+    "context": {
+      "query": "UPDATE users SET email = ? WHERE id = ?",
+      "values": ["newemail@example.com", 42],
+      "rows": 1
+    },
+    "duration": 5,
+    "operationId": "mysql2:query:err:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001000311,
+    "context": {
+      "query": "UPDATE users SET email = ? WHERE id = ?",
+      "values": ["newemail@example.com", 42]
+    },
+    "operationId": "mysql2:query:err:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710001000315,
+    "context": {
+      "http.method": "PUT",
+      "http.url": "/api/profile",
+      "http.statusCode": 500
+    },
+    "error": {
+      "message": "Unexpected database constraint violation",
+      "name": "InternalError"
+    },
+    "duration": 15,
+    "operationId": "express:req:err:4"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001000316,
+    "context": {
+      "http.method": "PUT",
+      "http.url": "/api/profile"
+    },
+    "operationId": "express:req:err:4"
+  },
+  {
+    "channel": "mysql2:pool:connect",
+    "eventType": "start",
+    "timestamp": 1710001000400,
+    "context": {
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306,
+      "user": "app_user",
+      "database": "ecommerce",
+      "poolAlias": "read-replica"
+    },
+    "operationId": "pool:connect:err:1"
+  },
+  {
+    "channel": "mysql2:pool:connect",
+    "eventType": "error",
+    "timestamp": 1710001005000,
+    "context": {
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "error": {
+      "message": "connect ETIMEDOUT db-prod-1.example.com:3306",
+      "code": "ETIMEDOUT",
+      "errno": 110,
+      "syscall": "connect"
+    },
+    "duration": 5000,
+    "operationId": "pool:connect:err:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "start",
+    "timestamp": 1710001001000,
+    "context": {
+      "command": "GET",
+      "args": ["session:broken"],
+      "server.address": "redis-cache-1.example.com",
+      "server.port": 6379
+    },
+    "operationId": "redis:cmd:err:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncStart",
+    "timestamp": 1710001001001,
+    "context": {
+      "command": "GET",
+      "args": ["session:broken"]
+    },
+    "operationId": "redis:cmd:err:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "error",
+    "timestamp": 1710001001100,
+    "context": {
+      "command": "GET",
+      "args": ["session:broken"]
+    },
+    "error": {
+      "message": "Redis connection lost: read ECONNRESET",
+      "code": "ECONNRESET",
+      "name": "RedisError"
+    },
+    "duration": 100,
+    "operationId": "redis:cmd:err:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710001002000,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products/export",
+      "http.requestId": "req-err-005"
+    },
+    "operationId": "express:req:err:5"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710001002001,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products/export"
+    },
+    "operationId": "express:req:err:5"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710001002005,
+    "context": {
+      "query": "SELECT * FROM products ORDER BY id",
+      "values": [],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:err:3"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710001002006,
+    "context": {
+      "query": "SELECT * FROM products ORDER BY id",
+      "values": []
+    },
+    "operationId": "mysql2:query:err:3"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "end",
+    "timestamp": 1710001020000,
+    "context": {
+      "query": "SELECT * FROM products ORDER BY id",
+      "values": [],
+      "rows": 25000
+    },
+    "duration": 18000,
+    "operationId": "mysql2:query:err:3"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001020001,
+    "context": {
+      "query": "SELECT * FROM products ORDER BY id",
+      "values": []
+    },
+    "operationId": "mysql2:query:err:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710001020010,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products/export",
+      "http.statusCode": 200,
+      "http.responseTime": 18010
+    },
+    "duration": 18010,
+    "operationId": "express:req:err:5"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710001020011,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products/export"
+    },
+    "operationId": "express:req:err:5"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710001003000,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/upload",
+      "http.requestId": "req-err-006"
+    },
+    "operationId": "express:req:err:6"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710001003001,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/upload"
+    },
+    "operationId": "express:req:err:6"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "error",
+    "timestamp": 1710001003050,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/upload",
+      "http.requestId": "req-err-006"
+    },
+    "error": {
+      "message": "Request entity too large. Max payload size is 10MB.",
+      "name": "PayloadTooLargeError",
+      "stack": "PayloadTooLargeError: Request entity too large\n    at memoryLimit (middleware.js:42:15)\n    at Layer.handle [as handle_request] (express/lib/router/layer.js:95:5)\n    at next (express/lib/router/route.js:137:13)\n    at Route.dispatch (express/lib/router/route.js:112:3)"
+    },
+    "duration": 50,
+    "operationId": "express:req:err:6"
+  }
+]

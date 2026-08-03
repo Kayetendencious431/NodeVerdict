@@ -22,7 +22,12 @@ export function ReportPage() {
     setReportData(report);
   }, [setReportData]);
 
-  const { loading, error, handleFile } = useFileUpload(handleFileRead);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead);
+
+  function handleReset() {
+    reset();
+    setReportData(null);
+  }
 
   // Check URL hash for shared reports
   useMemo(() => {
@@ -52,7 +57,7 @@ export function ReportPage() {
           <h1 className="text-xl font-bold text-gray-800">Report Generator</h1>
           <p className="text-sm text-gray-500 mt-1">Generate shareable diagnostic reports from tracing data</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to generate report" maxSize={50 * 1024 * 1024} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to generate report" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <LoadingOverlay visible={loading} message="Generating report..." />
         <div className="mt-8">

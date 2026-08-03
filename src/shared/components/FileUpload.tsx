@@ -6,9 +6,12 @@ interface FileUploadProps {
   label?: string;
   disabled?: boolean;
   maxSize?: number;
+  fileName?: string | null;
+  fileSize?: number | null;
+  onReset?: () => void;
 }
 
-export function FileUpload({ onFile, accept = '.json', label = 'Upload file', disabled, maxSize }: FileUploadProps) {
+export function FileUpload({ onFile, accept = '.json', label = 'Upload file', disabled, maxSize, fileName, fileSize, onReset }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -30,6 +33,33 @@ export function FileUpload({ onFile, accept = '.json', label = 'Upload file', di
       return;
     }
     onFile(file);
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  // Show loaded file state with clear button
+  if (fileName) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+        <svg className="w-5 h-5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-indigo-700 truncate">{fileName}</p>
+          {fileSize != null && <p className="text-xs text-indigo-500">{formatFileSize(fileSize)}</p>}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onReset?.(); }}
+          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-md hover:bg-red-50 transition-colors shrink-0"
+        >
+          Clear
+        </button>
+      </div>
+    );
   }
 
   return (

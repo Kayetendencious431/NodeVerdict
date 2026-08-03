@@ -16,11 +16,16 @@ function severityBadge(severity: string) {
 
 export function ValidatorPage() {
   const { validationResults, setValidationResults } = useRootStore();
-  const { loading, error, handleFile } = useFileUpload(useCallback(async (content: string) => {
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const events = JSON.parse(content) as TracingEvent[];
     const results = validateEvents(events);
     setValidationResults(results);
   }, [setValidationResults]));
+
+  function handleReset() {
+    reset();
+    setValidationResults(null);
+  }
 
   const stats = useMemo(() => {
     if (!validationResults) return null;
@@ -42,7 +47,7 @@ export function ValidatorPage() {
           <h1 className="text-xl font-bold text-gray-800">Event Validator</h1>
           <p className="text-sm text-gray-500 mt-1">Validate TracingChannel events against spec conventions</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={50 * 1024 * 1024} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <LoadingOverlay visible={loading} message="Validating..." />
         <div className="mt-8">

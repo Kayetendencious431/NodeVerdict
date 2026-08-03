@@ -16,11 +16,16 @@ function severityColor(severity: string) {
 
 export function HeapAnalyzerPage() {
   const { heapAnalysis, setHeapAnalysis } = useRootStore();
-  const { loading, error, handleFile } = useFileUpload(useCallback(async (content: string) => {
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const snapshot = parseHeapSnapshot(content);
     const analysis = analyzeHeap(snapshot);
     setHeapAnalysis(analysis);
   }, [setHeapAnalysis]));
+
+  function handleReset() {
+    reset();
+    setHeapAnalysis(null);
+  }
 
   if (!heapAnalysis) {
     return (
@@ -34,6 +39,9 @@ export function HeapAnalyzerPage() {
           accept=".heapsnapshot,.json"
           label="Upload heap snapshot (.heapsnapshot)"
           maxSize={200 * 1024 * 1024}
+          fileName={fileName}
+          fileSize={fileSize}
+          onReset={handleReset}
         />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <LoadingOverlay visible={loading} message="Parsing heap snapshot..." />

@@ -28,7 +28,7 @@ export function EventViewerPage() {
     setSelectedChannels(analysis.channels);
   }, [setTracingAnalysis, setSelectedChannels]);
 
-  const { loading, error, handleFile } = useFileUpload(handleFileRead);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead);
 
   const filteredEvents = useMemo(() => {
     if (!tracingAnalysis) return [];
@@ -42,6 +42,13 @@ export function EventViewerPage() {
     return tracingAnalysis.events[selectedEventIndex] ?? null;
   }, [selectedEventIndex, tracingAnalysis]);
 
+  function handleReset() {
+    reset();
+    setTracingAnalysis(null);
+    setSelectedChannels([]);
+    setSelectedEventIndex(null);
+  }
+
   if (!tracingAnalysis) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
@@ -54,6 +61,9 @@ export function EventViewerPage() {
           accept=".json"
           label="Upload tracing events JSON"
           maxSize={50 * 1024 * 1024}
+          fileName={fileName}
+          fileSize={fileSize}
+          onReset={handleReset}
         />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <LoadingOverlay visible={loading} message="Parsing events..." />
@@ -69,9 +79,22 @@ export function EventViewerPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Event Viewer</h1>
-        <p className="text-sm text-gray-500">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Event Viewer</h1>
+          <p className="text-sm text-gray-500">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
+        </div>
+        <div className="w-72">
+          <FileUpload
+            onFile={handleFile}
+            accept=".json"
+            label="Upload tracing events JSON"
+            maxSize={50 * 1024 * 1024}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+          />
+        </div>
       </div>
 
       <EventSummary analysis={tracingAnalysis} />

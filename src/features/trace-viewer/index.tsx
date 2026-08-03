@@ -10,11 +10,16 @@ import { formatDuration } from '../../shared/utils';
 
 export function TraceViewerPage() {
   const { traceData, setTraceData } = useRootStore();
-  const { loading, error, handleFile } = useFileUpload(useCallback(async (content: string) => {
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const events = JSON.parse(content) as TracingEvent[];
     const analysis = analyzeTracingEvents(events);
     setTraceData(analysis);
   }, [setTraceData]));
+
+  function handleReset() {
+    reset();
+    setTraceData(null);
+  }
 
   const spans = useMemo(() => {
     if (!traceData) return [];
@@ -40,7 +45,7 @@ export function TraceViewerPage() {
           <h1 className="text-xl font-bold text-gray-800">Trace Waterfall View</h1>
           <p className="text-sm text-gray-500 mt-1">Upload tracing events to visualize async operation chains</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <LoadingOverlay visible={loading} message="Building trace..." />
         <div className="mt-8">
@@ -55,9 +60,22 @@ export function TraceViewerPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Trace Waterfall</h1>
-        <p className="text-sm text-gray-500">{traceData.totalOperations} operations, {dependencies.length} dependency links</p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Trace Waterfall</h1>
+          <p className="text-sm text-gray-500">{traceData.totalOperations} operations, {dependencies.length} dependency links</p>
+        </div>
+        <div className="w-72">
+          <FileUpload
+            onFile={handleFile}
+            accept=".json"
+            label="Upload tracing events JSON"
+            maxSize={50 * 1024 * 1024}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">

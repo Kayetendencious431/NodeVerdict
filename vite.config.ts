@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/node-verdict/',
+  base: './',
   build: {
     target: 'es2022',
     outDir: 'dist',

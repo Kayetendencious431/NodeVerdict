@@ -10,6 +10,7 @@ import { SearchFilterPage } from '../features/search-filter';
 import { TimeSeriesPage } from '../features/time-series';
 import { PerfComparePage } from '../features/perf-compare';
 import { useUIStore } from '../stores';
+import { useEffect } from 'react';
 
 function HomePage() {
   const { navigate } = useUIStore();
@@ -17,13 +18,13 @@ function HomePage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="text-center py-12">
-        <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">NodeVerdict</h1>
-        <p className="text-gray-500 mb-8">Node.js TracingChannel diagnostic data viewer — all analysis runs locally in your browser.</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">NodeVerdict</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">Node.js TracingChannel diagnostic data viewer — all analysis runs locally in your browser.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -97,16 +98,16 @@ function FeatureCard({ title, description, icon, onClick, className = '' }: {
   title: string; description: string; icon: string; onClick: () => void; className?: string;
 }) {
   return (
-    <button onClick={onClick} className={`bg-white border border-gray-200 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 transition-all group ${className}`}>
+    <button onClick={onClick} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 transition-all group ${className}`}>
       <div className="flex items-start gap-4">
-        <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors">
-          <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
+          <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
           </svg>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors">{title}</h3>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">{description}</p>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">{title}</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{description}</p>
         </div>
       </div>
     </button>
@@ -115,6 +116,16 @@ function FeatureCard({ title, description, icon, onClick, className = '' }: {
 
 export function App() {
   const { currentPage } = useUIStore();
+  const darkMode = useUIStore((s) => s.darkMode);
+
+  // Apply dark class on mount and when darkMode changes
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   const pageContent = (() => {
     switch (currentPage) {

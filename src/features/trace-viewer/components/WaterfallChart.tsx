@@ -49,7 +49,7 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
         .attr('text-anchor', 'end')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', '11px')
-        .attr('fill', '#374151')
+        .attr('fill', 'currentColor')
         .text(span.channel);
 
       // Bar background (duration)
@@ -68,7 +68,7 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
         .attr('y', y + heightPerSpan / 2)
         .attr('dominant-baseline', 'middle')
         .attr('font-size', '10px')
-        .attr('fill', '#6b7280')
+        .attr('fill', 'currentColor')
         .text(`${span.duration.toFixed(1)}ms`);
 
       // Error indicator
@@ -79,7 +79,7 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
           .attr('text-anchor', 'middle')
           .attr('dominant-baseline', 'middle')
           .attr('font-size', '14px')
-          .attr('fill', '#ef4444')
+          .attr('fill', 'currentColor')
           .text('!');
       }
     });
@@ -90,7 +90,7 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
   }
 
   return (
-    <div className="overflow-auto border border-gray-200 rounded-lg bg-white p-2">
+    <div className="overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-2">
       <svg ref={svgRef} className="w-full" style={{ minHeight: '200px' }} />
     </div>
   );

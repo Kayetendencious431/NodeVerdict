@@ -38,7 +38,7 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [zoomStack, setZoomStack] = useState<FlameFrame[]>([flameTree]);
-  const [dimensions, setDimensions] = useState({ width: 900, height: 400 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const currentFrame = zoomStack[zoomStack.length - 1];
 
@@ -78,6 +78,9 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const h = Math.min(800, Math.max(200, zoomStack.length * 28 + 30));
+    setDimensions({ width: rect.width, height: h });
     const resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
         const w = entry.contentRect.width;
@@ -90,6 +93,7 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
   }, [zoomStack.length]);
 
   useEffect(() => {
+    if (!svgRef.current || !dimensions) return;
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
@@ -165,12 +169,12 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-500">Flame Graph</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Flame Graph</span>
           {zoomStack.length > 1 && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               — {zoomStack.map(f => f.name).join(' › ')}
             </span>
           )}
@@ -179,7 +183,7 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
           {zoomStack.length > 1 && (
             <button
               onClick={handleZoomOut}
-              className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               ← Back
             </button>
@@ -187,7 +191,7 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
           {zoomStack.length > 1 && (
             <button
               onClick={handleResetZoom}
-              className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Reset
             </button>
@@ -195,10 +199,10 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
         </div>
       </div>
       <div ref={containerRef} className="relative" style={{ minHeight: 200 }}>
-        <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block" />
+        {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block" />}
         {tooltip && (
           <div
-            className="absolute z-10 px-3 py-1.5 bg-gray-900 text-white text-xs rounded shadow-lg pointer-events-none whitespace-nowrap"
+            className="absolute z-10 px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded shadow-lg pointer-events-none whitespace-nowrap"
             style={{ left: tooltip.x, top: tooltip.y }}
           >
             {tooltip.text}

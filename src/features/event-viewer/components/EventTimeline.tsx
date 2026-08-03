@@ -14,15 +14,15 @@ export function EventTimeline({ events, selectedIndex, onSelect }: EventTimeline
   const range = Math.max(maxTime - minTime, 1);
 
   return (
-    <div className="overflow-auto border border-gray-200 rounded-lg bg-white">
+    <div className="overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left px-4 py-2 font-medium text-gray-500">Timestamp</th>
-            <th className="text-left px-4 py-2 font-medium text-gray-500">Channel</th>
-            <th className="text-left px-4 py-2 font-medium text-gray-500">Type</th>
-            <th className="text-left px-4 py-2 font-medium text-gray-500">Context</th>
-            <th className="w-24 px-4 py-2 font-medium text-gray-500">Timeline</th>
+          <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Timestamp</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Context</th>
+            <th className="w-24 px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Timeline</th>
           </tr>
         </thead>
         <tbody>
@@ -30,11 +30,11 @@ export function EventTimeline({ events, selectedIndex, onSelect }: EventTimeline
             <tr
               key={idx}
               onClick={() => onSelect(idx)}
-              className={`border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
-                selectedIndex === idx ? 'bg-indigo-50 border-indigo-200' : ''
+              className={`border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                selectedIndex === idx ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : ''
               }`}
             >
-              <td className="px-4 py-2 font-mono text-xs text-gray-500 whitespace-nowrap">
+              <td className="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 {formatTimestamp(event.timestamp)}
               </td>
               <td className="px-4 py-2">
@@ -50,11 +50,11 @@ export function EventTimeline({ events, selectedIndex, onSelect }: EventTimeline
                   {event.eventType}
                 </span>
               </td>
-              <td className="px-4 py-2 text-xs text-gray-600 max-w-xs truncate">
+              <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 max-w-xs truncate">
                 {truncate(JSON.stringify(event.context), 60)}
               </td>
               <td className="px-4 py-2">
-                <div className="relative h-4 w-20 bg-gray-100 rounded-full overflow-hidden">
+                <div className="relative h-4 w-20 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="absolute top-0 h-full rounded-full opacity-70"
                     style={{

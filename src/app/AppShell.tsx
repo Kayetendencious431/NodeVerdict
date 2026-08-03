@@ -14,14 +14,14 @@ const NAV_ITEMS = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { currentPage, navigate, sidebarOpen, toggleSidebar } = useUIStore();
+  const { currentPage, navigate, sidebarOpen, toggleSidebar, darkMode, toggleDarkMode } = useUIStore();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       {/* Sidebar */}
-      <aside className={`bg-white border-r border-gray-200 flex flex-col transition-all ${sidebarOpen ? 'w-56' : 'w-16'}`}>
+      <aside className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all ${sidebarOpen ? 'w-56' : 'w-16'}`}>
         {/* Logo */}
-        <div className="h-14 flex items-center px-4 border-b border-gray-200">
+        <div className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800">
           {sidebarOpen ? (
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -29,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                 </svg>
               </div>
-              <span className="text-sm font-bold text-gray-800">NodeVerdict</span>
+              <span className="text-sm font-bold text-gray-800 dark:text-gray-100">NodeVerdict</span>
             </div>
           ) : (
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto">
@@ -48,8 +48,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => navigate(item.page)}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 currentPage === item.page
-                  ? 'bg-indigo-50 text-indigo-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
             >
               <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,9 +60,51 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        {/* Toggle */}
-        <div className="p-2 border-t border-gray-200">
-          <button onClick={toggleSidebar} className="w-full flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+        {/* Dark mode toggle & Sidebar toggle */}
+        <div className="p-2 border-t border-gray-200 dark:border-gray-800 space-y-1">
+          {/* Dark mode toggle */}
+          {sidebarOpen && (
+            <button
+              onClick={toggleDarkMode}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              {darkMode ? (
+                <>
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  <span>Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                  <span>Dark Mode</span>
+                </>
+              )}
+            </button>
+          )}
+          {/* Collapsed dark mode toggle */}
+          {!sidebarOpen && (
+            <button
+              onClick={toggleDarkMode}
+              className="w-full flex items-center justify-center p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+          )}
+          {/* Sidebar toggle */}
+          <button onClick={toggleSidebar} className="w-full flex items-center justify-center p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <svg className={`w-4 h-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>

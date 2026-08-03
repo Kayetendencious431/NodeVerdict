@@ -105,22 +105,22 @@ export function PerfComparePage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800">Performance Comparison</h1>
-          <p className="text-sm text-gray-500 mt-1">Compare two sets of tracing data to identify performance regressions or improvements</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Performance Comparison</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Compare two sets of tracing data to identify performance regressions or improvements</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">Before / Baseline</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Before / Baseline</p>
             <FileUpload onFile={handleFileA} accept=".json" label="Upload baseline tracing" maxSize={50 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} />
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">After / Changed</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">After / Changed</p>
             <FileUpload onFile={handleFileB} accept=".json" label="Upload changed tracing" maxSize={50 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} />
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Comparing..." />
 
         <div className="mt-8">
@@ -137,33 +137,33 @@ export function PerfComparePage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Performance Comparison</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Performance Comparison</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {nameA} vs {nameB}
           </p>
         </div>
-        <button onClick={handleReset} className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        <button onClick={handleReset} className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
           Clear & Start Over
         </button>
       </div>
 
       {/* Overview comparison */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-xs font-medium text-gray-500 mb-1">{nameA} (Baseline)</p>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{nameA} (Baseline)</p>
           <div className="grid grid-cols-2 gap-2">
             <StatCard title="Events" value={dataA.analysis.totalEvents.toLocaleString()} />
             <StatCard title="Operations" value={dataA.analysis.totalOperations.toLocaleString()} />
-            <StatCard title="Error Rate" value={`${(dataA.analysis.errorRate * 100).toFixed(1)}%`} color={dataA.analysis.errorRate > 0.05 ? 'text-red-600' : ''} />
+            <StatCard title="Error Rate" value={`${(dataA.analysis.errorRate * 100).toFixed(1)}%`} color={dataA.analysis.errorRate > 0.05 ? 'text-red-600 dark:text-red-400' : ''} />
             <StatCard title="Duration" value={formatDuration(dataA.analysis.timeRange.end - dataA.analysis.timeRange.start)} />
           </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-xs font-medium text-gray-500 mb-1">{nameB} (Changed)</p>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{nameB} (Changed)</p>
           <div className="grid grid-cols-2 gap-2">
             <StatCard title="Events" value={dataB.analysis.totalEvents.toLocaleString()} />
             <StatCard title="Operations" value={dataB.analysis.totalOperations.toLocaleString()} />
-            <StatCard title="Error Rate" value={`${(dataB.analysis.errorRate * 100).toFixed(1)}%`} color={dataB.analysis.errorRate > 0.05 ? 'text-red-600' : ''} />
+            <StatCard title="Error Rate" value={`${(dataB.analysis.errorRate * 100).toFixed(1)}%`} color={dataB.analysis.errorRate > 0.05 ? 'text-red-600 dark:text-red-400' : ''} />
             <StatCard title="Duration" value={formatDuration(dataB.analysis.timeRange.end - dataB.analysis.timeRange.start)} />
           </div>
         </div>
@@ -171,48 +171,48 @@ export function PerfComparePage() {
 
       {/* Channel comparison */}
       {comparison && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
-            <h2 className="text-sm font-semibold text-gray-700">Channel Comparison</h2>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Channel Comparison</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-2 font-medium text-gray-500">Channel</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-500">Avg (A)</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-500">Avg (B)</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-500">Delta</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-500">Change</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-500">Errors (A→B)</th>
+                <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Avg (A)</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Avg (B)</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Delta</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Change</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Errors (A→B)</th>
                 </tr>
               </thead>
               <tbody>
                 {comparison.channels.map((ch, idx) => (
-                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-700">{ch.channel}</td>
-                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{ch.avgDurationA.toFixed(1)}ms</td>
-                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{ch.avgDurationB.toFixed(1)}ms</td>
+                  <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">{ch.channel}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{ch.avgDurationA.toFixed(1)}ms</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{ch.avgDurationB.toFixed(1)}ms</td>
                     <td className={`px-4 py-2 text-right font-mono text-xs ${
-                      ch.durationDelta > 0 ? 'text-red-600' : ch.durationDelta < 0 ? 'text-emerald-600' : ''
+                      ch.durationDelta > 0 ? 'text-red-600 dark:text-red-400' : ch.durationDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : ''
                     }`}>
                       {ch.durationDelta > 0 ? '+' : ''}{ch.durationDelta.toFixed(1)}ms
                     </td>
                     <td className={`px-4 py-2 text-right font-mono text-xs font-medium ${
-                      ch.durationPercent > 5 ? 'text-red-600' : ch.durationPercent < -5 ? 'text-emerald-600' : 'text-gray-500'
+                      ch.durationPercent > 5 ? 'text-red-600 dark:text-red-400' : ch.durationPercent < -5 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'
                     }`}>
                       {ch.durationPercent > 0 ? '+' : ''}{ch.durationPercent.toFixed(1)}%
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-xs">
-                      <span className={ch.errorA > 0 ? 'text-red-600' : 'text-gray-400'}>{ch.errorA}</span>
-                      <span className="text-gray-400"> → </span>
-                      <span className={ch.errorB > 0 ? 'text-red-600' : 'text-gray-400'}>{ch.errorB}</span>
+                      <span className={ch.errorA > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}>{ch.errorA}</span>
+                      <span className="text-gray-400 dark:text-gray-500"> → </span>
+                      <span className={ch.errorB > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}>{ch.errorB}</span>
                     </td>
                   </tr>
                 ))}
                 {comparison.channels.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">No common channels found</td>
+                    <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No common channels found</td>
                   </tr>
                 )}
               </tbody>

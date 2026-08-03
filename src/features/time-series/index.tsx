@@ -9,10 +9,13 @@ import * as d3 from 'd3';
 function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 250 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    // Measure the actual container size immediately
+    const rect = containerRef.current.getBoundingClientRect();
+    setDimensions({ width: rect.width, height: 250 });
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         setDimensions({ width: entry.contentRect.width, height: 250 });
@@ -47,7 +50,7 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
   }, [analysis]);
 
   useEffect(() => {
-    if (!svgRef.current || chartData.length === 0) return;
+    if (!svgRef.current || chartData.length === 0 || !dimensions) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -78,7 +81,7 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
       .attr('y', d => y(d.count))
       .attr('width', barWidth)
       .attr('height', d => h - y(d.count))
-      .attr('fill', '#6366f1')
+      .attr('fill', 'currentColor')
       .attr('opacity', 0.7);
 
     // Error markers
@@ -91,7 +94,7 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
       .attr('y', d => y(d.errors) - 3)
       .attr('width', barWidth)
       .attr('height', d => 6)
-      .attr('fill', '#ef4444')
+      .attr('fill', 'currentColor')
       .attr('opacity', 0.8);
 
     // X axis
@@ -113,14 +116,14 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
       .attr('y', -8)
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
-      .attr('fill', '#6b7280')
+      .attr('fill', 'currentColor')
       .text('Events / Time Bucket');
 
   }, [chartData, analysis.timeRange.start, dimensions]);
 
   return (
-    <div ref={containerRef} className="bg-white border border-gray-200 rounded-lg p-3">
-      <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />
+    <div ref={containerRef} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+      {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />}
     </div>
   );
 }
@@ -128,10 +131,12 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
 function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 250 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDimensions({ width: rect.width, height: 250 });
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         setDimensions({ width: entry.contentRect.width, height: 250 });
@@ -166,7 +171,7 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
   }, [analysis]);
 
   useEffect(() => {
-    if (!svgRef.current || histogram.length === 0) return;
+    if (!svgRef.current || histogram.length === 0 || !dimensions) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -194,7 +199,7 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
       .attr('y', d => y(d.count))
       .attr('width', x.bandwidth())
       .attr('height', d => h - y(d.count))
-      .attr('fill', '#6366f1')
+      .attr('fill', 'currentColor')
       .attr('opacity', 0.7);
 
     g.append('g')
@@ -214,8 +219,8 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
   }, [histogram, dimensions]);
 
   return (
-    <div ref={containerRef} className="bg-white border border-gray-200 rounded-lg p-3">
-      <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />
+    <div ref={containerRef} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+      {dimensions && <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />}
     </div>
   );
 }
@@ -237,11 +242,11 @@ export function TimeSeriesPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800">Time Series Analysis</h1>
-          <p className="text-sm text-gray-500 mt-1">Visualize event throughput, latency distribution, and performance trends over time</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Time Series Analysis</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Visualize event throughput, latency distribution, and performance trends over time</p>
         </div>
         <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Analyzing..." />
         <div className="mt-8">
           <EmptyState title="No data loaded" description="Upload a tracing events JSON file to visualize throughput and latency distribution over time." />
@@ -258,8 +263,8 @@ export function TimeSeriesPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Time Series Analysis</h1>
-          <p className="text-sm text-gray-500">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Time Series Analysis</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
         </div>
         <div className="w-72">
           <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
@@ -282,36 +287,36 @@ export function TimeSeriesPage() {
       </div>
 
       {/* Channel Latency Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">Channel Latency Breakdown</h2>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Channel Latency Breakdown</h2>
         </div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left px-4 py-2 font-medium text-gray-500">Channel</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">Avg</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">P50</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">P95</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">P99</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">Min</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">Max</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500">Ops</th>
+            <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Avg</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">P50</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">P95</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">P99</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Min</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Max</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Ops</th>
             </tr>
           </thead>
           <tbody>
             {tracingAnalysis.channelStats.map(cs => (
-              <tr key={cs.channel} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-2 font-medium text-gray-700">{cs.channel}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{cs.avgDuration.toFixed(1)}ms</td>
-                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{cs.p50Duration.toFixed(1)}ms</td>
-                <td className={`px-4 py-2 text-right font-mono text-xs ${cs.p95Duration > 100 ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
+              <tr key={cs.channel} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">{cs.channel}</td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{cs.avgDuration.toFixed(1)}ms</td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{cs.p50Duration.toFixed(1)}ms</td>
+                <td className={`px-4 py-2 text-right font-mono text-xs ${cs.p95Duration > 100 ? 'text-orange-600 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>
                   {cs.p95Duration.toFixed(1)}ms
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{cs.p99Duration.toFixed(1)}ms</td>
-                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{cs.minDuration.toFixed(1)}ms</td>
-                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{cs.maxDuration.toFixed(1)}ms</td>
-                <td className="px-4 py-2 text-right text-xs text-gray-600">{cs.totalOperations}</td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{cs.p99Duration.toFixed(1)}ms</td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{cs.minDuration.toFixed(1)}ms</td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{cs.maxDuration.toFixed(1)}ms</td>
+                <td className="px-4 py-2 text-right text-xs text-gray-600 dark:text-gray-300">{cs.totalOperations}</td>
               </tr>
             ))}
           </tbody>

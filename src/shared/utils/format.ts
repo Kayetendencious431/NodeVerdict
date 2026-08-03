@@ -37,9 +37,9 @@ export function eventTypeColor(type: string): string {
   switch (type) {
     case 'start': return 'text-emerald-600 bg-emerald-50';
     case 'end': return 'text-blue-600 bg-blue-50';
-    case 'asyncStart': return 'text-amber-600 bg-amber-50';
-    case 'asyncEnd': return 'text-purple-600 bg-purple-50';
-    case 'error': return 'text-red-600 bg-red-50';
-    default: return 'text-gray-600 bg-gray-50';
+    case 'asyncStart': return 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-600';
+    case 'asyncEnd': return 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-600';
+    case 'error': return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-600';
+    default: return 'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-600'; 
   }
 }

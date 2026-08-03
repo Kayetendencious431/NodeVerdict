@@ -53,8 +53,8 @@ export function EventViewerPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800">Diagnostic Event Viewer</h1>
-          <p className="text-sm text-gray-500 mt-1">Upload a JSON file with TracingChannel events to visualize</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Diagnostic Event Viewer</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Upload a JSON file with TracingChannel events to visualize</p>
         </div>
         <FileUpload
           onFile={handleFile}
@@ -65,7 +65,7 @@ export function EventViewerPage() {
           fileSize={fileSize}
           onReset={handleReset}
         />
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Parsing events..." />
         <div className="mt-8">
           <EmptyState
@@ -81,8 +81,8 @@ export function EventViewerPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Event Viewer</h1>
-          <p className="text-sm text-gray-500">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Event Viewer</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
         </div>
         <div className="w-72">
           <FileUpload
@@ -119,7 +119,7 @@ export function EventViewerPage() {
           {selectedEvent ? (
             <EventDetail event={selectedEvent} onClose={() => setSelectedEventIndex(null)} />
           ) : (
-            <div className="bg-gray-50 rounded-lg p-6 text-center text-sm text-gray-400">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 text-center text-sm text-gray-400 dark:text-gray-500">
               Click an event to see details
             </div>
           )}

@@ -42,11 +42,11 @@ export function TraceViewerPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800">Trace Waterfall View</h1>
-          <p className="text-sm text-gray-500 mt-1">Upload tracing events to visualize async operation chains</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Trace Waterfall View</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Upload tracing events to visualize async operation chains</p>
         </div>
         <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Building trace..." />
         <div className="mt-8">
           <EmptyState
@@ -62,8 +62,8 @@ export function TraceViewerPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Trace Waterfall</h1>
-          <p className="text-sm text-gray-500">{traceData.totalOperations} operations, {dependencies.length} dependency links</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Trace Waterfall</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{traceData.totalOperations} operations, {dependencies.length} dependency links</p>
         </div>
         <div className="w-72">
           <FileUpload
@@ -81,7 +81,7 @@ export function TraceViewerPage() {
       <div className="grid grid-cols-3 gap-3 mb-4">
         <StatCard title="Total Time" value={formatDuration(totalDuration)} subtitle={`${spanCount(spans)} trace spans`} />
         <StatCard title="Operations" value={traceData.totalOperations.toString()} />
-        <StatCard title="Bottlenecks" value={bottlenecks.length.toString()} color={bottlenecks.length > 0 ? 'text-orange-600' : 'text-gray-900'} />
+        <StatCard title="Bottlenecks" value={bottlenecks.length.toString()} color={bottlenecks.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-gray-100'} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

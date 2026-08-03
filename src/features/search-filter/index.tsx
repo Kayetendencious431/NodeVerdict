@@ -125,11 +125,11 @@ export function SearchFilterPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800">Search & Filter</h1>
-          <p className="text-sm text-gray-500 mt-1">Advanced search and filtering across tracing events</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Search & Filter</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Advanced search and filtering across tracing events</p>
         </div>
         <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Parsing events..." />
         <div className="mt-8">
           <EmptyState title="No data loaded" description="Upload a JSON file with TracingChannel events to search and filter." />
@@ -142,8 +142,8 @@ export function SearchFilterPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Search & Filter</h1>
-          <p className="text-sm text-gray-500">{tracingAnalysis.totalEvents} events total</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Search & Filter</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events total</p>
         </div>
         <div className="w-72">
           <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
@@ -151,10 +151,10 @@ export function SearchFilterPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -162,73 +162,73 @@ export function SearchFilterPage() {
               value={searchOptions.query}
               onChange={e => updateSearch({ query: e.target.value })}
               placeholder="Search events (searches channel, context, operationId)..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:border-indigo-400 dark:focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             />
           </div>
-          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
             <input
               type="checkbox"
               checked={searchOptions.useRegex}
               onChange={e => updateSearch({ useRegex: e.target.checked })}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-gray-600"
             />
             Regex
           </label>
-          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
             <input
               type="checkbox"
               checked={searchOptions.caseSensitive}
               onChange={e => updateSearch({ caseSensitive: e.target.checked })}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-gray-600"
             />
             Case
           </label>
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             {showAdvanced ? 'Hide Advanced' : 'Advanced'}
           </button>
         </div>
 
         {/* Results count */}
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
           {filteredEvents.events.length} / {tracingAnalysis.totalEvents} events match
           {filteredEvents.events.length !== tracingAnalysis.totalEvents && (
-            <span className="text-gray-400"> — {tracingAnalysis.totalEvents - filteredEvents.events.length} hidden</span>
+            <span className="text-gray-400 dark:text-gray-500"> — {tracingAnalysis.totalEvents - filteredEvents.events.length} hidden</span>
           )}
         </div>
 
         {/* Advanced Filters */}
         {showAdvanced && (
-          <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">Min Duration (ms)</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Min Duration (ms)</label>
               <input
                 type="number"
                 min={0}
                 value={searchOptions.minDuration ?? ''}
                 onChange={e => updateSearch({ minDuration: e.target.value ? Number(e.target.value) : null })}
                 placeholder="Any"
-                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">Max Duration (ms)</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Max Duration (ms)</label>
               <input
                 type="number"
                 min={0}
                 value={searchOptions.maxDuration ?? ''}
                 onChange={e => updateSearch({ maxDuration: e.target.value ? Number(e.target.value) : null })}
                 placeholder="Any"
-                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">Status</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Status</label>
               <div className="flex gap-2">
                 {(['success', 'error', 'incomplete'] as const).map(s => (
-                  <label key={s} className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                  <label key={s} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={searchOptions.status.includes(s)}
@@ -239,7 +239,7 @@ export function SearchFilterPage() {
                           updateSearch({ status: searchOptions.status.filter(x => x !== s) });
                         }
                       }}
-                      className="rounded border-gray-300"
+                      className="rounded border-gray-300 dark:border-gray-600"
                     />
                     {s}
                   </label>
@@ -247,22 +247,22 @@ export function SearchFilterPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">Time Range</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Time Range</label>
               <div className="flex gap-1">
                 <input
                   type="number"
                   value={searchOptions.timeRangeStart ?? ''}
                   onChange={e => updateSearch({ timeRangeStart: e.target.value ? Number(e.target.value) : null })}
                   placeholder="From"
-                  className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                  className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
-                <span className="text-xs text-gray-400 self-center">-</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 self-center">-</span>
                 <input
                   type="number"
                   value={searchOptions.timeRangeEnd ?? ''}
                   onChange={e => updateSearch({ timeRangeEnd: e.target.value ? Number(e.target.value) : null })}
                   placeholder="To"
-                  className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                  className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -272,44 +272,44 @@ export function SearchFilterPage() {
 
       {/* Results Table */}
       {filteredEvents.events.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <th className="text-left px-4 py-2 font-medium text-gray-500">Timestamp</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500">Channel</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500">Type</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500">Operation</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500">Context</th>
+                <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Timestamp</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Operation</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Context</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEvents.events.map((event, idx) => {
                   const op = filteredEvents.operations.find(o => o.operationId === event.operationId);
                   return (
-                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">
+                    <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {new Date(event.timestamp).toISOString().slice(11, 23)}
                       </td>
-                      <td className="px-4 py-2 text-xs text-gray-700">{event.channel}</td>
+                      <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-200">{event.channel}</td>
                       <td className="px-4 py-2">
                         <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          event.eventType === 'error' ? 'bg-red-100 text-red-700' :
-                          event.eventType === 'start' ? 'bg-emerald-100 text-emerald-700' :
-                          event.eventType === 'end' ? 'bg-blue-100 text-blue-700' :
-                          event.eventType === 'asyncStart' ? 'bg-amber-100 text-amber-700' :
-                          event.eventType === 'asyncEnd' ? 'bg-purple-100 text-purple-700' :
-                          'bg-gray-100 text-gray-700'
+                          event.eventType === 'error' ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                          event.eventType === 'start' ? 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' :
+                          event.eventType === 'end' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' :
+                          event.eventType === 'asyncStart' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' :
+                          event.eventType === 'asyncEnd' ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' :
+                          'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
                         }`}>
                           {event.eventType}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-xs text-gray-600 max-w-[150px] truncate">
+                      <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 max-w-[150px] truncate">
                         {event.operationId ?? '-'}
-                        {op && <span className="text-gray-400 ml-1">({formatDuration(op.duration)})</span>}
+                        {op && <span className="text-gray-400 dark:text-gray-500 ml-1">({formatDuration(op.duration)})</span>}
                       </td>
-                      <td className="px-4 py-2 text-xs text-gray-500 max-w-[200px] truncate">
+                      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 max-w-[200px] truncate">
                         {event.context ? JSON.stringify(event.context).slice(0, 80) : '-'}
                       </td>
                     </tr>
@@ -322,8 +322,8 @@ export function SearchFilterPage() {
       )}
 
       {filteredEvents.events.length === 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-sm text-gray-500">No events match your search criteria</p>
+        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">No events match your search criteria</p>
         </div>
       )}
     </div>

@@ -11,6 +11,16 @@ interface UIState {
   setError: (error: string | null) => void;
   sidebarOpen: boolean;
   toggleSidebar: () => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
+function getInitialDarkMode(): boolean {
+  try {
+    const stored = localStorage.getItem('nodeverdict-darkmode');
+    if (stored !== null) return stored === 'true';
+  } catch {}
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -22,4 +32,15 @@ export const useUIStore = create<UIState>((set) => ({
   setError: (error) => set({ error }),
   sidebarOpen: true,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  darkMode: getInitialDarkMode(),
+  toggleDarkMode: () => set((s) => {
+    const next = !s.darkMode;
+    try { localStorage.setItem('nodeverdict-darkmode', String(next)); } catch {}
+    if (next) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return { darkMode: next };
+  }),
 }));

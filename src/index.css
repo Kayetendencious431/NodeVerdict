@@ -1,11 +1,19 @@
 @import "tailwindcss";
 
+/* Class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Base styles */
 body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Body background transitions for theme switching */
+body {
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Scrollbar styling */
@@ -25,6 +33,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 
 /* Animation for loading spinner */

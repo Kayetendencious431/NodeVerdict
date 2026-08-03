@@ -1,0 +1,48 @@
+[
+  {"channel": "express:request", "eventType": "start", "timestamp": 1710000000000, "context": {"http.method": "GET", "http.url": "/api/products", "http.requestId": "cross-req-001"}, "operationId": "cross:express:req:001"},
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000001, "context": {"http.method": "GET", "http.url": "/api/products"}, "operationId": "cross:express:req:001"},
+  {"channel": "auth:check", "eventType": "start", "timestamp": 1710000000002, "context": {"token": "jwt-abc-123", "user": "seller"}, "operationId": "cross:auth:check:001"},
+  {"channel": "auth:check", "eventType": "end", "timestamp": 1710000000004, "context": {"token": "jwt-abc-123", "user": "seller", "authorized": true}, "duration": 2, "operationId": "cross:auth:check:001"},
+
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000005, "context": {"http.method": "GET", "http.url": "/api/products"}, "operationId": "cross:express:req:001"},
+  {"channel": "redis:get", "eventType": "start", "timestamp": 1710000000006, "context": {"command": "get", "key": "cache:products:featured"}, "operationId": "cross:redis:get:001"},
+  {"channel": "redis:get", "eventType": "end", "timestamp": 1710000000008, "context": {"command": "get", "key": "cache:products:featured", "hit": false}, "duration": 2, "operationId": "cross:redis:get:001"},
+
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000009, "context": {"http.method": "GET", "http.url": "/api/products"}, "operationId": "cross:express:req:001"},
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000010, "context": {"query": "SELECT p.*, AVG(r.rating) as avg_rating FROM products p LEFT JOIN reviews r ON r.product_id = p.id WHERE p.status = 'active' GROUP BY p.id ORDER BY p.created_at DESC LIMIT 20", "server.address": "db-prod.example.com", "server.port": 3306}, "operationId": "cross:mysql2:q:001"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000011, "context": {"query": "SELECT p.*, AVG(r.rating) as avg_rating FROM products p LEFT JOIN reviews r ON r.product_id = p.id WHERE p.status = 'active' GROUP BY p.id ORDER BY p.created_at DESC LIMIT 20"}, "operationId": "cross:mysql2:q:001"},
+
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000050, "context": {"query": "SELECT p.*, AVG(r.rating) as avg_rating FROM products p LEFT JOIN reviews r ON r.product_id = p.id WHERE p.status = 'active' GROUP BY p.id ORDER BY p.created_at DESC LIMIT 20", "rows": 10}, "duration": 40, "operationId": "cross:mysql2:q:001"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000051, "context": {"query": "SELECT p.*, AVG(r.rating) as avg_rating FROM products p LEFT JOIN reviews r ON r.product_id = p.id WHERE p.status = 'active' GROUP BY p.id ORDER BY p.created_at DESC LIMIT 20"}, "operationId": "cross:mysql2:q:001"},
+
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000052, "context": {"http.method": "GET", "http.url": "/api/products"}, "operationId": "cross:express:req:001"},
+  {"channel": "redis:set", "eventType": "start", "timestamp": 1710000000053, "context": {"command": "set", "key": "cache:products:featured"}, "operationId": "cross:redis:set:001"},
+  {"channel": "redis:set", "eventType": "end", "timestamp": 1710000000055, "context": {"command": "set", "key": "cache:products:featured"}, "duration": 2, "operationId": "cross:redis:set:001"},
+
+  {"channel": "express:request", "eventType": "asyncEnd", "timestamp": 1710000000060, "context": {"http.method": "GET", "http.url": "/api/products"}, "operationId": "cross:express:req:001"},
+  {"channel": "express:request", "eventType": "end", "timestamp": 1710000000061, "context": {"http.method": "GET", "http.url": "/api/products", "http.status_code": 200}, "duration": 61, "operationId": "cross:express:req:001"},
+
+  {"channel": "express:request", "eventType": "start", "timestamp": 1710000000100, "context": {"http.method": "POST", "http.url": "/api/orders", "http.requestId": "cross-req-002"}, "operationId": "cross:express:req:002"},
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000101, "context": {"http.method": "POST", "http.url": "/api/orders"}, "operationId": "cross:express:req:002"},
+  {"channel": "auth:check", "eventType": "start", "timestamp": 1710000000102, "context": {"token": "jwt-abc-123", "user": "buyer"}, "operationId": "cross:auth:check:002"},
+  {"channel": "auth:check", "eventType": "end", "timestamp": 1710000000103, "context": {"token": "jwt-abc-123", "user": "buyer", "authorized": true}, "duration": 1, "operationId": "cross:auth:check:002"},
+
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000104, "context": {"http.method": "POST", "http.url": "/api/orders"}, "operationId": "cross:express:req:002"},
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000105, "context": {"query": "SELECT id, name, price, stock FROM products WHERE id IN (1, 2, 3) FOR UPDATE", "server.address": "db-prod.example.com", "server.port": 3306}, "operationId": "cross:mysql2:q:002"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000106, "context": {"query": "SELECT id, name, price, stock FROM products WHERE id IN (1, 2, 3) FOR UPDATE"}, "operationId": "cross:mysql2:q:002"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000120, "context": {"query": "SELECT id, name, price, stock FROM products WHERE id IN (1, 2, 3) FOR UPDATE", "rows": 3}, "duration": 15, "operationId": "cross:mysql2:q:002"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000121, "context": {"query": "SELECT id, name, price, stock FROM products WHERE id IN (1, 2, 3) FOR UPDATE"}, "operationId": "cross:mysql2:q:002"},
+
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000122, "context": {"http.method": "POST", "http.url": "/api/orders"}, "operationId": "cross:express:req:002"},
+  {"channel": "kafka:produce", "eventType": "start", "timestamp": 1710000000123, "context": {"topic": "order-events", "key": "order:new:42", "value": "{\"userId\":42,\"items\":[1,2,3],\"total\":299.99}"}, "operationId": "cross:kafka:produce:001"},
+  {"channel": "kafka:produce", "eventType": "end", "timestamp": 1710000000130, "context": {"topic": "order-events", "key": "order:new:42", "partition": 3, "offset": 512}, "duration": 7, "operationId": "cross:kafka:produce:001"},
+
+  {"channel": "express:request", "eventType": "asyncStart", "timestamp": 1710000000131, "context": {"http.method": "POST", "http.url": "/api/orders"}, "operationId": "cross:express:req:002"},
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000132, "context": {"query": "INSERT INTO orders (user_id, product_ids, total, status) VALUES (42, '[1,2,3]', 299.99, 'pending')", "server.address": "db-prod.example.com", "server.port": 3306}, "operationId": "cross:mysql2:q:003"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000133, "context": {"query": "INSERT INTO orders (user_id, product_ids, total, status) VALUES (42, '[1,2,3]', 299.99, 'pending')"}, "operationId": "cross:mysql2:q:003"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000140, "context": {"query": "INSERT INTO orders (user_id, product_ids, total, status) VALUES (42, '[1,2,3]', 299.99, 'pending')", "rows": 1}, "duration": 8, "operationId": "cross:mysql2:q:003"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000141, "context": {"query": "INSERT INTO orders (user_id, product_ids, total, status) VALUES (42, '[1,2,3]', 299.99, 'pending')"}, "operationId": "cross:mysql2:q:003"},
+
+  {"channel": "express:request", "eventType": "asyncEnd", "timestamp": 1710000000150, "context": {"http.method": "POST", "http.url": "/api/orders"}, "operationId": "cross:express:req:002"},
+  {"channel": "express:request", "eventType": "end", "timestamp": 1710000000151, "context": {"http.method": "POST", "http.url": "/api/orders", "http.status_code": 201}, "duration": 51, "operationId": "cross:express:req:002"}
+]

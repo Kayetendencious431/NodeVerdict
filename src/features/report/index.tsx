@@ -4,7 +4,7 @@ import { useFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents, generateReport, decompressReport } from '../../shared/engine';
 import { encodeReportToHash, decodeReportFromHash } from '../../shared/utils';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
-import type { TracingEvent, ReportData } from '../../shared/types';
+import type { TracingEvent, ReportData, ChannelStats } from '../../shared/types';
 
 export function ReportPage() {
   const { reportData, setReportData } = useRootStore();
@@ -156,7 +156,7 @@ export function ReportPage() {
       )}
 
       {/* Share */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Share Report</h2>
         <div className="flex items-center gap-2">
           <input
@@ -177,7 +177,122 @@ export function ReportPage() {
         </p>
       </div>
 
+      {/* Export HTML */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">Export Offline Report</h2>
+        <p className="text-xs text-gray-500 mb-3">Download a standalone HTML file with all data and charts embedded. No server needed to view.</p>
+        <button
+          onClick={() => exportHtmlReport(reportData)}
+          className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+        >
+          Download HTML Report
+        </button>
+      </div>
+
       <LoadingOverlay visible={loading} />
     </div>
   );
+}
+
+function exportHtmlReport(reportData: ReportData): void {
+  const channels = reportData.eventSummary?.channels ?? [];
+  const findings = reportData.keyFindings ?? [];
+  const heap = reportData.heapAnalysis;
+
+  const rows = channels.map(cs => `
+    <tr>
+      <td style="padding:4px 8px;font-size:13px">${escapeHtml(cs.channel)}</td>
+      <td style="padding:4px 8px;font-size:13px;text-align:right">${cs.totalOperations}</td>
+      <td style="padding:4px 8px;font-size:13px;text-align:right">${cs.avgDuration.toFixed(1)}ms</td>
+      <td style="padding:4px 8px;font-size:13px;text-align:right;color:${cs.p95Duration > 100 ? '#dc2626' : '#374151'}">${cs.p95Duration.toFixed(1)}ms</td>
+      <td style="padding:4px 8px;font-size:13px;text-align:right;color:${cs.errorCount > 0 ? '#dc2626' : '#374151'}">${cs.errorCount}</td>
+    </tr>
+  `).join('');
+
+  const findingsHtml = findings.map(f => `<li style="margin:4px 0;font-size:13px;color:#374151">${escapeHtml(f)}</li>`).join('');
+
+  const heapHtml = heap ? `
+    <div style="margin-top:16px">
+      <h2 style="font-size:16px;font-weight:600;color:#1f2937;margin-bottom:8px">Heap Analysis</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="background:#f9fafb;padding:12px;border-radius:8px">
+          <p style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Total Size</p>
+          <p style="font-size:20px;font-weight:700;color:#1f2937;margin-top:4px">${(heap.totalSize / 1024 / 1024).toFixed(1)}MB</p>
+        </div>
+        <div style="background:#f9fafb;padding:12px;border-radius:8px">
+          <p style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Top Objects</p>
+          <p style="font-size:20px;font-weight:700;color:#1f2937;margin-top:4px">${heap.topObjects.length}</p>
+        </div>
+        <div style="background:#fef2f2;padding:12px;border-radius:8px">
+          <p style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Leak Suspects</p>
+          <p style="font-size:20px;font-weight:700;color:#dc2626;margin-top:4px">${heap.leakCount}</p>
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NodeVerdict Diagnostic Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 24px; background: #f9fafb; color: #1f2937; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px 0; }
+    .subtitle { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th { background: #f9fafb; text-align: left; padding: 8px; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 8px; border-bottom: 1px solid #f3f4f6; }
+    .findings { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .footer { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <div style="width:28px;height:28px;background:#4f46e5;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">N</div>
+      <h1>NodeVerdict Diagnostic Report</h1>
+    </div>
+    <p class="subtitle">Generated ${new Date(reportData.generatedAt).toLocaleString()} | ${reportData.eventSummary?.totalEvents ?? 0} events, ${reportData.eventSummary?.totalOperations ?? 0} operations</p>
+
+    <div class="findings">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 8px 0">Key Findings</h2>
+      <ul style="margin:0;padding-left:20px">${findingsHtml}</ul>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Channel</th>
+          <th style="text-align:right">Ops</th>
+          <th style="text-align:right">Avg</th>
+          <th style="text-align:right">P95</th>
+          <th style="text-align:right">Errors</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    ${heapHtml}
+
+    <div class="footer">
+      <p>Generated by NodeVerdict — ${new Date().toISOString()}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nodeverdict-report.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }

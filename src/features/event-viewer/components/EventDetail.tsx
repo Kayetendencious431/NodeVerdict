@@ -6,6 +6,192 @@ interface EventDetailProps {
   onClose: () => void;
 }
 
+/** Smart context renderer based on channel type */
+function SmartContext({ context, channel }: { context: Record<string, unknown>; channel: string }) {
+  // SQL query detection
+  if (context.query || context.sql || context.text) {
+    const sql = String(context.query ?? context.sql ?? context.text);
+    const hasQuery = !!context.query;
+    const hasParams = !!context.parameters;
+    const hasRows = context.rows !== undefined;
+    return (
+      <div className="space-y-2">
+        {hasQuery && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">SQL Query</p>
+            <pre className="text-xs bg-blue-50 border border-blue-100 rounded p-2 overflow-auto max-h-32 text-blue-800 font-mono"
+              dangerouslySetInnerHTML={{ __html: highlightSql(sql) }}
+            />
+          </div>
+        )}
+        {hasParams && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">Parameters</p>
+            <pre className="text-xs bg-gray-50 rounded p-1 overflow-auto max-h-20">
+              {JSON.stringify(context.parameters, null, 2)}
+            </pre>
+          </div>
+        )}
+        {hasRows && (
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Rows affected</span>
+            <span className="text-xs font-medium">{String(context.rows)}</span>
+          </div>
+        )}
+        {renderOtherFields(context, ['query', 'sql', 'text', 'parameters', 'rows'])}
+      </div>
+    );
+  }
+
+  // HTTP request detection
+  const hasMethod = !!context.method;
+  const hasUrl = !!(context.url || context.path);
+  const hasStatusCode = context.statusCode !== undefined;
+  const hasHeaders = !!context.headers;
+  if (hasUrl || hasMethod || hasStatusCode) {
+    return (
+      <div className="space-y-1.5">
+        {hasMethod && hasUrl && (
+          <div className="flex items-center gap-2">
+            <span className={`text-xs px-1.5 py-0.5 rounded font-mono font-bold ${
+              String(context.method) === 'GET' ? 'bg-emerald-100 text-emerald-700' :
+              String(context.method) === 'POST' ? 'bg-blue-100 text-blue-700' :
+              String(context.method) === 'DELETE' ? 'bg-red-100 text-red-700' :
+              'bg-amber-100 text-amber-700'
+            }`}>
+              {String(context.method)}
+            </span>
+            <span className="text-xs font-mono text-gray-700 truncate">{String(context.url ?? context.path)}</span>
+          </div>
+        )}
+        {hasStatusCode && (
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Status</span>
+            <span className={`text-xs font-mono font-medium ${
+              Number(context.statusCode) >= 400 ? 'text-red-600' : 'text-emerald-600'
+            }`}>
+              {String(context.statusCode)}
+            </span>
+          </div>
+        )}
+        {hasHeaders && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">Headers</p>
+            <pre className="text-xs bg-gray-50 rounded p-1 overflow-auto max-h-20">
+              {JSON.stringify(context.headers, null, 2)}
+            </pre>
+          </div>
+        )}
+        {renderOtherFields(context, ['url', 'path', 'method', 'statusCode', 'headers', 'request'])}
+      </div>
+    );
+  }
+
+  // Redis command detection
+  const hasCmd = !!context.command;
+  const hasKey = !!context.key;
+  const hasKeys = !!context.keys;
+  if (hasCmd || hasKey || hasKeys) {
+    return (
+      <div className="space-y-1.5">
+        {hasCmd && (
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Command</span>
+            <span className="text-xs font-mono font-medium text-purple-700">{String(context.command).toUpperCase()}</span>
+          </div>
+        )}
+        {hasKey && (
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Key</span>
+            <span className="text-xs font-mono text-gray-700">{String(context.key)}</span>
+          </div>
+        )}
+        {hasKeys && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">Keys</p>
+            <pre className="text-xs bg-gray-50 rounded p-1">{(context.keys as string[]).join(', ')}</pre>
+          </div>
+        )}
+        {renderOtherFields(context, ['command', 'key', 'keys'])}
+      </div>
+    );
+  }
+
+  // Error context
+  const hasStack = !!context.stack;
+  const hasError = !!context.error;
+  if (hasStack || hasError) {
+    return (
+      <div className="space-y-1.5">
+        {hasError && (
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Error</span>
+            <span className="text-xs text-red-600">{String(context.error)}</span>
+          </div>
+        )}
+        {hasStack && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">Stack Trace</p>
+            <pre className="text-xs bg-red-50 border border-red-100 rounded p-2 overflow-auto max-h-32 text-red-800 font-mono">
+              {String(context.stack)}
+            </pre>
+          </div>
+        )}
+        {renderOtherFields(context, ['error', 'stack', 'message'])}
+      </div>
+    );
+  }
+
+  // Default: render all fields as JSON
+  return (
+    <pre className="text-xs bg-gray-50 rounded p-2 overflow-auto max-h-48">
+      {JSON.stringify(context, null, 2)}
+    </pre>
+  );
+}
+
+function renderOtherFields(context: Record<string, unknown>, exclude: string[]): React.ReactNode {
+  const remaining = Object.entries(context).filter(([k]) => !exclude.includes(k));
+  if (remaining.length === 0) return null;
+
+  return (
+    <div className="mt-2 pt-2 border-t border-gray-100">
+      <p className="text-xs font-medium text-gray-500 mb-1">Other Fields</p>
+      {remaining.map(([key, value]) => (
+        <div key={key} className="flex justify-between text-xs py-0.5">
+          <span className="text-gray-500">{key}</span>
+          <span className="text-gray-700 font-mono max-w-[150px] truncate">
+            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function highlightSql(sql: string): string {
+  // Simple SQL highlighting without dependencies
+  const keywords = ['SELECT', 'FROM', 'WHERE', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET',
+    'DELETE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'AND', 'OR', 'NOT',
+    'IN', 'LIKE', 'BETWEEN', 'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
+    'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'EXISTS', 'UNION', 'CASE',
+    'WHEN', 'THEN', 'ELSE', 'END', 'NULL', 'IS', 'TRUE', 'FALSE'];
+  
+  let highlighted = sql;
+  for (const kw of keywords) {
+    const regex = new RegExp(`\\b${kw}\\b`, 'gi');
+    highlighted = highlighted.replace(regex, match => `<span style="color:#7c3aed;font-weight:600">${match}</span>`);
+  }
+  // Highlight strings
+  highlighted = highlighted.replace(/'[^']*'/g, match => `<span style="color:#059669">${match}</span>`);
+  // Highlight numbers
+  highlighted = highlighted.replace(/\b(\d+)\b/g, match => `<span style="color:#d97706">${match}</span>`);
+  // Highlight comments
+  highlighted = highlighted.replace(/--.*$/gm, match => `<span style="color:#9ca3af;font-style:italic">${match}</span>`);
+
+  return highlighted;
+}
+
 export function EventDetail({ event, onClose }: EventDetailProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -45,14 +231,20 @@ export function EventDetail({ event, onClose }: EventDetailProps) {
             <span className="text-red-600">{event.error.message}</span>
           </div>
         )}
+        {event.operationId && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Operation ID</span>
+            <span className="text-xs font-mono text-gray-600 max-w-[150px] truncate">{event.operationId}</span>
+          </div>
+        )}
       </div>
 
-      <div className="mt-3">
-        <p className="text-xs font-medium text-gray-500 mb-1">Context</p>
-        <pre className="text-xs bg-gray-50 rounded p-2 overflow-auto max-h-48">
-          {JSON.stringify(event.context, null, 2)}
-        </pre>
-      </div>
+      {event.context && Object.keys(event.context).length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-gray-500 mb-1">Context</p>
+          <SmartContext context={event.context} channel={event.channel} />
+        </div>
+      )}
     </div>
   );
 }

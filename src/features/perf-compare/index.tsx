@@ -1,0 +1,234 @@
+import { useState, useCallback, useMemo } from 'react';
+import { analyzeTracingEvents, buildWaterfall, findBottlenecks } from '../../shared/engine';
+import { useFileUpload } from '../../shared/hooks';
+import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
+import { formatDuration } from '../../shared/utils';
+import type { TracingEvent, TracingAnalysis, TraceSpan } from '../../shared/types';
+
+interface ComparedData {
+  name: string;
+  analysis: TracingAnalysis;
+  spans: TraceSpan[];
+  bottlenecks: TraceSpan[];
+}
+
+export function PerfComparePage() {
+  const [dataA, setDataA] = useState<ComparedData | null>(null);
+  const [dataB, setDataB] = useState<ComparedData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nameA, setNameA] = useState('Before');
+  const [nameB, setNameB] = useState('After');
+
+  const handleFileA = useCallback(async (file: File) => {
+    setLoading(true);
+    setError(null);
+    setNameA(file.name.replace(/\.[^/.]+$/, ''));
+    try {
+      const content = await file.text();
+      const events = JSON.parse(content) as TracingEvent[];
+      const analysis = analyzeTracingEvents(events);
+      const spans = buildWaterfall(analysis.operations, analysis.events);
+      const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
+      const bottlenecks = findBottlenecks(allSpans);
+      setDataA({ name: file.name, analysis, spans, bottlenecks });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleFileB = useCallback(async (file: File) => {
+    setLoading(true);
+    setError(null);
+    setNameB(file.name.replace(/\.[^/.]+$/, ''));
+    try {
+      const content = await file.text();
+      const events = JSON.parse(content) as TracingEvent[];
+      const analysis = analyzeTracingEvents(events);
+      const spans = buildWaterfall(analysis.operations, analysis.events);
+      const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
+      const bottlenecks = findBottlenecks(allSpans);
+      setDataB({ name: file.name, analysis, spans, bottlenecks });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  function handleReset() {
+    setDataA(null);
+    setDataB(null);
+    setError(null);
+  }
+
+  const comparison = useMemo(() => {
+    if (!dataA || !dataB) return null;
+
+    const channelStats = new Map<string, { aDuration: number; bDuration: number; aError: number; bError: number }>();
+    for (const cs of dataA.analysis.channelStats) {
+      channelStats.set(cs.channel, { aDuration: cs.avgDuration, bDuration: 0, aError: cs.errorCount, bError: 0 });
+    }
+    for (const cs of dataB.analysis.channelStats) {
+      const existing = channelStats.get(cs.channel) ?? { aDuration: 0, bDuration: 0, aError: 0, bError: 0 };
+      existing.bDuration = cs.avgDuration;
+      existing.bError = cs.errorCount;
+      channelStats.set(cs.channel, existing);
+    }
+
+    return {
+      totalEventsA: dataA.analysis.totalEvents,
+      totalEventsB: dataB.analysis.totalEvents,
+      totalOpsA: dataA.analysis.totalOperations,
+      totalOpsB: dataB.analysis.totalOperations,
+      errorRateA: dataA.analysis.errorRate * 100,
+      errorRateB: dataB.analysis.errorRate * 100,
+      timeRangeA: dataA.analysis.timeRange.end - dataA.analysis.timeRange.start,
+      timeRangeB: dataB.analysis.timeRange.end - dataB.analysis.timeRange.start,
+      bottleneckCountA: dataA.bottlenecks.length,
+      bottleneckCountB: dataB.bottlenecks.length,
+      channels: Array.from(channelStats.entries()).map(([ch, stats]) => ({
+        channel: ch,
+        avgDurationA: stats.aDuration,
+        avgDurationB: stats.bDuration,
+        durationDelta: stats.bDuration - stats.aDuration,
+        durationPercent: stats.aDuration > 0 ? ((stats.bDuration - stats.aDuration) / stats.aDuration) * 100 : 0,
+        errorA: stats.aError,
+        errorB: stats.bError,
+      })),
+    };
+  }, [dataA, dataB]);
+
+  if (!dataA || !dataB) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-800">Performance Comparison</h1>
+          <p className="text-sm text-gray-500 mt-1">Compare two sets of tracing data to identify performance regressions or improvements</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">Before / Baseline</p>
+            <FileUpload onFile={handleFileA} accept=".json" label="Upload baseline tracing" maxSize={50 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">After / Changed</p>
+            <FileUpload onFile={handleFileB} accept=".json" label="Upload changed tracing" maxSize={50 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} />
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <LoadingOverlay visible={loading} message="Comparing..." />
+
+        <div className="mt-8">
+          <EmptyState
+            title="No data to compare"
+            description="Upload two tracing event JSON files (e.g., before and after a code change) to compare performance metrics."
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Performance Comparison</h1>
+          <p className="text-sm text-gray-500">
+            {nameA} vs {nameB}
+          </p>
+        </div>
+        <button onClick={handleReset} className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          Clear & Start Over
+        </button>
+      </div>
+
+      {/* Overview comparison */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-xs font-medium text-gray-500 mb-1">{nameA} (Baseline)</p>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard title="Events" value={dataA.analysis.totalEvents.toLocaleString()} />
+            <StatCard title="Operations" value={dataA.analysis.totalOperations.toLocaleString()} />
+            <StatCard title="Error Rate" value={`${(dataA.analysis.errorRate * 100).toFixed(1)}%`} color={dataA.analysis.errorRate > 0.05 ? 'text-red-600' : ''} />
+            <StatCard title="Duration" value={formatDuration(dataA.analysis.timeRange.end - dataA.analysis.timeRange.start)} />
+          </div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-xs font-medium text-gray-500 mb-1">{nameB} (Changed)</p>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard title="Events" value={dataB.analysis.totalEvents.toLocaleString()} />
+            <StatCard title="Operations" value={dataB.analysis.totalOperations.toLocaleString()} />
+            <StatCard title="Error Rate" value={`${(dataB.analysis.errorRate * 100).toFixed(1)}%`} color={dataB.analysis.errorRate > 0.05 ? 'text-red-600' : ''} />
+            <StatCard title="Duration" value={formatDuration(dataB.analysis.timeRange.end - dataB.analysis.timeRange.start)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Channel comparison */}
+      {comparison && (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
+            <h2 className="text-sm font-semibold text-gray-700">Channel Comparison</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-2 font-medium text-gray-500">Channel</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500">Avg (A)</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500">Avg (B)</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500">Delta</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500">Change</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-500">Errors (A→B)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.channels.map((ch, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-2 font-medium text-gray-700">{ch.channel}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{ch.avgDurationA.toFixed(1)}ms</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-gray-600">{ch.avgDurationB.toFixed(1)}ms</td>
+                    <td className={`px-4 py-2 text-right font-mono text-xs ${
+                      ch.durationDelta > 0 ? 'text-red-600' : ch.durationDelta < 0 ? 'text-emerald-600' : ''
+                    }`}>
+                      {ch.durationDelta > 0 ? '+' : ''}{ch.durationDelta.toFixed(1)}ms
+                    </td>
+                    <td className={`px-4 py-2 text-right font-mono text-xs font-medium ${
+                      ch.durationPercent > 5 ? 'text-red-600' : ch.durationPercent < -5 ? 'text-emerald-600' : 'text-gray-500'
+                    }`}>
+                      {ch.durationPercent > 0 ? '+' : ''}{ch.durationPercent.toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">
+                      <span className={ch.errorA > 0 ? 'text-red-600' : 'text-gray-400'}>{ch.errorA}</span>
+                      <span className="text-gray-400"> → </span>
+                      <span className={ch.errorB > 0 ? 'text-red-600' : 'text-gray-400'}>{ch.errorB}</span>
+                    </td>
+                  </tr>
+                ))}
+                {comparison.channels.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">No common channels found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function flattenChildren(span: { children: TraceSpan[] }): TraceSpan[] {
+  const result: TraceSpan[] = [];
+  for (const child of span.children) {
+    result.push(child);
+    result.push(...flattenChildren(child));
+  }
+  return result;
+}

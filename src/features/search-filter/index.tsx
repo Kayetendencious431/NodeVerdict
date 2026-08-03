@@ -1,0 +1,331 @@
+import { useState, useCallback, useMemo } from 'react';
+import { useRootStore } from '../../stores';
+import { useFileUpload } from '../../shared/hooks';
+import { analyzeTracingEvents } from '../../shared/engine';
+import { ChannelFilter, FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
+import { formatDuration } from '../../shared/utils';
+import type { TracingEvent } from '../../shared/types';
+
+interface SearchOptions {
+  query: string;
+  useRegex: boolean;
+  minDuration: number | null;
+  maxDuration: number | null;
+  status: string[];
+  timeRangeStart: number | null;
+  timeRangeEnd: number | null;
+  caseSensitive: boolean;
+}
+
+export function SearchFilterPage() {
+  const { tracingAnalysis, setTracingAnalysis } = useRootStore();
+  const [searchOptions, setSearchOptions] = useState<SearchOptions>({
+    query: '',
+    useRegex: false,
+    minDuration: null,
+    maxDuration: null,
+    status: [],
+    timeRangeStart: null,
+    timeRangeEnd: null,
+    caseSensitive: false,
+  });
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const handleFileRead = useCallback(async (content: string) => {
+    const events = JSON.parse(content) as TracingEvent[];
+    const analysis = analyzeTracingEvents(events);
+    setTracingAnalysis(analysis);
+  }, [setTracingAnalysis]);
+
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead);
+
+  // Filtered events
+  const filteredEvents = useMemo(() => {
+    if (!tracingAnalysis) return { events: [], operations: [] };
+
+    let events = tracingAnalysis.events;
+
+    // Text search across event context
+    if (searchOptions.query) {
+      try {
+        const regex = searchOptions.useRegex
+          ? new RegExp(searchOptions.query, searchOptions.caseSensitive ? '' : 'i')
+          : new RegExp(escapeRegex(searchOptions.query), searchOptions.caseSensitive ? '' : 'i');
+
+        events = events.filter(e => {
+          const searchTarget = JSON.stringify({ channel: e.channel, context: e.context, operationId: e.operationId });
+          return regex.test(searchTarget);
+        });
+      } catch {
+        // Invalid regex, skip filtering
+      }
+    }
+
+    // Filter by status (via operations)
+    let filteredOperationIds: Set<string> | null = null;
+    if (searchOptions.status.length > 0) {
+      filteredOperationIds = new Set(
+        tracingAnalysis.operations
+          .filter(op => searchOptions.status.includes(op.status))
+          .map(op => op.operationId)
+      );
+      events = events.filter(e => !e.operationId || filteredOperationIds!.has(e.operationId));
+    }
+
+    // Filter by duration (via operations)
+    if (searchOptions.minDuration !== null || searchOptions.maxDuration !== null) {
+      const matchingOps = tracingAnalysis.operations.filter(op => {
+        if (searchOptions.minDuration !== null && op.duration < searchOptions.minDuration) return false;
+        if (searchOptions.maxDuration !== null && op.duration > searchOptions.maxDuration) return false;
+        return true;
+      });
+      const matchingIds = new Set(matchingOps.map(op => op.operationId));
+      events = events.filter(e => !e.operationId || matchingIds.has(e.operationId));
+    }
+
+    // Filter by time range
+    if (searchOptions.timeRangeStart !== null) {
+      events = events.filter(e => e.timestamp >= searchOptions.timeRangeStart!);
+    }
+    if (searchOptions.timeRangeEnd !== null) {
+      events = events.filter(e => e.timestamp <= searchOptions.timeRangeEnd!);
+    }
+
+    const operations = tracingAnalysis.operations.filter(op =>
+      events.some(e => e.operationId === op.operationId)
+    );
+
+    return { events, operations };
+  }, [tracingAnalysis, searchOptions]);
+
+  function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function updateSearch(updates: Partial<SearchOptions>) {
+    setSearchOptions(prev => ({ ...prev, ...updates }));
+  }
+
+  function handleReset() {
+    reset();
+    setTracingAnalysis(null);
+    setSearchOptions({
+      query: '',
+      useRegex: false,
+      minDuration: null,
+      maxDuration: null,
+      status: [],
+      timeRangeStart: null,
+      timeRangeEnd: null,
+      caseSensitive: false,
+    });
+  }
+
+  if (!tracingAnalysis) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-800">Search & Filter</h1>
+          <p className="text-sm text-gray-500 mt-1">Advanced search and filtering across tracing events</p>
+        </div>
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        <LoadingOverlay visible={loading} message="Parsing events..." />
+        <div className="mt-8">
+          <EmptyState title="No data loaded" description="Upload a JSON file with TracingChannel events to search and filter." />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Search & Filter</h1>
+          <p className="text-sm text-gray-500">{tracingAnalysis.totalEvents} events total</p>
+        </div>
+        <div className="w-72">
+          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchOptions.query}
+              onChange={e => updateSearch({ query: e.target.value })}
+              placeholder="Search events (searches channel, context, operationId)..."
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+            />
+          </div>
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={searchOptions.useRegex}
+              onChange={e => updateSearch({ useRegex: e.target.checked })}
+              className="rounded border-gray-300"
+            />
+            Regex
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={searchOptions.caseSensitive}
+              onChange={e => updateSearch({ caseSensitive: e.target.checked })}
+              className="rounded border-gray-300"
+            />
+            Case
+          </label>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            {showAdvanced ? 'Hide Advanced' : 'Advanced'}
+          </button>
+        </div>
+
+        {/* Results count */}
+        <div className="text-xs text-gray-500">
+          {filteredEvents.events.length} / {tracingAnalysis.totalEvents} events match
+          {filteredEvents.events.length !== tracingAnalysis.totalEvents && (
+            <span className="text-gray-400"> — {tracingAnalysis.totalEvents - filteredEvents.events.length} hidden</span>
+          )}
+        </div>
+
+        {/* Advanced Filters */}
+        {showAdvanced && (
+          <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Min Duration (ms)</label>
+              <input
+                type="number"
+                min={0}
+                value={searchOptions.minDuration ?? ''}
+                onChange={e => updateSearch({ minDuration: e.target.value ? Number(e.target.value) : null })}
+                placeholder="Any"
+                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Max Duration (ms)</label>
+              <input
+                type="number"
+                min={0}
+                value={searchOptions.maxDuration ?? ''}
+                onChange={e => updateSearch({ maxDuration: e.target.value ? Number(e.target.value) : null })}
+                placeholder="Any"
+                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Status</label>
+              <div className="flex gap-2">
+                {(['success', 'error', 'incomplete'] as const).map(s => (
+                  <label key={s} className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={searchOptions.status.includes(s)}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          updateSearch({ status: [...searchOptions.status, s] });
+                        } else {
+                          updateSearch({ status: searchOptions.status.filter(x => x !== s) });
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    {s}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Time Range</label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  value={searchOptions.timeRangeStart ?? ''}
+                  onChange={e => updateSearch({ timeRangeStart: e.target.value ? Number(e.target.value) : null })}
+                  placeholder="From"
+                  className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                />
+                <span className="text-xs text-gray-400 self-center">-</span>
+                <input
+                  type="number"
+                  value={searchOptions.timeRangeEnd ?? ''}
+                  onChange={e => updateSearch({ timeRangeEnd: e.target.value ? Number(e.target.value) : null })}
+                  placeholder="To"
+                  className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Results Table */}
+      {filteredEvents.events.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                  <th className="text-left px-4 py-2 font-medium text-gray-500">Timestamp</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500">Channel</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500">Type</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500">Operation</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500">Context</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvents.events.map((event, idx) => {
+                  const op = filteredEvents.operations.find(o => o.operationId === event.operationId);
+                  return (
+                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">
+                        {new Date(event.timestamp).toISOString().slice(11, 23)}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-gray-700">{event.channel}</td>
+                      <td className="px-4 py-2">
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          event.eventType === 'error' ? 'bg-red-100 text-red-700' :
+                          event.eventType === 'start' ? 'bg-emerald-100 text-emerald-700' :
+                          event.eventType === 'end' ? 'bg-blue-100 text-blue-700' :
+                          event.eventType === 'asyncStart' ? 'bg-amber-100 text-amber-700' :
+                          event.eventType === 'asyncEnd' ? 'bg-purple-100 text-purple-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {event.eventType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-gray-600 max-w-[150px] truncate">
+                        {event.operationId ?? '-'}
+                        {op && <span className="text-gray-400 ml-1">({formatDuration(op.duration)})</span>}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-gray-500 max-w-[200px] truncate">
+                        {event.context ? JSON.stringify(event.context).slice(0, 80) : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {filteredEvents.events.length === 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+          <p className="text-sm text-gray-500">No events match your search criteria</p>
+        </div>
+      )}
+    </div>
+  );
+}

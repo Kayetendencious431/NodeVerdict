@@ -27,6 +27,11 @@ export function HeapAnalyzerPage() {
     setHeapAnalysis(null);
   }
 
+  // Wrap the raw error from parseHeapSnapshot with a more helpful message
+  const displayError = error?.includes('"snapshot" field')
+    ? 'This is not a valid .heapsnapshot file. Use Node.js to generate a heap snapshot (node --heapsnapshot-signal=SIGUSR2 app.js) or use the examples/heap-*.heapsnapshot files from the examples directory.'
+    : error;
+
   if (!heapAnalysis) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
@@ -43,7 +48,7 @@ export function HeapAnalyzerPage() {
           fileSize={fileSize}
           onReset={handleReset}
         />
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {displayError && <p className="mt-3 text-sm text-red-600">{displayError}</p>}
         <LoadingOverlay visible={loading} message="Parsing heap snapshot..." />
         <div className="mt-8">
           <EmptyState

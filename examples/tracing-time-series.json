@@ -1,0 +1,80 @@
+[
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000000, "context": {"query": "SELECT * FROM users", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:001"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000001, "context": {"query": "SELECT * FROM users"}, "operationId": "ts:mysql2:q:001"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000015, "context": {"query": "SELECT * FROM users", "rows": 100}, "duration": 15, "operationId": "ts:mysql2:q:001"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000016, "context": {"query": "SELECT * FROM users"}, "operationId": "ts:mysql2:q:001"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000020, "context": {"query": "SELECT * FROM orders", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:002"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000021, "context": {"query": "SELECT * FROM orders"}, "operationId": "ts:mysql2:q:002"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000090, "context": {"query": "SELECT * FROM orders", "rows": 500}, "duration": 70, "operationId": "ts:mysql2:q:002"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000091, "context": {"query": "SELECT * FROM orders"}, "operationId": "ts:mysql2:q:002"},
+
+  {"channel": "redis:get", "eventType": "start", "timestamp": 1710000000100, "context": {"command": "get", "key": "session:abc"}, "operationId": "ts:redis:get:001"},
+  {"channel": "redis:get", "eventType": "end", "timestamp": 1710000000102, "context": {"command": "get", "key": "session:abc", "hit": true}, "duration": 2, "operationId": "ts:redis:get:001"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000110, "context": {"query": "SELECT * FROM products WHERE category = 'electronics'", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:003"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000111, "context": {"query": "SELECT * FROM products WHERE category = 'electronics'"}, "operationId": "ts:mysql2:q:003"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000125, "context": {"query": "SELECT * FROM products WHERE category = 'electronics'", "rows": 75}, "duration": 15, "operationId": "ts:mysql2:q:003"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000126, "context": {"query": "SELECT * FROM products WHERE category = 'electronics'"}, "operationId": "ts:mysql2:q:003"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000200, "context": {"query": "SELECT * FROM users WHERE id = 1", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:004"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000201, "context": {"query": "SELECT * FROM users WHERE id = 1"}, "operationId": "ts:mysql2:q:004"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000208, "context": {"query": "SELECT * FROM users WHERE id = 1", "rows": 1}, "duration": 8, "operationId": "ts:mysql2:q:004"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000209, "context": {"query": "SELECT * FROM users WHERE id = 1"}, "operationId": "ts:mysql2:q:004"},
+
+  {"channel": "ioredis:command", "eventType": "start", "timestamp": 1710000000210, "context": {"command": "hgetall", "key": "user:1:profile"}, "operationId": "ts:ioredis:hgetall:001"},
+  {"channel": "ioredis:command", "eventType": "end", "timestamp": 1710000000213, "context": {"command": "hgetall", "key": "user:1:profile", "fields": 8}, "duration": 3, "operationId": "ts:ioredis:hgetall:001"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000300, "context": {"query": "SELECT * FROM orders WHERE total > 100", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:005"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000301, "context": {"query": "SELECT * FROM orders WHERE total > 100"}, "operationId": "ts:mysql2:q:005"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000350, "context": {"query": "SELECT * FROM orders WHERE total > 100", "rows": 200}, "duration": 50, "operationId": "ts:mysql2:q:005"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000351, "context": {"query": "SELECT * FROM orders WHERE total > 100"}, "operationId": "ts:mysql2:q:005"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000400, "context": {"query": "SELECT * FROM inventory", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:006"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000401, "context": {"query": "SELECT * FROM inventory"}, "operationId": "ts:mysql2:q:006"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000410, "context": {"query": "SELECT * FROM inventory", "rows": 50}, "duration": 10, "operationId": "ts:mysql2:q:006"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000411, "context": {"query": "SELECT * FROM inventory"}, "operationId": "ts:mysql2:q:006"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000500, "context": {"query": "SELECT * FROM users WHERE id = 2", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:007"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000501, "context": {"query": "SELECT * FROM users WHERE id = 2"}, "operationId": "ts:mysql2:q:007"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000506, "context": {"query": "SELECT * FROM users WHERE id = 2", "rows": 1}, "duration": 6, "operationId": "ts:mysql2:q:007"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000507, "context": {"query": "SELECT * FROM users WHERE id = 2"}, "operationId": "ts:mysql2:q:007"},
+
+  {"channel": "redis:set", "eventType": "start", "timestamp": 1710000000510, "context": {"command": "set", "key": "cache:product:1"}, "operationId": "ts:redis:set:001"},
+  {"channel": "redis:set", "eventType": "end", "timestamp": 1710000000511, "context": {"command": "set", "key": "cache:product:1"}, "duration": 1, "operationId": "ts:redis:set:001"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000600, "context": {"query": "SELECT * FROM orders WHERE total > 100", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:008"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000601, "context": {"query": "SELECT * FROM orders WHERE total > 100"}, "operationId": "ts:mysql2:q:008"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000655, "context": {"query": "SELECT * FROM orders WHERE total > 100", "rows": 180}, "duration": 55, "operationId": "ts:mysql2:q:008"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000656, "context": {"query": "SELECT * FROM orders WHERE total > 100"}, "operationId": "ts:mysql2:q:008"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000700, "context": {"query": "SELECT * FROM logs WHERE level = 'error'", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:009"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000701, "context": {"query": "SELECT * FROM logs WHERE level = 'error'"}, "operationId": "ts:mysql2:q:009"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000720, "context": {"query": "SELECT * FROM logs WHERE level = 'error'", "rows": 30}, "duration": 20, "operationId": "ts:mysql2:q:009"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000721, "context": {"query": "SELECT * FROM logs WHERE level = 'error'"}, "operationId": "ts:mysql2:q:009"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000800, "context": {"query": "SELECT * FROM users WHERE id = 3", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:010"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000801, "context": {"query": "SELECT * FROM users WHERE id = 3"}, "operationId": "ts:mysql2:q:010"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000805, "context": {"query": "SELECT * FROM users WHERE id = 3", "rows": 1}, "duration": 5, "operationId": "ts:mysql2:q:010"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000806, "context": {"query": "SELECT * FROM users WHERE id = 3"}, "operationId": "ts:mysql2:q:010"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000900, "context": {"query": "SELECT * FROM analytics WHERE date = '2026-01-01'", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:011"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000000901, "context": {"query": "SELECT * FROM analytics WHERE date = '2026-01-01'"}, "operationId": "ts:mysql2:q:011"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000950, "context": {"query": "SELECT * FROM analytics WHERE date = '2026-01-01'", "rows": 1000}, "duration": 50, "operationId": "ts:mysql2:q:011"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000000951, "context": {"query": "SELECT * FROM analytics WHERE date = '2026-01-01'"}, "operationId": "ts:mysql2:q:011"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000001000, "context": {"query": "SELECT * FROM users", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:012"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000001001, "context": {"query": "SELECT * FROM users"}, "operationId": "ts:mysql2:q:012"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000001010, "context": {"query": "SELECT * FROM users", "rows": 100}, "duration": 10, "operationId": "ts:mysql2:q:012"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000001011, "context": {"query": "SELECT * FROM users"}, "operationId": "ts:mysql2:q:012"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000001100, "context": {"query": "SELECT * FROM products WHERE price > 50", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:013"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000001101, "context": {"query": "SELECT * FROM products WHERE price > 50"}, "operationId": "ts:mysql2:q:013"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000001120, "context": {"query": "SELECT * FROM products WHERE price > 50", "rows": 45}, "duration": 20, "operationId": "ts:mysql2:q:013"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000001121, "context": {"query": "SELECT * FROM products WHERE price > 50"}, "operationId": "ts:mysql2:q:013"},
+
+  {"channel": "mysql2:query", "eventType": "start", "timestamp": 1710000001200, "context": {"query": "SELECT * FROM orders WHERE total > 100", "server.address": "db-1.example.com", "server.port": 3306}, "operationId": "ts:mysql2:q:014"},
+  {"channel": "mysql2:query", "eventType": "asyncStart", "timestamp": 1710000001201, "context": {"query": "SELECT * FROM orders WHERE total > 100"}, "operationId": "ts:mysql2:q:014"},
+  {"channel": "mysql2:query", "eventType": "end", "timestamp": 1710000001250, "context": {"query": "SELECT * FROM orders WHERE total > 100", "rows": 200}, "duration": 50, "operationId": "ts:mysql2:q:014"},
+  {"channel": "mysql2:query", "eventType": "asyncEnd", "timestamp": 1710000001251, "context": {"query": "SELECT * FROM orders WHERE total > 100"}, "operationId": "ts:mysql2:q:014"}
+]

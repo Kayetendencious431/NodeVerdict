@@ -1,0 +1,327 @@
+[
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710000000000,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = ?",
+      "values": [42],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000001,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = ?",
+      "values": [42]
+    },
+    "operationId": "mysql2:query:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "end",
+    "timestamp": 1710000000045,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = ?",
+      "values": [42],
+      "rows": 1
+    },
+    "duration": 45,
+    "operationId": "mysql2:query:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000046,
+    "context": {
+      "query": "SELECT * FROM users WHERE id = ?",
+      "values": [42]
+    },
+    "operationId": "mysql2:query:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710000000050,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000051,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99]
+    },
+    "operationId": "mysql2:query:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "end",
+    "timestamp": 1710000000120,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99],
+      "rows": 1,
+      "insertId": 1001
+    },
+    "duration": 70,
+    "operationId": "mysql2:query:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000121,
+    "context": {
+      "query": "INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)",
+      "values": [42, "widget", 9.99]
+    },
+    "operationId": "mysql2:query:2"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710000000150,
+    "context": {
+      "query": "SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.price > ? ORDER BY p.price DESC LIMIT 20",
+      "values": [100],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:3"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000151,
+    "context": {
+      "query": "SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.price > ? ORDER BY p.price DESC LIMIT 20",
+      "values": [100]
+    },
+    "operationId": "mysql2:query:3"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "end",
+    "timestamp": 1710000000450,
+    "context": {
+      "query": "SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.price > ? ORDER BY p.price DESC LIMIT 20",
+      "values": [100],
+      "rows": 15
+    },
+    "duration": 300,
+    "operationId": "mysql2:query:3"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000451,
+    "context": {
+      "query": "SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.price > ? ORDER BY p.price DESC LIMIT 20",
+      "values": [100]
+    },
+    "operationId": "mysql2:query:3"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "start",
+    "timestamp": 1710000000005,
+    "context": {
+      "command": "GET",
+      "args": ["user:42:session"],
+      "server.address": "redis-cache-1.example.com",
+      "server.port": 6379
+    },
+    "operationId": "redis:cmd:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000006,
+    "context": {
+      "command": "GET",
+      "args": ["user:42:session"]
+    },
+    "operationId": "redis:cmd:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "end",
+    "timestamp": 1710000000008,
+    "context": {
+      "command": "GET",
+      "args": ["user:42:session"],
+      "result": "{\"token\":\"abc123\",\"role\":\"admin\"}"
+    },
+    "duration": 3,
+    "operationId": "redis:cmd:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000009,
+    "context": {
+      "command": "GET",
+      "args": ["user:42:session"]
+    },
+    "operationId": "redis:cmd:1"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "start",
+    "timestamp": 1710000000010,
+    "context": {
+      "command": "SET",
+      "args": ["product:1001:views", "0"],
+      "server.address": "redis-cache-1.example.com",
+      "server.port": 6379
+    },
+    "operationId": "redis:cmd:2"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000011,
+    "context": {
+      "command": "SET",
+      "args": ["product:1001:views", "0"]
+    },
+    "operationId": "redis:cmd:2"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "end",
+    "timestamp": 1710000000012,
+    "context": {
+      "command": "SET",
+      "args": ["product:1001:views", "0"],
+      "result": "OK"
+    },
+    "duration": 2,
+    "operationId": "redis:cmd:2"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000013,
+    "context": {
+      "command": "SET",
+      "args": ["product:1001:views", "0"]
+    },
+    "operationId": "redis:cmd:2"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "start",
+    "timestamp": 1710000000015,
+    "context": {
+      "command": "LRANGE",
+      "args": ["recent_orders:42", "0", "9"],
+      "server.address": "redis-cache-1.example.com",
+      "server.port": 6379
+    },
+    "operationId": "redis:cmd:3"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000016,
+    "context": {
+      "command": "LRANGE",
+      "args": ["recent_orders:42", "0", "9"]
+    },
+    "operationId": "redis:cmd:3"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "end",
+    "timestamp": 1710000000018,
+    "context": {
+      "command": "LRANGE",
+      "args": ["recent_orders:42", "0", "9"],
+      "result": ["order_1001", "order_1000", "order_999"]
+    },
+    "duration": 3,
+    "operationId": "redis:cmd:3"
+  },
+  {
+    "channel": "ioredis:command",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000019,
+    "context": {
+      "command": "LRANGE",
+      "args": ["recent_orders:42", "0", "9"]
+    },
+    "operationId": "redis:cmd:3"
+  },
+  {
+    "channel": "mysql2:pool:connect",
+    "eventType": "start",
+    "timestamp": 1710000000000,
+    "context": {
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306,
+      "user": "app_user",
+      "database": "ecommerce"
+    },
+    "operationId": "pool:connect:1"
+  },
+  {
+    "channel": "mysql2:pool:connect",
+    "eventType": "end",
+    "timestamp": 1710000000030,
+    "context": {
+      "threadId": 128,
+      "server.address": "db-prod-1.example.com"
+    },
+    "duration": 30,
+    "operationId": "pool:connect:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710000000460,
+    "context": {
+      "query": "UPDATE inventory SET stock = stock - 1 WHERE product_id = ? AND stock > 0",
+      "values": [1001],
+      "server.address": "db-prod-1.example.com",
+      "server.port": 3306
+    },
+    "operationId": "mysql2:query:4"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000461,
+    "context": {
+      "query": "UPDATE inventory SET stock = stock - 1 WHERE product_id = ? AND stock > 0",
+      "values": [1001]
+    },
+    "operationId": "mysql2:query:4"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "error",
+    "timestamp": 1710000000470,
+    "context": {
+      "query": "UPDATE inventory SET stock = stock - 1 WHERE product_id = ? AND stock > 0",
+      "values": [1001]
+    },
+    "error": {
+      "message": "Deadlock found when trying to get lock; try restarting transaction",
+      "code": "ER_LOCK_DEADLOCK",
+      "errno": 1213
+    },
+    "operationId": "mysql2:query:4"
+  }
+]

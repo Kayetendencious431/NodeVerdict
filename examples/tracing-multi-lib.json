@@ -1,0 +1,266 @@
+[
+  {
+    "channel": "pg:query",
+    "eventType": "start",
+    "timestamp": 1710000001000,
+    "context": {
+      "query": "SELECT * FROM users WHERE email = $1",
+      "values": ["test@example.com"],
+      "server.address": "pg-primary.example.com",
+      "server.port": 5432,
+      "db.name": "app_production"
+    },
+    "operationId": "pg:query:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710000001001,
+    "context": {
+      "query": "SELECT * FROM users WHERE email = $1",
+      "values": ["test@example.com"]
+    },
+    "operationId": "pg:query:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "end",
+    "timestamp": 1710000001020,
+    "context": {
+      "query": "SELECT * FROM users WHERE email = $1",
+      "values": ["test@example.com"],
+      "rowCount": 1
+    },
+    "duration": 20,
+    "operationId": "pg:query:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000001021,
+    "context": {
+      "query": "SELECT * FROM users WHERE email = $1",
+      "values": ["test@example.com"]
+    },
+    "operationId": "pg:query:1"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "start",
+    "timestamp": 1710000001050,
+    "context": {
+      "query": "INSERT INTO audit_logs (action, user_id, details) VALUES ($1, $2, $3)",
+      "values": ["login", 42, "{\"ip\":\"10.0.0.1\"}"],
+      "server.address": "pg-primary.example.com",
+      "server.port": 5432,
+      "db.name": "app_production"
+    },
+    "operationId": "pg:query:2"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "asyncStart",
+    "timestamp": 1710000001051,
+    "context": {
+      "query": "INSERT INTO audit_logs (action, user_id, details) VALUES ($1, $2, $3)",
+      "values": ["login", 42, "{\"ip\":\"10.0.0.1\"}"]
+    },
+    "operationId": "pg:query:2"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "end",
+    "timestamp": 1710000001055,
+    "context": {
+      "query": "INSERT INTO audit_logs (action, user_id, details) VALUES ($1, $2, $3)",
+      "values": ["login", 42, "{\"ip\":\"10.0.0.1\"}"],
+      "rowCount": 1
+    },
+    "duration": 5,
+    "operationId": "pg:query:2"
+  },
+  {
+    "channel": "pg:query",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000001056,
+    "context": {
+      "query": "INSERT INTO audit_logs (action, user_id, details) VALUES ($1, $2, $3)",
+      "values": ["login", 42, "{\"ip\":\"10.0.0.1\"}"]
+    },
+    "operationId": "pg:query:2"
+  },
+  {
+    "channel": "kafkajs:producer:send",
+    "eventType": "start",
+    "timestamp": 1710000001100,
+    "context": {
+      "topic": "order_events",
+      "messages": 1,
+      "broker": "kafka-broker-1:9092"
+    },
+    "operationId": "kafka:send:1"
+  },
+  {
+    "channel": "kafkajs:producer:send",
+    "eventType": "asyncStart",
+    "timestamp": 1710000001101,
+    "context": {
+      "topic": "order_events",
+      "messages": 1
+    },
+    "operationId": "kafka:send:1"
+  },
+  {
+    "channel": "kafkajs:producer:send",
+    "eventType": "end",
+    "timestamp": 1710000001150,
+    "context": {
+      "topic": "order_events",
+      "messages": 1,
+      "offset": "1042"
+    },
+    "duration": 50,
+    "operationId": "kafka:send:1"
+  },
+  {
+    "channel": "kafkajs:producer:send",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000001151,
+    "context": {
+      "topic": "order_events",
+      "messages": 1
+    },
+    "operationId": "kafka:send:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710000000000,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders",
+      "http.requestId": "req-abc-123"
+    },
+    "operationId": "express:req:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000001,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders"
+    },
+    "operationId": "express:req:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710000000460,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders",
+      "http.statusCode": 201,
+      "http.responseTime": 460
+    },
+    "duration": 460,
+    "operationId": "express:req:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000461,
+    "context": {
+      "http.method": "POST",
+      "http.url": "/api/orders"
+    },
+    "operationId": "express:req:1"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710000000005,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products?page=1&limit=20",
+      "http.requestId": "req-def-456"
+    },
+    "operationId": "express:req:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000006,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products?page=1&limit=20"
+    },
+    "operationId": "express:req:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710000000452,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products?page=1&limit=20",
+      "http.statusCode": 200,
+      "http.responseTime": 452
+    },
+    "duration": 452,
+    "operationId": "express:req:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000453,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/products?page=1&limit=20"
+    },
+    "operationId": "express:req:2"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "start",
+    "timestamp": 1710000000008,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/health",
+      "http.requestId": "req-ghi-789"
+    },
+    "operationId": "express:req:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncStart",
+    "timestamp": 1710000000009,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/health"
+    },
+    "operationId": "express:req:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "end",
+    "timestamp": 1710000000015,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/health",
+      "http.statusCode": 200
+    },
+    "duration": 7,
+    "operationId": "express:req:3"
+  },
+  {
+    "channel": "express:request",
+    "eventType": "asyncEnd",
+    "timestamp": 1710000000016,
+    "context": {
+      "http.method": "GET",
+      "http.url": "/api/health"
+    },
+    "operationId": "express:req:3"
+  }
+]

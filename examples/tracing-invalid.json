@@ -1,0 +1,44 @@
+[
+  {
+    "channel": "invalid-channel-name",
+    "eventType": "start",
+    "timestamp": 1710000001000,
+    "context": {},
+    "operationId": "bad:1"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "start",
+    "timestamp": 1710000001010,
+    "context": {},
+    "operationId": "mysql2:query:orphan"
+  },
+  {
+    "channel": "mysql2:query",
+    "eventType": "end",
+    "timestamp": 1710000001020,
+    "context": {},
+    "operationId": "mysql2:query:no-start"
+  },
+  {
+    "channel": "redis:command",
+    "eventType": "start",
+    "timestamp": 1710000001030,
+    "context": {},
+    "operationId": "redis:cmd:1"
+  },
+  {
+    "channel": "redis:command",
+    "eventType": "start",
+    "timestamp": 1710000001031,
+    "context": {},
+    "operationId": "redis:cmd:1"
+  },
+  {
+    "channel": "redis:command",
+    "eventType": "end",
+    "timestamp": 1710000001035,
+    "context": {},
+    "operationId": "redis:cmd:1"
+  }
+]

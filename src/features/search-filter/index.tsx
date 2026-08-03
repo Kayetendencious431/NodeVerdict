@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { analyzeTracingEvents } from '../../shared/engine';
 import { ChannelFilter, FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatDuration } from '../../shared/utils';
@@ -37,7 +38,8 @@ export function SearchFilterPage() {
     setTracingAnalysis(analysis);
   }, [setTracingAnalysis]);
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead, setProgress);
 
   // Filtered events
   const filteredEvents = useMemo(() => {
@@ -128,7 +130,7 @@ export function SearchFilterPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Search & Filter</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Advanced search and filtering across tracing events</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Parsing events..." />
         <div className="mt-8">
@@ -146,7 +148,7 @@ export function SearchFilterPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events total</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         </div>
       </div>
 

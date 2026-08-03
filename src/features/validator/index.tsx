@@ -1,6 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { validateEvents } from '../../shared/engine';
 import { FileUpload, EmptyState, LoadingOverlay, StatCard } from '../../shared/components';
 import type { TracingEvent } from '../../shared/types';
@@ -16,11 +17,12 @@ function severityBadge(severity: string) {
 
 export function ValidatorPage() {
   const { validationResults, setValidationResults } = useRootStore();
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const events = JSON.parse(content) as TracingEvent[];
     const results = validateEvents(events);
     setValidationResults(results);
-  }, [setValidationResults]));
+  }, [setValidationResults]), setProgress);
 
   function handleReset() {
     reset();
@@ -47,7 +49,7 @@ export function ValidatorPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Event Validator</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Validate TracingChannel events against spec conventions</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Validating..." />
         <div className="mt-8">
@@ -75,6 +77,8 @@ export function ValidatorPage() {
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
+            loading={loading}
+            progress={progress}
           />
         </div>
       </div>

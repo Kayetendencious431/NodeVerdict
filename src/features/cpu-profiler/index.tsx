@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { analyzeCpuProfile } from '../../shared/engine';
 import { FlameGraph } from './components/FlameGraph';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
@@ -9,10 +10,11 @@ import type { CpuProfileAnalysis } from '../../shared/types';
 export function CpuProfilerPage() {
   const [analysis, setAnalysis] = useState<CpuProfileAnalysis | null>(null);
   const [sortBy, setSortBy] = useState<'self' | 'total'>('total');
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const result = analyzeCpuProfile(content);
     setAnalysis(result);
-  }, []));
+  }, []), setProgress);
 
   // Must be before any early return to keep hooks consistent
   const sortedFunctions = useMemo(() => {
@@ -46,6 +48,8 @@ export function CpuProfilerPage() {
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
+          loading={loading}
+          progress={progress}
         />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Analyzing CPU profile..." />
@@ -77,6 +81,8 @@ export function CpuProfilerPage() {
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
+            loading={loading}
+            progress={progress}
           />
         </div>
       </div>

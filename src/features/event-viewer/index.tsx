@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { analyzeTracingEvents } from '../../shared/engine';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { EventTimeline } from './components/EventTimeline';
 import { EventDetail } from './components/EventDetail';
 import { EventSummary } from './components/EventSummary';
@@ -28,7 +29,8 @@ export function EventViewerPage() {
     setSelectedChannels(analysis.channels);
   }, [setTracingAnalysis, setSelectedChannels]);
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead, setProgress);
 
   const filteredEvents = useMemo(() => {
     if (!tracingAnalysis) return [];
@@ -64,6 +66,8 @@ export function EventViewerPage() {
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
+          loading={loading}
+          progress={progress}
         />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Parsing events..." />
@@ -93,6 +97,8 @@ export function EventViewerPage() {
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
+            loading={loading}
+            progress={progress}
           />
         </div>
       </div>

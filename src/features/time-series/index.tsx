@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { analyzeTracingEvents } from '../../shared/engine';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import type { TracingEvent, TracingAnalysis } from '../../shared/types';
@@ -245,11 +246,12 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
 
 export function TimeSeriesPage() {
   const { tracingAnalysis, setTracingAnalysis } = useRootStore();
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const events = JSON.parse(content) as TracingEvent[];
     const analysis = analyzeTracingEvents(events);
     setTracingAnalysis(analysis);
-  }, [setTracingAnalysis]));
+  }, [setTracingAnalysis]), setProgress);
 
   function handleReset() {
     reset();
@@ -263,7 +265,7 @@ export function TimeSeriesPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Time Series Analysis</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Visualize event throughput, latency distribution, and performance trends over time</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Analyzing..." />
         <div className="mt-8">
@@ -285,7 +287,7 @@ export function TimeSeriesPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         </div>
       </div>
 

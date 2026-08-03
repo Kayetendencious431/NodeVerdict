@@ -1,6 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks } from '../../shared/engine';
 import { WaterfallChart } from './components/WaterfallChart';
 import { BottleneckList } from './components/BottleneckList';
@@ -10,11 +11,12 @@ import { formatDuration } from '../../shared/utils';
 
 export function TraceViewerPage() {
   const { traceData, setTraceData } = useRootStore();
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const events = JSON.parse(content) as TracingEvent[];
     const analysis = analyzeTracingEvents(events);
     setTraceData(analysis);
-  }, [setTraceData]));
+  }, [setTraceData]), setProgress);
 
   function handleReset() {
     reset();
@@ -45,7 +47,7 @@ export function TraceViewerPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Trace Waterfall View</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Upload tracing events to visualize async operation chains</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Building trace..." />
         <div className="mt-8">
@@ -74,6 +76,8 @@ export function TraceViewerPage() {
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
+            loading={loading}
+            progress={progress}
           />
         </div>
       </div>

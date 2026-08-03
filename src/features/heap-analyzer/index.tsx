@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { parseHeapSnapshot, analyzeHeap } from '../../shared/engine';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
 
@@ -16,11 +17,12 @@ function severityColor(severity: string) {
 
 export function HeapAnalyzerPage() {
   const { heapAnalysis, setHeapAnalysis } = useRootStore();
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
     const snapshot = parseHeapSnapshot(content);
     const analysis = analyzeHeap(snapshot);
     setHeapAnalysis(analysis);
-  }, [setHeapAnalysis]));
+  }, [setHeapAnalysis]), setProgress);
 
   function handleReset() {
     reset();
@@ -47,6 +49,8 @@ export function HeapAnalyzerPage() {
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
+          loading={loading}
+          progress={progress}
         />
         {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
         <LoadingOverlay visible={loading} message="Parsing heap snapshot..." />
@@ -76,6 +80,8 @@ export function HeapAnalyzerPage() {
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
+            loading={loading}
+            progress={progress}
           />
         </div>
       </div>

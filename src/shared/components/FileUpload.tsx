@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, type DragEvent } from 'react';
+import type { ProgressInfo } from '../hooks/useFileUpload';
 
 interface FileUploadProps {
   onFile: (file: File) => void;
@@ -9,9 +10,11 @@ interface FileUploadProps {
   fileName?: string | null;
   fileSize?: number | null;
   onReset?: () => void;
+  loading?: boolean;
+  progress?: ProgressInfo | null;
 }
 
-export function FileUpload({ onFile, accept = '.json', label = 'Upload file', disabled, maxSize, fileName, fileSize, onReset }: FileUploadProps) {
+export function FileUpload({ onFile, accept = '.json', label = 'Upload file', disabled, maxSize, fileName, fileSize, onReset, loading, progress }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -41,6 +44,35 @@ export function FileUpload({ onFile, accept = '.json', label = 'Upload file', di
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
+  // Loading state with progress bar
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-2 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg">
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 text-indigo-500 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Loading file...</p>
+            {progress && (
+              <p className="text-xs text-indigo-500">
+                {formatFileSize(progress.loaded)} / {formatFileSize(progress.total)} ({progress.percent}%)
+              </p>
+            )}
+          </div>
+        </div>
+        {progress && (
+          <div className="w-full h-1.5 bg-indigo-200 dark:bg-indigo-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Show loaded file state with clear button
   if (fileName) {
     return (
@@ -67,7 +99,7 @@ export function FileUpload({ onFile, accept = '.json', label = 'Upload file', di
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => (disabled ? null : inputRef.current?.click())}
       className={`
         border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
         ${dragOver ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-800'}

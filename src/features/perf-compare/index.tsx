@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { analyzeTracingEvents, buildWaterfall, findBottlenecks } from '../../shared/engine';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatDuration } from '../../shared/utils';
 import type { TracingEvent, TracingAnalysis, TraceSpan } from '../../shared/types';
@@ -19,13 +20,16 @@ export function PerfComparePage() {
   const [error, setError] = useState<string | null>(null);
   const [nameA, setNameA] = useState('Before');
   const [nameB, setNameB] = useState('After');
+  const [progressA, setProgressA] = useState<ProgressInfo | null>(null);
+  const [progressB, setProgressB] = useState<ProgressInfo | null>(null);
 
   const handleFileA = useCallback(async (file: File) => {
     setLoading(true);
     setError(null);
+    setProgressA({ loaded: 0, total: file.size, percent: 0 });
     setNameA(file.name.replace(/\.[^/.]+$/, ''));
     try {
-      const content = await file.text();
+      const content = await readFileWithProgress(file, setProgressA);
       const events = JSON.parse(content) as TracingEvent[];
       const analysis = analyzeTracingEvents(events);
       const spans = buildWaterfall(analysis.operations, analysis.events);
@@ -42,9 +46,10 @@ export function PerfComparePage() {
   const handleFileB = useCallback(async (file: File) => {
     setLoading(true);
     setError(null);
+    setProgressB({ loaded: 0, total: file.size, percent: 0 });
     setNameB(file.name.replace(/\.[^/.]+$/, ''));
     try {
-      const content = await file.text();
+      const content = await readFileWithProgress(file, setProgressB);
       const events = JSON.parse(content) as TracingEvent[];
       const analysis = analyzeTracingEvents(events);
       const spans = buildWaterfall(analysis.operations, analysis.events);
@@ -62,6 +67,8 @@ export function PerfComparePage() {
     setDataA(null);
     setDataB(null);
     setError(null);
+    setProgressA(null);
+    setProgressB(null);
   }
 
   const comparison = useMemo(() => {
@@ -112,11 +119,11 @@ export function PerfComparePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Before / Baseline</p>
-            <FileUpload onFile={handleFileA} accept=".json" label="Upload baseline tracing" maxSize={500 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} />
+            <FileUpload onFile={handleFileA} accept=".json" label="Upload baseline tracing" maxSize={500 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} loading={loading} progress={progressA} />
           </div>
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">After / Changed</p>
-            <FileUpload onFile={handleFileB} accept=".json" label="Upload changed tracing" maxSize={500 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} />
+            <FileUpload onFile={handleFileB} accept=".json" label="Upload changed tracing" maxSize={500 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} loading={loading} progress={progressB} />
           </div>
         </div>
 
@@ -231,4 +238,18 @@ function flattenChildren(span: { children: TraceSpan[] }): TraceSpan[] {
     result.push(...flattenChildren(child));
   }
   return result;
+}
+
+function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    reader.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });
+      }
+    };
+    reader.readAsText(file);
+  });
 }

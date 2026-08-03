@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { parseHeapSnapshot, diffHeapSnapshots } from '../../shared/engine';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
 import type { HeapSnapshot } from '../../shared/types';
@@ -14,13 +15,16 @@ export function HeapDiffPage() {
   const [error, setError] = useState<string | null>(null);
   const [fileAName, setFileAName] = useState<string | null>(null);
   const [fileBName, setFileBName] = useState<string | null>(null);
+  const [progressA, setProgressA] = useState<ProgressInfo | null>(null);
+  const [progressB, setProgressB] = useState<ProgressInfo | null>(null);
 
   const handleFileA = useCallback(async (file: File) => {
     setLoading(true);
     setError(null);
     setFileAName(file.name);
+    setProgressA({ loaded: 0, total: file.size, percent: 0 });
     try {
-      const content = await file.text();
+      const content = await readFileWithProgress(file, setProgressA);
       const snapshot = parseHeapSnapshot(content);
       setSnapshotA(snapshot);
       if (snapshotB) {
@@ -42,8 +46,9 @@ export function HeapDiffPage() {
     setLoading(true);
     setError(null);
     setFileBName(file.name);
+    setProgressB({ loaded: 0, total: file.size, percent: 0 });
     try {
-      const content = await file.text();
+      const content = await readFileWithProgress(file, setProgressB);
       const snapshot = parseHeapSnapshot(content);
       setSnapshotB(snapshot);
       if (snapshotA) {
@@ -68,6 +73,8 @@ export function HeapDiffPage() {
     setError(null);
     setFileAName(null);
     setFileBName(null);
+    setProgressA(null);
+    setProgressB(null);
   }
 
   if (!diffResult) {
@@ -88,6 +95,8 @@ export function HeapDiffPage() {
               maxSize={3 * 1024 * 1024 * 1024}
               fileName={fileAName}
               onReset={() => { setSnapshotA(null); setDiffResult(null); setFileAName(null); }}
+              loading={loading}
+              progress={progressA}
             />
           </div>
           <div>
@@ -99,6 +108,8 @@ export function HeapDiffPage() {
               maxSize={3 * 1024 * 1024 * 1024}
               fileName={fileBName}
               onReset={() => { setSnapshotB(null); setDiffResult(null); setFileBName(null); }}
+              loading={loading}
+              progress={progressB}
             />
           </div>
         </div>
@@ -218,4 +229,18 @@ export function HeapDiffPage() {
       </div>
     </div>
   );
+}
+
+function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    reader.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });
+      }
+    };
+    reader.readAsText(file);
+  });
 }

@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload } from '../../shared/hooks';
+import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { analyzeTracingEvents, generateReport, decompressReport } from '../../shared/engine';
 import { encodeReportToHash, decodeReportFromHash } from '../../shared/utils';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
@@ -22,7 +23,8 @@ export function ReportPage() {
     setReportData(report);
   }, [setReportData]);
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead, setProgress);
 
   function handleReset() {
     reset();
@@ -57,7 +59,7 @@ export function ReportPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Report Generator</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Generate shareable diagnostic reports from tracing data</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to generate report" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to generate report" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Generating report..." />
         <div className="mt-8">
@@ -86,6 +88,8 @@ export function ReportPage() {
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
+            loading={loading}
+            progress={progress}
           />
         </div>
       </div>

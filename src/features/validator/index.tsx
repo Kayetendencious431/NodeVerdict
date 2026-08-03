@@ -62,8 +62,21 @@ export function ValidatorPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Validation Results</h1>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Validation Results</h1>
+        </div>
+        <div className="w-72">
+          <FileUpload
+            onFile={handleFile}
+            accept=".json"
+            label="Upload tracing events to validate"
+            maxSize={50 * 1024 * 1024}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+          />
+        </div>
       </div>
 
       {stats && (

@@ -57,9 +57,22 @@ export function HeapAnalyzerPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Heap Analysis</h1>
-        <p className="text-sm text-gray-500">{heapAnalysis.snapshot.nodeCount.toLocaleString()} nodes, {heapAnalysis.snapshot.edgeCount.toLocaleString()} edges</p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Heap Analysis</h1>
+          <p className="text-sm text-gray-500">{heapAnalysis.snapshot.nodeCount.toLocaleString()} nodes, {heapAnalysis.snapshot.edgeCount.toLocaleString()} edges</p>
+        </div>
+        <div className="w-72">
+          <FileUpload
+            onFile={handleFile}
+            accept=".heapsnapshot,.json"
+            label="Upload heap snapshot (.heapsnapshot)"
+            maxSize={200 * 1024 * 1024}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">

@@ -72,9 +72,22 @@ export function ReportPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Diagnostic Report</h1>
-        <p className="text-sm text-gray-500">Generated {new Date(reportData.generatedAt).toLocaleString()}</p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Diagnostic Report</h1>
+          <p className="text-sm text-gray-500">Generated {new Date(reportData.generatedAt).toLocaleString()}</p>
+        </div>
+        <div className="w-72">
+          <FileUpload
+            onFile={handleFile}
+            accept=".json"
+            label="Upload tracing events to generate report"
+            maxSize={50 * 1024 * 1024}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+          />
+        </div>
       </div>
 
       {/* Key Findings */}

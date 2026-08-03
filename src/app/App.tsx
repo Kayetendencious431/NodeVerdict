@@ -10,6 +10,7 @@ import { SearchFilterPage } from '../features/search-filter';
 import { TimeSeriesPage } from '../features/time-series';
 import { PerfComparePage } from '../features/perf-compare';
 import { useUIStore } from '../stores';
+import { TutorialPage } from '../features/tutorial';
 import { useEffect } from 'react';
 
 function HomePage() {
@@ -90,6 +91,15 @@ function HomePage() {
           className="md:col-span-2"
         />
       </div>
+
+      <div className="mt-6">
+        <FeatureCard
+          title="Tutorial"
+          description="Learn how to generate diagnostic data from your Node.js project and use all of NodeVerdict's features."
+          icon="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+          onClick={() => navigate('tutorial')}
+        />
+      </div>
     </div>
   );
 }
@@ -140,6 +150,7 @@ export function App() {
       <div style={{ display: currentPage === 'search-filter' ? 'block' : 'none' }}><SearchFilterPage /></div>
       <div style={{ display: currentPage === 'time-series' ? 'block' : 'none' }}><TimeSeriesPage /></div>
       <div style={{ display: currentPage === 'perf-compare' ? 'block' : 'none' }}><PerfComparePage /></div>
+      <div style={{ display: currentPage === 'tutorial' ? 'block' : 'none' }}><TutorialPage /></div>
     </AppShell>
   );
 }

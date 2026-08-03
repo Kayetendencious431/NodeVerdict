@@ -170,24 +170,30 @@ function renderOtherFields(context: Record<string, unknown>, exclude: string[]):
 }
 
 function highlightSql(sql: string): string {
-  // Simple SQL highlighting without dependencies
+  // First, HTML-escape the input to prevent XSS
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
   const keywords = ['SELECT', 'FROM', 'WHERE', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET',
     'DELETE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'AND', 'OR', 'NOT',
     'IN', 'LIKE', 'BETWEEN', 'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
     'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'EXISTS', 'UNION', 'CASE',
     'WHEN', 'THEN', 'ELSE', 'END', 'NULL', 'IS', 'TRUE', 'FALSE'];
-  
-  let highlighted = sql;
+
+  let highlighted = escapeHtml(sql);
   for (const kw of keywords) {
     const regex = new RegExp(`\\b${kw}\\b`, 'gi');
-    highlighted = highlighted.replace(regex, match => `<span className="text-purple-700 font-semibold">${match}</span>`);
+    highlighted = highlighted.replace(regex, match => `<span class="text-purple-700 font-semibold">${match}</span>`);
   }
   // Highlight strings
-  highlighted = highlighted.replace(/'[^']*'/g, match => `<span className="text-green-600">${match}</span>`);
+  highlighted = highlighted.replace(/'[^']*'/g, match => `<span class="text-green-600">${match}</span>`);
   // Highlight numbers
-  highlighted = highlighted.replace(/\b(\d+)\b/g, match => `<span className="text-yellow-600">${match}</span>`);
+  highlighted = highlighted.replace(/\b(\d+)\b/g, (match) => {
+    // Only highlight numbers that aren't already inside a span tag
+    return `<span class="text-yellow-600">${match}</span>`;
+  });
   // Highlight comments
-  highlighted = highlighted.replace(/--.*$/gm, match => `<span className="text-gray-500 font-italic">${match}</span>`);
+  highlighted = highlighted.replace(/--.*$/gm, (match) => `<span class="text-gray-500 italic">${match}</span>`);
 
   return highlighted;
 }

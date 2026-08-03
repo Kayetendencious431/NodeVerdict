@@ -16,7 +16,7 @@ Add a subscription script to your Node.js application to capture all TracingChan
 
 ```js
 // capture-events.js
-const { subscribe } = require('diagnostics_channel');
+const diagnostics_channel = require('diagnostics_channel');
 
 const capturedEvents = [];
 const MAX_EVENTS = 10000;
@@ -34,9 +34,9 @@ const channels = [
 ];
 
 for (const channelName of channels) {
-  const channel = subscribe(channelName);
-  if (channel) {
-    channel.subscribe((event) => {
+  const ch = diagnostics_channel.channel(channelName);
+  if (ch) {
+    ch.subscribe((event) => {
       if (capturedEvents.length >= MAX_EVENTS) return;
       capturedEvents.push({
         channel: channelName,
@@ -59,14 +59,14 @@ process.on('SIGINT', () => {
 ```js
 const express = require('express');
 const mysql = require('mysql2/promise');
-const { subscribe } = require('diagnostics_channel');
+const diagnostics_channel = require('diagnostics_channel');
 
 const app = express();
 const capturedEvents = [];
 
 const channels = ['mysql2:query', 'express:request'];
 for (const name of channels) {
-  const ch = subscribe(name);
+  const ch = diagnostics_channel.channel(name);
   if (ch) {
     ch.subscribe((event) => {
       capturedEvents.push({

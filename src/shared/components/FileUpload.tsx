@@ -76,20 +76,23 @@ export function FileUpload({ onFile, accept = '.json', label = 'Upload file', di
   // Show loaded file state with clear button
   if (fileName) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg">
-        <svg className="w-5 h-5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 truncate">{fileName}</p>
-          {fileSize != null && <p className="text-xs text-indigo-500">{formatFileSize(fileSize)}</p>}
+      <div className="flex flex-col gap-1 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg">
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-indigo-500 dark:text-indigo-400 truncate">{label}</p>
+            <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 truncate">{fileName}</p>
+            {fileSize != null && <p className="text-xs text-indigo-500">{formatFileSize(fileSize)}</p>}
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onReset?.(); }}
+            className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+          >
+            Clear
+          </button>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); onReset?.(); }}
-          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
-        >
-          Clear
-        </button>
       </div>
     );
   }

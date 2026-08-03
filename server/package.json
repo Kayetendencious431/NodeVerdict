@@ -1,0 +1,12 @@
+{
+  "name": "nodeverdict-live-agent",
+  "version": "1.0.0",
+  "description": "Live diagnostic agent for NodeVerdict — connect to a running Node.js process and stream diagnostic data in real-time",
+  "type": "module",
+  "bin": {
+    "nodeverdict-agent": "./live-agent.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

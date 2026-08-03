@@ -313,7 +313,36 @@ Full-text search and advanced filtering across all events.
 3. Use filters to narrow results
 4. Result count updates in real-time
 
-### 4.10 Report
+### 4.10 Live Monitor
+
+Connect to a running Node.js process in real-time via WebSocket — no restart, no dump file needed.
+
+**Features:**
+- Real-time memory usage polling (RSS, heapUsed, heapTotal, external)
+- Live TracingChannel event streaming
+- On-demand heap snapshot (download as `.heapsnapshot`)
+- On-demand CPU profile (download as `.cpuprofile`)
+
+**Steps:**
+1. Install the agent on the target machine:
+   ```bash
+   cd server
+   npm install
+   ```
+2. Start the agent alongside your Node.js application:
+   ```bash
+   node server/live-agent.mjs --port 9876
+   ```
+   Options:
+   - `--port`: Agent WebSocket port (default: 9876)
+   - `--channels`: Comma-separated diagnostics_channel names to subscribe to
+   - `--connect`: Connect to a remote Node.js inspector URL instead of local
+
+3. Open NodeVerdict in your browser, click "Live Monitor" in the sidebar
+4. Enter `localhost:9876` (or the agent's host:port) and click "Connect"
+5. Use the panels to monitor, trace, and capture diagnostics in real-time
+
+### 4.11 Report
 
 Generate shareable diagnostic reports.
 
@@ -332,7 +361,7 @@ Generate shareable diagnostic reports.
 
 ## 5. Sample Files Quick Start
 
-14 sample files are available in the `examples/` directory:
+17 sample files are available in the `examples/` directory:
 
 | File | Best For | Description |
 |------|----------|-------------|
@@ -350,6 +379,9 @@ Generate shareable diagnostic reports.
 | `heap-express-app.heapsnapshot` | Heap Analyzer | Realistic Express app heap |
 | `heap-diff-before.heapsnapshot` | Heap Diff | Heap comparison baseline |
 | `heap-diff-after.heapsnapshot` | Heap Diff | Heap comparison (with leaks) |
+| `heap-string-leak.heapsnapshot` | Heap Analyzer | String concatenation leak with external memory |
+| `memory-timeline.json` | Memory Timeline | 16 snapshots, RSS 65MB→250MB growth |
+| `gc-trace-gc.log` | GC Log Analyzer | 33 GC events (Scavenge + Mark-sweep) |
 
 ### Recommended Learning Path
 
@@ -362,6 +394,7 @@ Generate shareable diagnostic reports.
 7. **Time Series** → `tracing-time-series.json` — View trends
 8. **Search & Filter** → `tracing-search-filter.json` — Try advanced search
 9. **Report** → `tracing-events.json` — Generate a shareable report
+10. **Live Monitor** → Start the agent and connect to a running Node.js process
 
 ---
 
@@ -373,16 +406,11 @@ Generate shareable diagnostic reports.
 
 ### What file formats are supported?
 
-- **Tracing events**: JSON files (up to 50MB)
-- **CPU Profile**: `.cpuprofile` files (up to 50MB)
-- **Heap Snapshot**: `.heapsnapshot` files (up to 200MB)
-
-### How to handle large files?
-
-For tracing files over 50MB or heap snapshots over 200MB:
-1. Pre-process on the server: filter non-essential events, split snapshots
-2. Reduce sampling rate and regenerate data
-3. Export only the critical time window
+- **Tracing events**: JSON files (up to 3GB, streamed via Web Worker)
+- **CPU Profile**: `.cpuprofile` files (up to 3GB)
+- **Heap Snapshot**: `.heapsnapshot` files (up to 3GB, streamed via Web Worker)
+- **Memory Timeline**: JSON files with `process.memoryUsage()` snapshots
+- **GC Log**: V8 `--trace-gc` log files
 
 ### Does every page support dark mode?
 

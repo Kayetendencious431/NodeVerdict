@@ -13,6 +13,7 @@ import { useUIStore } from '../stores';
 import { TutorialPage } from '../features/tutorial';
 import { MemoryTimelinePage } from '../features/memory-timeline';
 import { GcLogPage } from '../features/gc-log';
+import { LiveMonitorPage } from '../features/live-monitor';
 import { useEffect } from 'react';
 
 function HomePage() {
@@ -98,6 +99,12 @@ function HomePage() {
           onClick={() => navigate('gc-log')}
         />
         <FeatureCard
+          title="Live Monitor"
+          description="Connect to a running Node.js process via WebSocket — stream tracing events, memory usage, heap snapshots, and CPU profiles in real-time."
+          icon="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+          onClick={() => navigate('live-monitor')}
+        />
+        <FeatureCard
           title="Report"
           description="Generate shareable diagnostic reports with findings compressed into the URL or as a standalone HTML file."
           icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
@@ -167,6 +174,7 @@ export function App() {
       <div style={{ display: currentPage === 'tutorial' ? 'block' : 'none' }}><TutorialPage /></div>
       <div style={{ display: currentPage === 'memory-timeline' ? 'block' : 'none' }}><MemoryTimelinePage /></div>
       <div style={{ display: currentPage === 'gc-log' ? 'block' : 'none' }}><GcLogPage /></div>
+      <div style={{ display: currentPage === 'live-monitor' ? 'block' : 'none' }}><LiveMonitorPage /></div>
     </AppShell>
   );
 }

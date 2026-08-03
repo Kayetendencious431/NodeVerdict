@@ -85,7 +85,7 @@ export function HeapDiffPage() {
               onFile={handleFileA}
               accept=".heapsnapshot,.json"
               label="Upload before snapshot"
-              maxSize={200 * 1024 * 1024}
+              maxSize={3 * 1024 * 1024 * 1024}
               fileName={fileAName}
               onReset={() => { setSnapshotA(null); setDiffResult(null); setFileAName(null); }}
             />
@@ -96,7 +96,7 @@ export function HeapDiffPage() {
               onFile={handleFileB}
               accept=".heapsnapshot,.json"
               label="Upload after snapshot"
-              maxSize={200 * 1024 * 1024}
+              maxSize={3 * 1024 * 1024 * 1024}
               fileName={fileBName}
               onReset={() => { setSnapshotB(null); setDiffResult(null); setFileBName(null); }}
             />

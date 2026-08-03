@@ -263,7 +263,7 @@ export function TimeSeriesPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Time Series Analysis</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Visualize event throughput, latency distribution, and performance trends over time</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Analyzing..." />
         <div className="mt-8">
@@ -285,7 +285,7 @@ export function TimeSeriesPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
         </div>
       </div>
 

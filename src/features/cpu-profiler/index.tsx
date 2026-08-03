@@ -42,7 +42,7 @@ export function CpuProfilerPage() {
           onFile={handleFile}
           accept=".cpuprofile,.json"
           label="Upload CPU profile (.cpuprofile)"
-          maxSize={50 * 1024 * 1024}
+          maxSize={500 * 1024 * 1024}
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
@@ -73,7 +73,7 @@ export function CpuProfilerPage() {
             onFile={handleFile}
             accept=".cpuprofile,.json"
             label="Upload CPU profile"
-            maxSize={50 * 1024 * 1024}
+            maxSize={500 * 1024 * 1024}
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}

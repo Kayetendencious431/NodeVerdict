@@ -60,7 +60,7 @@ export function EventViewerPage() {
           onFile={handleFile}
           accept=".json"
           label="Upload tracing events JSON"
-          maxSize={50 * 1024 * 1024}
+          maxSize={500 * 1024 * 1024}
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
@@ -89,7 +89,7 @@ export function EventViewerPage() {
             onFile={handleFile}
             accept=".json"
             label="Upload tracing events JSON"
-            maxSize={50 * 1024 * 1024}
+            maxSize={500 * 1024 * 1024}
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}

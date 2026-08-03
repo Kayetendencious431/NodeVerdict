@@ -112,11 +112,11 @@ export function PerfComparePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Before / Baseline</p>
-            <FileUpload onFile={handleFileA} accept=".json" label="Upload baseline tracing" maxSize={50 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} />
+            <FileUpload onFile={handleFileA} accept=".json" label="Upload baseline tracing" maxSize={500 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} />
           </div>
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">After / Changed</p>
-            <FileUpload onFile={handleFileB} accept=".json" label="Upload changed tracing" maxSize={50 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} />
+            <FileUpload onFile={handleFileB} accept=".json" label="Upload changed tracing" maxSize={500 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} />
           </div>
         </div>
 

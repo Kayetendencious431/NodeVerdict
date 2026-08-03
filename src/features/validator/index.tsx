@@ -47,7 +47,7 @@ export function ValidatorPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Event Validator</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Validate TracingChannel events against spec conventions</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={50 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
+        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <LoadingOverlay visible={loading} message="Validating..." />
         <div className="mt-8">
@@ -71,7 +71,7 @@ export function ValidatorPage() {
             onFile={handleFile}
             accept=".json"
             label="Upload tracing events to validate"
-            maxSize={50 * 1024 * 1024}
+            maxSize={500 * 1024 * 1024}
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}

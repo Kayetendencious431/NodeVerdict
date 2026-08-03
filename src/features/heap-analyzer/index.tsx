@@ -43,7 +43,7 @@ export function HeapAnalyzerPage() {
           onFile={handleFile}
           accept=".heapsnapshot,.json"
           label="Upload heap snapshot (.heapsnapshot)"
-          maxSize={200 * 1024 * 1024}
+          maxSize={3 * 1024 * 1024 * 1024}
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
@@ -72,7 +72,7 @@ export function HeapAnalyzerPage() {
             onFile={handleFile}
             accept=".heapsnapshot,.json"
             label="Upload heap snapshot (.heapsnapshot)"
-            maxSize={200 * 1024 * 1024}
+            maxSize={3 * 1024 * 1024 * 1024}
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}

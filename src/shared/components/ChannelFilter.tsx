@@ -1,4 +1,5 @@
 import { channelColor } from '../utils';
+import { useI18n } from '../i18n/useI18n';
 
 interface ChannelFilterProps {
   channels: string[];
@@ -7,6 +8,7 @@ interface ChannelFilterProps {
 }
 
 export function ChannelFilter({ channels, selected, onChange }: ChannelFilterProps) {
+  const { t } = useI18n();
   const toggle = (ch: string) => {
     if (selected.includes(ch)) {
       if (selected.length > 1) onChange(selected.filter(s => s !== ch));
@@ -20,18 +22,18 @@ export function ChannelFilter({ channels, selected, onChange }: ChannelFilterPro
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Channels:</span>
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">{t('channelFilter.channels')}</span>
       <button
         onClick={selectAll}
         className={`text-xs px-2 py-1 rounded-full transition-colors ${selected.length === channels.length ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
       >
-        All
+        {t('common.all')}
       </button>
       <button
         onClick={deselectAll}
         className={`text-xs px-2 py-1 rounded-full transition-colors ${selected.length === 0 ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
       >
-        None
+        {t('common.none')}
       </button>
       {channels.map(ch => (
         <button

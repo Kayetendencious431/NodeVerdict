@@ -21,11 +21,15 @@ const en: Record<string, string> = {
   'nav.lightMode': 'Light Mode',
   'nav.collapse': 'Collapse sidebar',
   'nav.expand': 'Expand sidebar',
+  'nav.switchToLight': 'Switch to Light Mode',
+  'nav.switchToDark': 'Switch to Dark Mode',
 
   // App
   'app.title': 'NodeVerdict',
   'app.subtitle': 'Node.js Diagnostic Data Viewer',
   'app.description': 'Visualize and analyze Node.js diagnostic data in your browser — no backend required',
+  'app.switchToEnglish': 'Switch to English',
+  'app.switchToChinese': 'Switch to Chinese',
 
   // Home page feature cards
   'feature.event-viewer': 'Event Viewer',
@@ -78,6 +82,14 @@ const en: Record<string, string> = {
   'common.none': 'None',
   'common.bytes': 'bytes',
   'common.mb': 'MB',
+  'common.fileReadError': 'Failed to read file: {name}',
+
+  // ErrorBoundary / LoadingOverlay / ChannelFilter
+  'errorBoundary.title': 'Something went wrong',
+  'errorBoundary.unknownError': 'Unknown error',
+  'errorBoundary.reload': 'Reload page',
+  'loadingOverlay.default': 'Processing...',
+  'channelFilter.channels': 'Channels:',
 
   // Heap Analyzer
   'heapAnalyzer.title': 'Heap Analyzer',
@@ -118,6 +130,11 @@ const en: Record<string, string> = {
   'heapAnalyzer.loading': 'Analyzing heap snapshot...',
   'heapAnalyzer.progress': 'Analyzing...',
   'heapAnalyzer.error': 'Failed to analyze heap snapshot',
+  'heapAnalyzer.nodesEdges': '{nodes} nodes, {edges} edges',
+  'heapAnalyzer.exportTitle': 'Heap Snapshot Analysis',
+  'heapAnalyzer.summary': 'Summary',
+  'heapAnalyzer.exportNodes': 'Nodes',
+  'heapAnalyzer.exportEdges': 'Edges',
 
   // Heap Diff
   'heapDiff.title': 'Heap Diff',
@@ -146,6 +163,16 @@ const en: Record<string, string> = {
   'heapDiff.saved': 'Saved to snapshot history!',
   'heapDiff.loading': 'Comparing heap snapshots...',
   'heapDiff.error': 'Failed to compare snapshots',
+  'heapDiff.snapshotA': 'Snapshot A',
+  'heapDiff.snapshotB': 'Snapshot B',
+  'heapDiff.titleVs': '{a} vs {b}',
+  'heapDiff.comparing': 'Comparing {a} vs {b}',
+  'heapDiff.exportTitle': 'Heap Snapshot Diff',
+  'heapDiff.summary': 'Summary',
+  'heapDiff.typeComparison': 'Type Comparison',
+  'heapDiff.grewBy': '{name} grew by {delta}',
+  'heapDiff.removedTypesCount': '{count} type(s) were removed entirely.',
+  'heapDiff.showingFirst': 'Showing first {limit} of {count} types',
 
   // CPU Profiler
   'cpuProfiler.title': 'CPU Profiler',
@@ -178,6 +205,18 @@ const en: Record<string, string> = {
   'cpuProfiler.sortBy': 'Sort by',
   'cpuProfiler.sortSelf': 'Self',
   'cpuProfiler.sortTotal': 'Total',
+  'cpuProfiler.samplesTotal': '{samples} samples, {ms}ms total',
+  'cpuProfiler.exportTitle': 'CPU Profile Analysis',
+  'cpuProfiler.summary': 'Summary',
+  'cpuProfiler.exportFile': 'File',
+  'cpuProfiler.exportSelfPercent': 'Self %',
+  'cpuProfiler.exportHits': 'Hits',
+  'cpuProfiler.flameGraph.hint': 'Use the flame graph controls below to search, filter by function name, or toggle between Flame / Icicle view.',
+  'cpuProfiler.flameGraph.prev': 'Previous match',
+  'cpuProfiler.flameGraph.prevLabel': '↑ Prev',
+  'cpuProfiler.flameGraph.next': 'Next match',
+  'cpuProfiler.flameGraph.nextLabel': 'Next ↓',
+  'cpuProfiler.flameGraph.back': '← Back',
 
   // Event Viewer
   'eventViewer.acrossChannels': 'Across all channels',
@@ -224,6 +263,7 @@ const en: Record<string, string> = {
   'eventViewer.type': 'Type',
   'eventViewer.uploadHint': 'Upload a JSON file with TracingChannel events to visualize',
   'eventViewer.uploadTitle': 'Diagnostic Event Viewer',
+  'eventViewer.exportTitle': 'Diagnostic Event Viewer',
 
   // Memory Timeline
   'memoryTimeline.title': 'Memory Timeline',
@@ -318,6 +358,7 @@ const en: Record<string, string> = {
   'timeSeries.p95Latency': 'P95 Latency',
   'timeSeries.operations': 'Operations',
   'timeSeries.channelLatency': 'Channel Latency Breakdown',
+  'timeSeries.channel': 'Channel',
   'timeSeries.avg': 'Avg',
   'timeSeries.min': 'Min',
   'timeSeries.max': 'Max',
@@ -404,8 +445,8 @@ const en: Record<string, string> = {
   'snapshot.empty': 'No snapshot history yet',
   'snapshot.empty.desc': 'No snapshot history yet. Compare heap snapshots to build history.',
   'snapshot.clear': 'Clear History',
-  'snapshot.records': 'comparisons recorded',
-  'snapshot.record': 'comparison recorded',
+  'snapshot.records': '{count} comparisons recorded',
+  'snapshot.record': '{count} comparison recorded',
   'snapshot.trend': 'Retained Size Trend',
   'snapshot.id': 'ID',
   'snapshot.timestamp': 'Timestamp',
@@ -426,6 +467,9 @@ const en: Record<string, string> = {
   'snapshot.legend.retained': 'Retained Size Δ',
   'snapshot.legend.growth': 'Growth',
   'snapshot.legend.improvement': 'Improvement',
+  'snapshot.leakPatternLabel': 'Leak Pattern: {pattern}',
+  'snapshot.allRecords': 'All Records',
+  'snapshot.chartRetained': 'Retained Size Δ (MB)',
 
   // Trace Viewer
   'traceViewer.bottleneck': 'Bottleneck',
@@ -486,6 +530,9 @@ const en: Record<string, string> = {
   'alert.metric.rssGrowthRate': 'RSS Growth Rate (MB/s)',
   'alert.metric.errorRate': 'Error Rate (%)',
   'alert.metric.eventRate': 'Event Rate (evt/s)',
+  'alert.level.info': 'Info',
+  'alert.level.warning': 'Warning',
+  'alert.level.critical': 'Critical',
 
   // Validator
   'validator.allValid': 'All events valid!',
@@ -546,6 +593,20 @@ const en: Record<string, string> = {
   'report.findings.channelsWithErrors': 'Channels with errors: {count}',
   'report.findings.totalSize': 'Total heap size: {size}',
   'report.findings.leakSuspects': 'Leak suspects: {count}',
+  'report.shareDesc': 'This URL contains all report data compressed. Share it in GitHub Issues, Slack, or documentation.',
+  'report.exportTitle': 'NodeVerdict Diagnostic Report',
+  'report.exportGenerated': 'Generated {date} | {events} events, {operations} operations',
+  'report.exportHeapAnalysis': 'Heap Analysis',
+  'report.exportTotalSize': 'Total Size',
+  'report.exportTopObjects': 'Top Objects',
+  'report.exportLeakSuspects': 'Leak Suspects',
+  'report.exportKeyFindings': 'Key Findings',
+  'report.exportChannel': 'Channel',
+  'report.exportOps': 'Ops',
+  'report.exportAvg': 'Avg',
+  'report.exportP95': 'P95',
+  'report.exportErrors': 'Errors',
+  'report.exportFooter': 'Generated by NodeVerdict — {time}',
 
   // Live Monitor
   'liveMonitor.title': 'Live Monitor',
@@ -591,6 +652,10 @@ const en: Record<string, string> = {
   'liveMonitor.alerts': 'Alerts',
   'liveMonitor.noAlerts': 'No active alerts',
   'liveMonitor.error': 'Live Monitor error',
+  'liveMonitor.log.parseError': 'Failed to parse message: {data}',
+  'liveMonitor.log.connected': 'Connected to {agent} v{version} (PID {pid})',
+  'liveMonitor.log.chunkComplete': 'File chunk assembly complete',
+  'liveMonitor.log.alert': '[ALERT:{level}] {message}',
 
   // Tutorial
   'tutorial.title': 'Tutorial',
@@ -599,6 +664,7 @@ const en: Record<string, string> = {
   // FileUpload
   'fileUpload.localFile': 'Local File',
   'fileUpload.remoteUrl': 'Remote URL',
+  'fileUpload.uploadFile': 'Upload file',
   'fileUpload.urlPlaceholder': 'Enter file URL...',
   'fileUpload.load': 'Load',
   'fileUpload.cancel': 'Cancel',

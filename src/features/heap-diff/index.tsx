@@ -30,7 +30,7 @@ export function HeapDiffPage() {
     setFileAName(file.name);
     setProgressA({ loaded: 0, total: file.size, percent: 0 });
     try {
-      const content = await readFileWithProgress(file, setProgressA);
+      const content = await readFileWithProgress(file, setProgressA, (name) => t('common.fileReadError').replace('{name}', name));
       const snapshot = parseHeapSnapshot(content);
       setSnapshotA(snapshot);
       if (snapshotB) {
@@ -54,7 +54,7 @@ export function HeapDiffPage() {
     setFileBName(file.name);
     setProgressB({ loaded: 0, total: file.size, percent: 0 });
     try {
-      const content = await readFileWithProgress(file, setProgressB);
+      const content = await readFileWithProgress(file, setProgressB, (name) => t('common.fileReadError').replace('{name}', name));
       const snapshot = parseHeapSnapshot(content);
       setSnapshotB(snapshot);
       if (snapshotA) {
@@ -87,9 +87,9 @@ export function HeapDiffPage() {
   function handleSaveToHistory() {
     if (!diffResult) return;
     useRootStore.getState().addSnapshotRecord({
-      label: `${fileAName ?? 'A'} vs ${fileBName ?? 'B'}`,
-      beforeName: fileAName ?? 'Snapshot A',
-      afterName: fileBName ?? 'Snapshot B',
+      label: t('heapDiff.titleVs').replace('{a}', fileAName ?? t('heapDiff.snapshotA')).replace('{b}', fileBName ?? t('heapDiff.snapshotB')),
+      beforeName: fileAName ?? t('heapDiff.snapshotA'),
+      afterName: fileBName ?? t('heapDiff.snapshotB'),
       beforeSize: diffResult.totalSizeBefore,
       afterSize: diffResult.totalSizeAfter,
       newNodeCount: diffResult.newNodes.length,
@@ -160,16 +160,18 @@ export function HeapDiffPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('heapDiff.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Comparing {fileAName ?? 'A'} vs {fileBName ?? 'B'}
+            {t('heapDiff.comparing')
+              .replace('{a}', fileAName ?? t('heapDiff.snapshotA'))
+              .replace('{b}', fileBName ?? t('heapDiff.snapshotB'))}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButton
             onExportMarkdown={() => toMarkdown({
-              title: 'Heap Snapshot Diff',
+              title: t('heapDiff.exportTitle'),
               sections: [
                 {
-                  title: 'Summary',
+                  title: t('heapDiff.summary'),
                   type: 'stats',
                   content: [
                     { label: t('heapDiff.sizeBefore'), value: formatBytes(diffResult.totalSizeBefore) },
@@ -182,7 +184,7 @@ export function HeapDiffPage() {
                   ],
                 },
                 {
-                  title: 'Type Comparison',
+                  title: t('heapDiff.typeComparison'),
                   type: 'table',
                   content: {
                     headers: [t('heapAnalyzer.name'), t('heapDiff.type'), t('heapDiff.objectDelta'), t('heapDiff.sizeBeforeLabel'), t('heapDiff.sizeAfterLabel'), t('heapDiff.sizeDeltaLabel')],
@@ -201,7 +203,7 @@ export function HeapDiffPage() {
                   type: 'alert' as const,
                   content: {
                     level: 'warning' as const,
-                    message: diffResult.growingNodes.slice(0, 10).map(n => `${n.name} grew by ${formatBytes(n.sizeDelta)}`).join('; '),
+                    message: diffResult.growingNodes.slice(0, 10).map(n => t('heapDiff.grewBy').replace('{name}', n.name).replace('{delta}', formatBytes(n.sizeDelta))).join('; '),
                   },
                 }] : []),
                 ...(diffResult.removedNodes.length > 0 ? [{
@@ -209,7 +211,7 @@ export function HeapDiffPage() {
                   type: 'alert' as const,
                   content: {
                     level: 'info' as const,
-                    message: `${diffResult.removedNodes.length} type(s) were removed entirely.`,
+                    message: t('heapDiff.removedTypesCount').replace('{count}', String(diffResult.removedNodes.length)),
                   },
                 }] : []),
               ],
@@ -312,7 +314,7 @@ export function HeapDiffPage() {
               {diffResult.nodes.length > 200 && (
                 <tr className="bg-gray-50 dark:bg-gray-900">
                   <td colSpan={6} className="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                    Showing first 200 of {diffResult.nodes.length} types
+                    {t('heapDiff.showingFirst').replace('{limit}', '200').replace('{count}', String(diffResult.nodes.length))}
                   </td>
                 </tr>
               )}
@@ -324,11 +326,11 @@ export function HeapDiffPage() {
   );
 }
 
-function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void): Promise<string> {
+function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void, onError: (fileName: string) => string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    reader.onerror = () => reject(new Error(onError(file.name)));
     reader.onprogress = (e) => {
       if (e.lengthComputable) {
         onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });

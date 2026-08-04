@@ -101,7 +101,7 @@ export function ValidatorPage() {
               <span className={`w-2 h-2 rounded-full ${result.valid ? 'bg-emerald-500' : 'bg-red-500'}`} />
               <span className="font-medium text-sm text-gray-700 dark:text-gray-200">{result.channel}</span>
               <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${result.valid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                {result.valid ? 'Valid' : 'Issues Found'}
+                {result.valid ? t('validator.valid') : t('validator.invalid')}
               </span>
             </div>
 

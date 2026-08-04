@@ -382,16 +382,16 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
               <button
                 onClick={handleSearchPrev}
                 className="px-2 py-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                title="Previous match"
+                title={t('cpuProfiler.flameGraph.prev')}
               >
-                ↑ Prev
+                {t('cpuProfiler.flameGraph.prevLabel')}
               </button>
               <button
                 onClick={handleSearchNext}
                 className="px-2 py-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                title="Next match"
+                title={t('cpuProfiler.flameGraph.next')}
               >
-                Next ↓
+                {t('cpuProfiler.flameGraph.nextLabel')}
               </button>
             </div>
           )}
@@ -453,7 +453,7 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
               onClick={handleZoomOut}
               className="px-2 py-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              ← Back
+              {t('cpuProfiler.flameGraph.back')}
             </button>
           )}
           {zoomStack.length > 1 && (

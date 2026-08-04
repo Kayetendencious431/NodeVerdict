@@ -1,10 +1,12 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import tutorialMd from './TUTORIAL.md?raw';
+import tutorialMdZh from './TUTORIAL.zh.md?raw';
 import { useI18n } from '../../shared/i18n/useI18n';
 
 export function TutorialPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const content = lang === 'zh' ? tutorialMdZh : tutorialMd;
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
@@ -85,7 +87,7 @@ export function TutorialPage() {
             ),
           }}
         >
-          {tutorialMd}
+          {content}
         </ReactMarkdown>
       </div>
     </div>

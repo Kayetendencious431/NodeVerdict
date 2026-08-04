@@ -73,16 +73,18 @@ export function CpuProfilerPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('cpuProfiler.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {analysis.sampleCount.toLocaleString()} samples, {analysis.totalTime.toFixed(2)}ms total
+            {t('cpuProfiler.samplesTotal')
+              .replace('{samples}', analysis.sampleCount.toLocaleString())
+              .replace('{ms}', analysis.totalTime.toFixed(2))}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButton
             onExportMarkdown={() => toMarkdown({
-              title: 'CPU Profile Analysis',
+              title: t('cpuProfiler.exportTitle'),
               sections: [
                 {
-                  title: 'Summary',
+                  title: t('cpuProfiler.summary'),
                   type: 'stats',
                   content: [
                     { label: t('cpuProfiler.totalTime'), value: `${analysis.totalTime.toFixed(1)}ms` },
@@ -95,7 +97,7 @@ export function CpuProfilerPage() {
                   title: t('cpuProfiler.hotFunctions'),
                   type: 'table',
                   content: {
-                    headers: [t('cpuProfiler.functionName'), 'File', t('cpuProfiler.selfTime'), t('cpuProfiler.totalTimeLabel'), 'Self %', 'Hits'],
+                    headers: [t('cpuProfiler.functionName'), t('cpuProfiler.exportFile'), t('cpuProfiler.selfTime'), t('cpuProfiler.totalTimeLabel'), t('cpuProfiler.exportSelfPercent'), t('cpuProfiler.exportHits')],
                     rows: sortedFunctions.slice(0, 30).map(fn => [
                       fn.functionName,
                       fn.url ? fn.url.split('/').pop() + (fn.line ? `:${fn.line}` : '') : '-',
@@ -162,7 +164,7 @@ export function CpuProfilerPage() {
           </div>
         </div>
         <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
-          Use the flame graph controls below to search, filter by function name, or toggle between Flame / Icicle view.
+          {t('cpuProfiler.flameGraph.hint')}
         </div>
       </div>
 
@@ -196,11 +198,11 @@ export function CpuProfilerPage() {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
                 <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('cpuProfiler.functionName')}</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">File</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('cpuProfiler.exportFile')}</th>
                 <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('cpuProfiler.selfTime')}</th>
                 <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('cpuProfiler.totalTimeLabel')}</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Self %</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Hits</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('cpuProfiler.exportSelfPercent')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('cpuProfiler.exportHits')}</th>
               </tr>
             </thead>
             <tbody>

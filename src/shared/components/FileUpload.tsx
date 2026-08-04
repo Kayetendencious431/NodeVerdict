@@ -26,7 +26,7 @@ type UploadMode = 'local' | 'remote';
 export function FileUpload({
   onFile,
   accept = '.json',
-  label = 'Upload file',
+  label,
   disabled,
   maxSize,
   fileName,
@@ -147,7 +147,7 @@ export function FileUpload({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-indigo-500 dark:text-indigo-400 truncate">{label}</p>
+            <p className="text-xs text-indigo-500 dark:text-indigo-400 truncate">{label ?? t('fileUpload.uploadFile')}</p>
             <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 truncate">{fileName}</p>
             {fileSize != null && <p className="text-xs text-indigo-500">{formatFileSize(fileSize)}</p>}
           </div>

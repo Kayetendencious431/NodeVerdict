@@ -79,38 +79,38 @@ function HomePage() {
           onClick={() => navigate('perf-compare')}
         />
         <FeatureCard
-          title="Validator"
-          description="Validate TracingChannel events against naming conventions, field requirements, and pairing completeness."
+          title={t('feature.validator')}
+          description={t('feature.validator.desc')}
           icon="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
           onClick={() => navigate('validator')}
         />
         <FeatureCard
-          title="Search & Filter"
-          description="Full-text search, regex, duration range, status filter, and time range across all events."
+          title={t('feature.search-filter')}
+          description={t('feature.search-filter.desc')}
           icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           onClick={() => navigate('search-filter')}
         />
         <FeatureCard
-          title="Memory Timeline"
-          description="Upload process.memoryUsage() time series data to visualize external, heap, and RSS memory trends."
+          title={t('feature.memory-timeline')}
+          description={t('feature.memory-timeline.desc')}
           icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
           onClick={() => navigate('memory-timeline')}
         />
         <FeatureCard
-          title="GC Log Analyzer"
-          description="Upload --trace-gc log files to analyze garbage collection patterns, pause times, and external memory pressure."
+          title={t('feature.gc-log')}
+          description={t('feature.gc-log.desc')}
           icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
           onClick={() => navigate('gc-log')}
         />
         <FeatureCard
-          title="Live Monitor"
-          description="Connect to a running Node.js process via WebSocket — stream tracing events, memory usage, heap snapshots, and CPU profiles in real-time."
+          title={t('feature.live-monitor')}
+          description={t('feature.live-monitor.desc')}
           icon="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
           onClick={() => navigate('live-monitor')}
         />
         <FeatureCard
-          title="Report"
-          description="Generate shareable diagnostic reports with findings compressed into the URL or as a standalone HTML file."
+          title={t('feature.report')}
+          description={t('feature.report.desc')}
           icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           onClick={() => navigate('report')}
           className="md:col-span-2"
@@ -119,8 +119,8 @@ function HomePage() {
 
       <div className="mt-6">
         <FeatureCard
-          title="Tutorial"
-          description="Learn how to generate diagnostic data from your Node.js project and use all of NodeVerdict's features."
+          title={t('feature.tutorial')}
+          description={t('feature.tutorial.desc')}
           icon="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
           onClick={() => navigate('tutorial')}
         />

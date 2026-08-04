@@ -20,8 +20,8 @@ export function PerfComparePage() {
   const [dataB, setDataB] = useState<ComparedData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nameA, setNameA] = useState('Before');
-  const [nameB, setNameB] = useState('After');
+  const [nameA, setNameA] = useState<string>(() => t('perfCompare.before'));
+  const [nameB, setNameB] = useState<string>(() => t('perfCompare.after'));
   const [progressA, setProgressA] = useState<ProgressInfo | null>(null);
   const [progressB, setProgressB] = useState<ProgressInfo | null>(null);
 
@@ -31,7 +31,7 @@ export function PerfComparePage() {
     setProgressA({ loaded: 0, total: file.size, percent: 0 });
     setNameA(file.name.replace(/\.[^/.]+$/, ''));
     try {
-      const content = await readFileWithProgress(file, setProgressA);
+      const content = await readFileWithProgress(file, setProgressA, (name) => t('common.fileReadError').replace('{name}', name));
       const events = JSON.parse(content) as TracingEvent[];
       const analysis = analyzeTracingEvents(events);
       const spans = buildWaterfall(analysis.operations, analysis.events);
@@ -51,7 +51,7 @@ export function PerfComparePage() {
     setProgressB({ loaded: 0, total: file.size, percent: 0 });
     setNameB(file.name.replace(/\.[^/.]+$/, ''));
     try {
-      const content = await readFileWithProgress(file, setProgressB);
+      const content = await readFileWithProgress(file, setProgressB, (name) => t('common.fileReadError').replace('{name}', name));
       const events = JSON.parse(content) as TracingEvent[];
       const analysis = analyzeTracingEvents(events);
       const spans = buildWaterfall(analysis.operations, analysis.events);
@@ -242,11 +242,11 @@ function flattenChildren(span: { children: TraceSpan[] }): TraceSpan[] {
   return result;
 }
 
-function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void): Promise<string> {
+function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void, onError: (fileName: string) => string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    reader.onerror = () => reject(new Error(onError(file.name)));
     reader.onprogress = (e) => {
       if (e.lengthComputable) {
         onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });

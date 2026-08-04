@@ -109,22 +109,26 @@ export function HeapAnalyzerPage() {
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('heapAnalyzer.title')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{heapAnalysis.snapshot.nodeCount.toLocaleString()} nodes, {heapAnalysis.snapshot.edgeCount.toLocaleString()} edges</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t('heapAnalyzer.nodesEdges')
+              .replace('{nodes}', heapAnalysis.snapshot.nodeCount.toLocaleString())
+              .replace('{edges}', heapAnalysis.snapshot.edgeCount.toLocaleString())}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButton
             onExportMarkdown={() => toMarkdown({
-              title: 'Heap Snapshot Analysis',
+              title: t('heapAnalyzer.exportTitle'),
               sections: [
                 {
-                  title: 'Summary',
+                  title: t('heapAnalyzer.summary'),
                   type: 'stats',
                   content: [
                     { label: t('heapAnalyzer.totalSize'), value: formatBytes(heapAnalysis.totalSize) },
                     { label: t('heapAnalyzer.totalRetained'), value: formatBytes(heapAnalysis.snapshot.totalRetainedSize) },
                     { label: t('heapAnalyzer.leakSuspects'), value: heapAnalysis.leakSuspects.length.toString() },
-                    { label: 'Nodes', value: heapAnalysis.snapshot.nodeCount.toLocaleString() },
-                    { label: 'Edges', value: heapAnalysis.snapshot.edgeCount.toLocaleString() },
+                    { label: t('heapAnalyzer.exportNodes'), value: heapAnalysis.snapshot.nodeCount.toLocaleString() },
+                    { label: t('heapAnalyzer.exportEdges'), value: heapAnalysis.snapshot.edgeCount.toLocaleString() },
                   ],
                 },
                 {

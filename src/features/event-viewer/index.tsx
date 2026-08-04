@@ -114,7 +114,7 @@ export function EventViewerPage() {
         <div className="flex items-center gap-2">
           <ExportButton
             onExportMarkdown={() => toMarkdown({
-              title: 'Diagnostic Event Viewer',
+              title: t('eventViewer.exportTitle'),
               sections: [
                 {
                   title: t('eventViewer.summary'),
@@ -188,7 +188,7 @@ export function EventViewerPage() {
             <EventDetail event={selectedEvent} onClose={() => setSelectedEventIndex(null)} />
           ) : (
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 text-center text-sm text-gray-400 dark:text-gray-500">
-              Click an event to see details
+              {t('eventViewer.selectEvent')}
             </div>
           )}
         </div>

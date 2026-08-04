@@ -179,7 +179,7 @@ export function ReportPage() {
           </button>
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-          This URL contains all report data compressed. Share it in GitHub Issues, Slack, or documentation.
+          {t('report.shareDesc')}
         </p>
       </div>
 
@@ -187,7 +187,7 @@ export function ReportPage() {
       <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('report.exportHtml')}</h2>
         <button
-          onClick={() => exportHtmlReport(reportData)}
+          onClick={() => exportHtmlReport(reportData, t)}
           className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
         >
           {t('report.exportHtml')}
@@ -199,7 +199,7 @@ export function ReportPage() {
   );
 }
 
-function exportHtmlReport(reportData: ReportData): void {
+function exportHtmlReport(reportData: ReportData, t: (key: string) => string): void {
   const channels = reportData.eventSummary?.channels ?? [];
   const findings = reportData.keyFindings ?? [];
   const heap = reportData.heapAnalysis;
@@ -217,18 +217,18 @@ function exportHtmlReport(reportData: ReportData): void {
 
   const heapHtml = heap ? `
     <div style="margin-top:16px">
-      <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Heap Analysis</h2>
+      <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">${t('report.exportHeapAnalysis')}</h2>
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-uppercase tracking-wider">Total Size</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-uppercase tracking-wider">${t('report.exportTotalSize')}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">${(heap.totalSize / 1024 / 1024).toFixed(1)}MB</p>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <p className="text-xs text-gray-500 text-uppercase tracking-wider">Top Objects</p>
+          <p className="text-xs text-gray-500 text-uppercase tracking-wider">${t('report.exportTopObjects')}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">${heap.topObjects.length}</p>
         </div>
         <div className="bg-fef2f2 dark:bg-gray-800 rounded-lg p-4">
-          <p className="text-xs text-gray-500 text-uppercase tracking-wider">Leak Suspects</p>
+          <p className="text-xs text-gray-500 text-uppercase tracking-wider">${t('report.exportLeakSuspects')}</p>
           <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">${heap.leakCount}</p>
         </div>  
       </div>
@@ -240,7 +240,7 @@ function exportHtmlReport(reportData: ReportData): void {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NodeVerdict Diagnostic Report</title>
+  <title>${t('report.exportTitle')}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 24px; background: #f9fafb; color: #1f2937; }
     .container { max-width: 800px; margin: 0 auto; }
@@ -253,23 +253,26 @@ function exportHtmlReport(reportData: ReportData): void {
   <div class="container">
     <div className="flex items-center gap-2 mb-4">
       <div className="w-8 h-8 bg-emerald-600 text-white text-center font-bold text-lg rounded-md flex items-center justify-center">N</div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">NodeVerdict Diagnostic Report</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">${t('report.exportTitle')}</h1>
     </div>
-    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Generated ${new Date(reportData.generatedAt).toLocaleString()} | ${reportData.eventSummary?.totalEvents ?? 0} events, ${reportData.eventSummary?.totalOperations ?? 0} operations</p>
+    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">${t('report.exportGenerated')
+      .replace('{date}', new Date(reportData.generatedAt).toLocaleString())
+      .replace('{events}', String(reportData.eventSummary?.totalEvents ?? 0))
+      .replace('{operations}', String(reportData.eventSummary?.totalOperations ?? 0))}</p>
 
     <div class="findings">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Findings</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">${t('report.exportKeyFindings')}</h2>
       <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300">${findingsHtml}</ul>
     </div>
 
     <table>
       <thead>
         <tr>
-          <th className="px-4 py-2 font-medium text-left text-gray-500 dark:text-gray-400">Channel</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">Ops</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">Avg</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">P95</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">Errors</th>
+          <th className="px-4 py-2 font-medium text-left text-gray-500 dark:text-gray-400">${t('report.exportChannel')}</th>
+          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportOps')}</th>
+          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportAvg')}</th>
+          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportP95')}</th>
+          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportErrors')}</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -278,7 +281,7 @@ function exportHtmlReport(reportData: ReportData): void {
     ${heapHtml}
 
     <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-      <p className="text-center">Generated by NodeVerdict — ${new Date().toISOString()}</p>
+      <p className="text-center">${t('report.exportFooter').replace('{time}', new Date().toISOString())}</p>
     </div>
   </div>
 </body>

@@ -3,9 +3,11 @@ import { useRootStore } from '../../stores/root-store';
 import { StatCard, EmptyState } from '../../shared/components';
 import { formatBytes } from '../../shared/utils/format';
 import { detectLeakPattern, getGrowthTrend } from '../../shared/engine/snapshot-history';
+import { useI18n } from '../../shared/i18n/useI18n';
 import * as d3 from 'd3';
 
 function TrendChart({ records }: { records: ReturnType<typeof getGrowthTrend> }) {
+  const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -114,9 +116,9 @@ function TrendChart({ records }: { records: ReturnType<typeof getGrowthTrend> })
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
       .attr('fill', 'currentColor')
-      .text('Retained Size Δ (MB)');
+      .text(t('snapshot.chartRetained'));
 
-  }, [records, dimensions]);
+  }, [records, dimensions, t]);
 
   if (records.dates.length === 0) return null;
 
@@ -125,15 +127,15 @@ function TrendChart({ records }: { records: ReturnType<typeof getGrowthTrend> })
       <div className="flex items-center gap-4 mb-2 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 rounded bg-indigo-500 inline-block" />
-          <span className="text-gray-600 dark:text-gray-300">Retained Size Δ</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('snapshot.legend.retained')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-          <span className="text-gray-600 dark:text-gray-300">Growth</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('snapshot.legend.growth')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
-          <span className="text-gray-600 dark:text-gray-300">Improvement</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('snapshot.legend.improvement')}</span>
         </div>
       </div>
       {dimensions && (
@@ -150,6 +152,7 @@ function TrendChart({ records }: { records: ReturnType<typeof getGrowthTrend> })
 
 export function SnapshotHistoryPage() {
   const { snapshotHistory, clearSnapshotHistory } = useRootStore();
+  const { t } = useI18n();
 
   const leakPattern = useMemo(() => detectLeakPattern(snapshotHistory), [snapshotHistory]);
   const trendData = useMemo(() => getGrowthTrend(snapshotHistory), [snapshotHistory]);
@@ -158,14 +161,14 @@ export function SnapshotHistoryPage() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Snapshot Diff History</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('snapshot.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Track heap snapshot comparison results over time to identify memory trends
+            {t('snapshot.description')}
           </p>
         </div>
         <EmptyState
-          title="No snapshot history yet"
-          description="No snapshot history yet. Compare heap snapshots to build history."
+          title={t('snapshot.empty')}
+          description={t('snapshot.empty.desc')}
         />
       </div>
     );
@@ -175,16 +178,16 @@ export function SnapshotHistoryPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Snapshot Diff History</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('snapshot.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {snapshotHistory.length} comparison{snapshotHistory.length !== 1 ? 's' : ''} recorded
+            {t(snapshotHistory.length === 1 ? 'snapshot.record' : 'snapshot.records').replace('{count}', String(snapshotHistory.length))}
           </p>
         </div>
         <button
           onClick={clearSnapshotHistory}
           className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          Clear History
+          {t('snapshot.clear')}
         </button>
       </div>
 
@@ -210,7 +213,7 @@ export function SnapshotHistoryPage() {
             <p className={`text-sm font-semibold ${
               leakPattern.flagged ? 'text-red-800 dark:text-red-300' : leakPattern.pattern === 'shrinking' ? 'text-emerald-800 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-200'
             }`}>
-              Leak Pattern: {leakPattern.pattern.charAt(0).toUpperCase() + leakPattern.pattern.slice(1)}
+              {t('snapshot.leakPatternLabel').replace('{pattern}', t('snapshot.patterns.' + leakPattern.pattern))}
             </p>
             <p className={`text-xs mt-1 ${
               leakPattern.flagged ? 'text-red-700 dark:text-red-400' : leakPattern.pattern === 'shrinking' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'
@@ -223,27 +226,27 @@ export function SnapshotHistoryPage() {
 
       {/* Trend Chart */}
       <div>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Retained Size Trend</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('snapshot.trend')}</h2>
         <TrendChart records={trendData} />
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-4 gap-3">
-        <StatCard title="Total Comparisons" value={snapshotHistory.length.toString()} />
+        <StatCard title={t('snapshot.totalComparisons')} value={snapshotHistory.length.toString()} />
         <StatCard
-          title="Avg Growth Rate"
+          title={t('snapshot.avgGrowthRate')}
           value={
             snapshotHistory.length > 0
               ? `${(snapshotHistory.reduce((s, r) => s + (r.growthRate ?? 0), 0) / snapshotHistory.length).toFixed(1)}%`
-              : 'N/A'
+              : t('common.none')
           }
         />
         <StatCard
-          title="Total New Nodes"
+          title={t('snapshot.totalNewNodes')}
           value={snapshotHistory.reduce((s, r) => s + r.newNodeCount, 0).toLocaleString()}
         />
         <StatCard
-          title="Flagged Records"
+          title={t('snapshot.flaggedRecords')}
           value={snapshotHistory.filter(r => r.flagged).length.toString()}
           color={snapshotHistory.some(r => r.flagged) ? 'text-red-600 dark:text-red-400' : undefined}
         />
@@ -251,18 +254,18 @@ export function SnapshotHistoryPage() {
 
       {/* History Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">All Records</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{t('snapshot.allRecords')}</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400">ID</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Timestamp</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Label</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Before</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">After</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Retained Δ</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Growth Rate</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.id')}</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.timestamp')}</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.label')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.before')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.after')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.delta')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">{t('snapshot.growthRate')}</th>
               </tr>
             </thead>
             <tbody>

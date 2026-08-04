@@ -141,7 +141,7 @@ export function LiveMonitorPage() {
     try {
       msg = JSON.parse(event.data as string);
     } catch {
-      addLog('Failed to parse message: ' + event.data, 'error');
+      addLog(t('liveMonitor.log.parseError').replace('{data}', String(event.data)), 'error');
       return;
     }
 
@@ -159,7 +159,10 @@ export function LiveMonitorPage() {
     switch (msgType) {
       case 'hello':
         if (msg.agent) {
-          addLog(`Connected to ${msg.agent} v${msg.version ?? '?'} (PID ${msg.pid ?? '?'})`);
+          addLog(t('liveMonitor.log.connected')
+            .replace('{agent}', String(msg.agent))
+            .replace('{version}', String(msg.version ?? '?'))
+            .replace('{pid}', String(msg.pid ?? '?')));
           if (msg.pid) setAgentPid(msg.pid);
         }
         break;
@@ -169,7 +172,7 @@ export function LiveMonitorPage() {
         addLog(msg.message ?? msg.text ?? msg.data ?? '');
         break;
       case 'error':
-        addLog(msg.message ?? msg.text ?? 'Error', 'error');
+        addLog(msg.message ?? msg.text ?? t('common.error'), 'error');
         break;
       case 'memory-usage':
       case 'memory':
@@ -282,7 +285,7 @@ export function LiveMonitorPage() {
         assembleChunk(idx, tot, String(data), snapBufferRef, (url) => {
           setSnapDownloadUrl(url);
           setSnapState('ready');
-          addLog('File chunk assembly complete');
+          addLog(t('liveMonitor.log.chunkComplete'));
         });
       }
       return true;
@@ -479,7 +482,7 @@ export function LiveMonitorPage() {
     const fired = evaluateAlerts(alertRules, snapshot);
     if (fired.length > 0) {
       fired.forEach(f => addFiredAlert(f));
-      fired.forEach(f => addLog(`[ALERT:${f.level}] ${f.message}`, f.level === 'critical' ? 'error' : 'info'));
+      fired.forEach(f => addLog(t('liveMonitor.log.alert').replace('{level}', f.level).replace('{message}', f.message), f.level === 'critical' ? 'error' : 'info'));
     }
   }, [memoryData, alertRules]);
 

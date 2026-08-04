@@ -1,0 +1,87 @@
+name: Performance Gate
+
+on:
+  pull_request:
+    paths:
+      - '**/*.json'
+      - '**/*.ndv'
+  workflow_dispatch:
+    inputs:
+      trace:
+        description: 'Trace file to check (relative to repo root)'
+        required: false
+        default: 'examples/tracing-perf-before.json'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI
+        run: npm run build:cli
+
+      - name: Determine trace file
+        id: trace
+        run: |
+          TRACE="${{ github.event.inputs.trace }}"
+          if [ -z "$TRACE" ] || [ "$TRACE" = "null" ]; then
+            TRACE="examples/tracing-perf-before.json"
+          fi
+          echo "trace=$TRACE" >> "$GITHUB_OUTPUT"
+
+      - name: Run performance gate
+        id: gate
+        run: |
+          node cli/check.mjs check "${{ steps.trace.outputs.trace }}" --report gate-report.md
+          echo "GATE_EXIT=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Post PR comment with gate report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('gate-report.md') ? fs.readFileSync('gate-report.md', 'utf-8') : 'Gate report was not generated.';
+            const exitCode = Number(process.env.GATE_EXIT || '0');
+            const body = `## NodeVerdict Performance Gate\n\n**Result: ${exitCode === 0 ? 'PASS' : 'FAIL'}**\n\n<details><summary>Report</summary>\n\n\`\`\`markdown\n${report}\n\`\`\`\n\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c => c.body && c.body.includes('NodeVerdict Performance Gate'));
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail the build when the gate fails
+        if: steps.gate.outputs.GATE_EXIT != '0'
+        run: |
+          echo "::error::Performance gate FAILED — see the PR comment for details."
+          exit 1

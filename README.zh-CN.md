@@ -204,7 +204,18 @@ graph LR
 
 ![Live Monitor](./introduction/LiveMonitor.png)
 
-### 14. 教程
+### 14. 告警规则（新增）
+
+定义基于追踪/堆指标阈值规则，并实时查看哪些规则正在触发。
+
+- **六种指标** — `heapUsedPercent`（%）、`externalMemory`（MB）、`heapGrowthRate`（MB/s）、`rssGrowthRate`（MB/s）、`errorRate`（%）、`eventRate`（evt/s）
+- **三个级别** — `info` / `warning` / `critical`，带颜色徽章、边框高亮；规则被违反时进入"触发"状态并点亮
+- **规则构建器** — 添加/删除规则（指标 + 比较运算符 + 阈值 + 级别）；默认内置一条规则（`heapUsedPercent > 85`，warning）
+- **最近触发** — 规则基于当前指标快照实时评估；每条触发规则都会列出实际值与消息，并可一键清除
+
+![Alert Rules](./introduction/AlertRules.png)
+
+### 15. 教程
 
 内置交互式指南，涵盖如何从 Node.js 项目生成诊断数据以及如何使用所有 NodeVerdict 功能。
 
@@ -213,6 +224,42 @@ graph LR
 - **示例文件参考** — 全部 17 个示例文件的完整表格及推荐学习路径
 
 ![NodeVerdict Tutorial](./introduction/NodeVerdictTutorial.png)
+
+### 16. AI 根因分析（新增）
+
+一键根因诊断，由大模型驱动（未配置 API 密钥时回退到本地启发式分析）。
+
+- **追踪转提示词** — 将任意追踪数据转为紧凑的结构化提示词，保留跨度拓扑、耗时占比和错误链
+- **生态感知推理** — 系统提示词内置 Node.js 知识库（连接池、事件循环阻塞、N+1、Redis KEYS 等），让模型依据真实库行为推理
+- **流式输出** — 分析以 Markdown 形式实时流入页面
+- **自带密钥** — 兼容任意 OpenAI 格式端点；密钥仅保存在浏览器 localStorage
+- **本地回退** — 启发式分析器（高成本频道、最深错误、最耗时跨度）零配置即可用
+
+![AI Root Cause](./introduction/AIRootCauseAnalysis.png)
+
+### 17. OpenTelemetry 导入与 .ndv 二进制格式（新增）
+
+- **OTel 原生** — 直接放入标准 OTLP/JSON 追踪导出（或 jaeger 风格 JSON），所有页面自动识别并转换为其内部事件模型。无需 Jaeger/采集器。
+- **紧凑 `.ndv` 格式** — 将追踪导出为内存映射友好的二进制格式（约为 JSON 体积的 45%）。追踪查看器可导入/导出 `.ndv`；该布局设计为让 Rust/WASM 解码器可直接读取同一缓冲区。
+- **统一加载器** — 一个加载器即可在全部功能中规范化三种来源（NodeVerdict JSON、OTel JSON、`.ndv`）。
+
+### 18. 性能门禁 CLI（新增）
+
+把追踪数据变成 CI 门禁。
+
+- **`node-verdict check`** — 带退出码（`0` 通过、`1` 失败、`2` 错误）的 CLI，便于接入 CI
+- **规则即代码** — P99 延迟、N+1 SQL 模式、事件循环延迟的可配置阈值
+- **GitHub Actions** — `.github/workflows/perf-gate.yml` 在每次 PR 上运行门禁，并将差异报告发布为 PR 评论
+- **输出** — 人类可读的 Markdown 或供机器解析的 `--json`
+
+### 19. NodeVerdictExporter SDK（新增）
+
+将运行中 Node.js 服务的 OTel 跨度直接流式送入查看器。
+
+- **`nodeverdict-exporter`** — 将完成的跨度转换为 NodeVerdict `TracingEvent[]` 并流式转发到回调的 OpenTelemetry `SpanProcessor` / `SpanExporter`
+- **一行式配置** — `startNodeVerdict({ serviceName, onExport })` 注册全局 `NodeTracerProvider`
+- **格式** — 原生事件 JSON 或 OTLP/JSON 输出，浏览器可直接导入
+- 完整指南见 [`exporter/README.md`](./exporter/README.md)。
 
 ---
 
@@ -291,9 +338,62 @@ CPU 性能分析文件应使用 `--cpu-prof` 标志从 Node.js 导出，或使�
 | **内存时间线** | `memory-timeline.json` | 可视化 RSS/堆/外部内存增长趋势 |
 | **GC 日志分析器** | `--trace-gc` 日志文件 | 分析 GC 暂停时间和外部内存压力 |
 | **实时监控** | WebSocket（实时） | 实时内存监控、按需堆/CPU 诊断 |
+| **告警规则** | Tracing 事件 JSON / 堆数据 | 阈值监控（内存占比、增长率、错误率/事件率） |
+| **AI 根因分析** | Tracing 事件 JSON / OTel / `.ndv` | 大模型或本地启发式根因分析 |
 | **教程** | 内置 MD 指南 | 学习如何生成和使用诊断数据 |
 
-### 3. 分享结果
+### 3. AI 根因分析
+
+一键诊断追踪数据：
+
+1. **上传追踪数据** — NodeVerdict `TracingEvent[]` JSON、OpenTelemetry 导出或 `.ndv` 文件均可。
+2. 点击 **AI 诊断**。首次使用会打开 **配置 API 密钥** 弹窗——填写任意 OpenAI 格式端点（Base URL）、模型与 API 密钥。密钥仅保存在浏览器 localStorage，并直接发送到该端点。
+3. 分析**以 Markdown 流式输出**——症状、关键证据、根因、修复建议（基于内置 Node.js 生态知识库）与置信度。
+4. 没有 API 密钥？点击 **本地启发式分析**——零配置即可输出成本最高的频道、跨度树中最深层的错误以及最耗时的跨度。
+
+> 隐私：只有你主动发送的追踪摘要会离开浏览器，原始数据始终留在本地。
+
+### 4. 性能门禁（CI）
+
+在命令行用性能规则检查追踪数据：
+
+```bash
+npm run build:cli                 # 打包 CLI（npm run build 也会执行）
+node cli/check.mjs check examples/tracing-perf-before.json
+```
+
+退出码：`0` = 通过，`1` = 失败，`2` = 错误。用配置文件或参数覆盖阈值：
+
+```bash
+node cli/check.mjs check examples/tracing-perf-before.json --config gate.json
+node cli/check.mjs check trace.ndv --threshold=p99MaxMs=250 --json --report gate-report.md
+```
+
+示例 `gate.json`：
+
+```json
+{ "p99MaxMs": 500, "n1SqlMaxCount": 3, "eventLoopDelayMaxMs": 20 }
+```
+
+内置的 [`.github/workflows/perf-gate.yml`](./.github/workflows/perf-gate.yml) 会在每次 PR 上运行门禁，并把报告发布为 PR 评论。
+
+### 5. 从 OpenTelemetry 流式导入
+
+在 Node.js 服务中使用导出 SDK，然后在任意 NodeVerdict 页面打开输出：
+
+```bash
+cd exporter && npm install
+```
+
+```ts
+import { startNodeVerdict } from 'nodeverdict-exporter';
+
+startNodeVerdict({ serviceName: 'api', onExport: (events) => console.log(JSON.stringify(events)) });
+```
+
+也可以把保存好的 OTLP/JSON 导出（或 jaeger 风格 JSON）直接拖入任意页面——加载器会自动识别格式。
+
+### 6. 分享结果
 
 点击 **报告** → **复制链接** 以 URL 形式分享你的分析结果。接收者打开链接即可看到相同的结果——无需服务器，无需安装。
 
@@ -315,12 +415,21 @@ src/
 │   ├── engine/                      # 流水线解析引擎（纯函数）
 │   │   ├── tracing-parser.ts        # Tracing 事件解析流水线
 │   │   ├── trace-aggregator.ts      # 瀑布图构建及瓶颈检测
+│   │   ├── data-loader.ts           # 统一加载器：NodeVerdict JSON / OTel / .ndv
+│   │   ├── otel-adapter.ts          # OTLP/JSON → TracingEvent 转换
+│   │   ├── ndv-codec.ts             # 紧凑 .ndv 二进制编解码器（WASM 就绪布局）
 │   │   ├── heap-parser.ts           # 堆快照解析
 │   │   ├── heap-diff.ts             # 堆快照对比引擎
 │   │   ├── memory-analyzer.ts       # 字符串/外部内存/GC 日志分析
 │   │   ├── cpu-profile-parser.ts    # CPU 性能分析解析及火焰树构建
 │   │   ├── validator.ts             # 事件格式验证器
 │   │   └── report-generator.ts      # 报告生成与压缩
+│   ├── ai/                          # AI 根因引擎
+│   │   ├── tracePrompt.ts           # 追踪转提示词转换器
+│   │   ├── rcaEngine.ts             # LLM 客户端 + 本地启发式分析器
+│   │   └── knowledge.ts             # Node.js 生态最佳实践知识库
+│   ├── gate/                        # CI 性能门禁规则引擎（与 CLI 共享）
+│   │   └── performance-gate.ts      # 指标 + 规则 + 报告格式化
 │   ├── workers/                     # Web Worker 工厂及处理器
 │   ├── utils/                       # 格式化、I/O、辅助工具
 │   ├── components/                  # 共享 UI 组件
@@ -431,6 +540,11 @@ graph TB
 11. **GC 日志分析** → 上传 `examples/gc-trace-gc.log` 分析 GC 暂停时间和外部内存压力
 12. **字符串泄漏检测** → 在堆分析器中上传 `examples/heap-string-leak.heapsnapshot` 查看外部内存统计和字符串分析
 13. **实时监控** → 启动 `node server/live-agent.mjs --port 9876`，从实时监控页面连接，实时监控正在运行的 Node.js 进程
+14. **告警规则** → 上传任意追踪数据，在告警规则中创建规则（如 `errorRate > 5`，warning），观察规则点亮
+15. **AI 根因分析** → 在 AI 根因分析中上传 `examples/tracing-perf-before.json`，点击 **AI 诊断**（无密钥时点击 **本地启发式分析**）
+16. **性能门禁** → 在终端运行 `node cli/check.mjs check examples/tracing-perf-before.json --threshold=p99MaxMs=250`，观察门禁失败
+17. **二进制导出** → 在跟踪查看器中上传追踪数据，点击 **导出 .ndv（二进制）**，再重新导入该 `.ndv` 文件
+18. **OTel 导入** → 把 OTLP/JSON 追踪导出拖入任意页面——会自动识别并转换
 
 ---
 
@@ -452,7 +566,8 @@ graph TB
 | 命令 | 描述 |
 |---------|------|
 | `npm run dev` | 启动 Vite 开发服务器，支持 HMR |
-| `npm run build` | TypeScript 检查 + 生产构建 |
+| `npm run build` | 打包 CLI + TypeScript 检查 + 生产构建 |
+| `npm run build:cli` | 将 `node-verdict` CLI 打包为 `cli/check.mjs` |
 | `npm run preview` | 本地预览生产构建 |
 
 ### 技术栈
@@ -474,7 +589,7 @@ graph TB
 答：不会。所有分析完全在浏览器中运行。没有数据被上传到任何服务器。实时监控功能通过 WebSocket 连接到本地代理，但数据始终停留在你的本地网络中。
 
 **问：支持哪些文件格式？**  
-答：TracingChannel 事件的 JSON 文件（最大 3GB，通过 Web Worker 流式处理）、用于堆分析的 `.heapsnapshot` 文件（最大 3GB）、用于 CPU 性能分析的 `.cpuprofile` 文件（最大 3GB）、用于内存时间线的 `process.memoryUsage()` JSON 数组，以及用于 GC 分析的 `--trace-gc` 日志文件。
+答：TracingChannel 事件的 JSON 文件（最大 3GB，通过 Web Worker 流式处理）、标准 OpenTelemetry OTLP/JSON 追踪导出、紧凑的 `.ndv` 二进制格式、用于堆分析的 `.heapsnapshot` 文件（最大 3GB）、用于 CPU 性能分析的 `.cpuprofile` 文件（最大 3GB）、用于内存时间线的 `process.memoryUsage()` JSON 数组，以及用于 GC 分析的 `--trace-gc` 日志文件。
 
 **问：我可以将其用于生产环境监控吗？**  
 答：实时监控功能通过 WebSocket 提供实时诊断，无需重启进程——适用于在预发或生产环境中按需调试。对于持久的生产监控，请考虑专用的 APM 工具。

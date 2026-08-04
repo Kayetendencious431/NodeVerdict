@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { useFileUpload, useRemoteFile } from '../../shared/hooks';
 import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
-import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks } from '../../shared/engine';
+import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks, loadTracingData, loadNdvBuffer, encodeNdv } from '../../shared/engine';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { WaterfallChart } from './components/WaterfallChart';
 import { BottleneckList } from './components/BottleneckList';
@@ -10,15 +10,38 @@ import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/c
 import type { TracingEvent, TraceSpan } from '../../shared/types';
 import { formatDuration } from '../../shared/utils';
 
+function handleTraceContent(content: string | ArrayBuffer, setTraceData: (a: ReturnType<typeof analyzeTracingEvents> | null) => void) {
+  const events = typeof content === 'string'
+    ? loadTracingData(content)
+    : loadNdvBuffer(content);
+  const analysis = analyzeTracingEvents(events);
+  setTraceData(analysis);
+}
+
+function downloadNdv(events: TracingEvent[]) {
+  const bytes = encodeNdv(events);
+  const blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trace-${Date.now()}.ndv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function TraceViewerPage() {
   const { t } = useI18n();
   const { traceData, setTraceData } = useRootStore();
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
-    const events = JSON.parse(content) as TracingEvent[];
-    const analysis = analyzeTracingEvents(events);
-    setTraceData(analysis);
-  }, [setTraceData]), setProgress);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
+    useCallback(async (content: string) => {
+      handleTraceContent(content, setTraceData);
+    }, [setTraceData]),
+    setProgress,
+    useCallback(async (buffer: ArrayBuffer) => {
+      handleTraceContent(buffer, setTraceData);
+    }, [setTraceData]),
+  );
 
   const {
     loading: urlLoading,
@@ -29,9 +52,7 @@ export function TraceViewerPage() {
     reset: resetUrl,
   } = useRemoteFile({
     onFile: useCallback(async (content: string) => {
-      const events = JSON.parse(content) as TracingEvent[];
-      const analysis = analyzeTracingEvents(events);
-      setTraceData(analysis);
+      handleTraceContent(content, setTraceData);
     }, [setTraceData]),
     onProgress: setProgress,
   });
@@ -66,7 +87,7 @@ export function TraceViewerPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('traceViewer.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('traceViewer.uploadHint')}</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label={t('traceViewer.uploadTitle')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} onUrlLoad={loadFromUrl} urlLoading={urlLoading} urlError={urlError} urlProgress={urlProgress} onUrlCancel={cancelUrl} />
+        <FileUpload onFile={handleFile} accept=".json,.ndv" label={t('traceViewer.uploadTitle')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} onUrlLoad={loadFromUrl} urlLoading={urlLoading} urlError={urlError} urlProgress={urlProgress} onUrlCancel={cancelUrl} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         {urlError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{urlError}</p>}
         <LoadingOverlay visible={loading || urlLoading} message={t('traceViewer.buildingTrace')} />
@@ -90,7 +111,7 @@ export function TraceViewerPage() {
         <div className="w-72">
           <FileUpload
             onFile={handleFile}
-            accept=".json"
+            accept=".json,.ndv"
             label={t('traceViewer.uploadTitle')}
             maxSize={500 * 1024 * 1024}
             fileName={fileName}
@@ -105,6 +126,15 @@ export function TraceViewerPage() {
             onUrlCancel={cancelUrl}
           />
         </div>
+      </div>
+
+      <div className="mb-4">
+        <button
+          onClick={() => downloadNdv(traceData.events)}
+          className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          {t('traceViewer.exportNdv')}
+        </button>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">

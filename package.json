@@ -3,15 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "bin": {
+    "node-verdict": "./cli/check.mjs"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:cli && tsc && vite build",
+    "build:cli": "esbuild cli/check.ts --bundle --platform=node --format=esm --outfile=cli/check.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
+    "esbuild": "^0.28.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   },

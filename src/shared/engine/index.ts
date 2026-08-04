@@ -10,3 +10,7 @@ export type { HeapDiffNode, HeapDiffResult } from './heap-diff';
 export { analyzeStrings, analyzeExternalMemory, parseMemoryTimeline, calculateGrowthRate, parseGcLog } from './memory-analyzer';
 export { evaluateAlerts, buildMetricSnapshot, defaultAlertRules } from './alert-engine';
 export type { AlertRule, AlertMetric, AlertOperator, AlertLevel, FiredAlert, MetricSnapshot } from '../types/alert';
+export { detectTraceFormat, loadTracingData, loadAndAnalyzeTrace, loadNdvBuffer } from './data-loader';
+export type { TraceFormat } from './data-loader';
+export { isOtelExport, convertOtelToTracingEvents, loadOtelTraceJson } from './otel-adapter';
+export { encodeNdv, decodeNdv, decodeNdvFromArrayBuffer, NdvError } from './ndv-codec';

@@ -17,6 +17,7 @@ const zh: Record<string, string> = {
   'nav.live-monitor': '实时监控',
   'nav.snapshot-history': '快照历史',
   'nav.alert-rules': '告警规则',
+  'nav.ai-rca': 'AI 根因分析',
   'nav.darkMode': '暗色模式',
   'nav.lightMode': '明亮模式',
   'nav.collapse': '收起侧边栏',
@@ -60,6 +61,8 @@ const zh: Record<string, string> = {
   'feature.gc-log.desc': '解析和分析 GC 日志',
   'feature.live-monitor': 'Live Monitor',
   'feature.live-monitor.desc': 'WebSocket 实时连接诊断',
+  'feature.ai-rca': 'AI 根因分析',
+  'feature.ai-rca.desc': '将追踪数据转为结构化提示词，由大模型结合 Node.js 生态最佳实践定位根因；也可用本地启发式快速分析。',
 
   // Common
   'common.export': '导出',
@@ -480,6 +483,7 @@ const zh: Record<string, string> = {
   'traceViewer.uploadDesc': '上传包含 TracingChannel 事件的 JSON 文件。asyncStart/asyncEnd 事件将用于构建瀑布图。',
   'traceViewer.uploadHint': '上传追踪事件 JSON 文件查看瀑布图',
   'traceViewer.uploadTitle': '上传追踪数据',
+  'traceViewer.exportNdv': '导出 .ndv（二进制）',
   'traceViewer.waterfallChart': '瀑布图',
 
   // Alert Rules
@@ -635,6 +639,31 @@ const zh: Record<string, string> = {
   'fileUpload.maxSize': '最大文件大小：3GB',
   'fileUpload.loading': '加载中...',
   'fileUpload.error': '文件加载失败',
+
+  // AI 根因分析
+  'aiRca.title': 'AI 根因分析',
+  'aiRca.subtitle': '将追踪数据转为结构化提示词，由大模型定位根因；除你主动发送的追踪摘要外，数据不会离开浏览器。',
+  'aiRca.uploadLabel': '上传追踪 JSON',
+  'aiRca.noData': '尚未加载追踪数据',
+  'aiRca.noDataDesc': '上传 NodeVerdict TracingEvent[] JSON 或 OpenTelemetry 导出文件以开始分析。',
+  'aiRca.events': '事件数',
+  'aiRca.operations': '操作数',
+  'aiRca.errorRate': '错误率',
+  'aiRca.channels': '频道数',
+  'aiRca.diagnose': 'AI 诊断',
+  'aiRca.analyzing': '分析中...',
+  'aiRca.configure': '配置 API 密钥',
+  'aiRca.localDiagnose': '本地启发式分析',
+  'aiRca.configTitle': 'AI 配置',
+  'aiRca.configDesc': 'API 密钥仅存储在本浏览器（localStorage）并直接发送至端点，兼容任意 OpenAI 格式端点。',
+  'aiRca.apiKey': 'API 密钥',
+  'aiRca.baseUrl': 'Base URL',
+  'aiRca.model': '模型',
+  'aiRca.show': '显示',
+  'aiRca.hide': '隐藏',
+  'aiRca.save': '保存',
+  'aiRca.cancel': '取消',
+  'aiRca.clearKey': '清除已保存的密钥',
 };
 
 export default zh;

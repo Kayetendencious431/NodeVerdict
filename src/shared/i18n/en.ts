@@ -17,6 +17,7 @@ const en: Record<string, string> = {
   'nav.live-monitor': 'Live Monitor',
   'nav.snapshot-history': 'Snapshot History',
   'nav.alert-rules': 'Alert Rules',
+  'nav.ai-rca': 'AI Root Cause',
   'nav.darkMode': 'Dark Mode',
   'nav.lightMode': 'Light Mode',
   'nav.collapse': 'Collapse sidebar',
@@ -60,6 +61,8 @@ const en: Record<string, string> = {
   'feature.gc-log.desc': 'Upload --trace-gc log files to analyze garbage collection patterns, pause times, and external memory pressure.',
   'feature.live-monitor': 'Live Monitor',
   'feature.live-monitor.desc': 'Connect to a running Node.js process via WebSocket — stream tracing events, memory usage, heap snapshots, and CPU profiles in real-time.',
+  'feature.ai-rca': 'AI Root Cause',
+  'feature.ai-rca.desc': 'Convert traces into structured prompts and get ecosystem-aware root-cause analysis from an LLM, or run fast local heuristics.',
 
   // Common
   'common.export': 'Export',
@@ -496,6 +499,7 @@ const en: Record<string, string> = {
   'traceViewer.uploadDesc': 'Upload a JSON file with TracingChannel events. asyncStart/asyncEnd events will be used to build the waterfall.',
   'traceViewer.uploadHint': 'Upload tracing events to visualize async operation chains',
   'traceViewer.uploadTitle': 'Upload tracing events JSON',
+  'traceViewer.exportNdv': 'Export .ndv (binary)',
   'traceViewer.waterfallChart': 'Waterfall Chart',
 
   // Alert Rules
@@ -672,6 +676,31 @@ const en: Record<string, string> = {
   'fileUpload.maxSize': 'Max file size: 3GB',
   'fileUpload.loading': 'Loading...',
   'fileUpload.error': 'Failed to load file',
+
+  // AI Root Cause
+  'aiRca.title': 'AI Root Cause Analysis',
+  'aiRca.subtitle': 'Convert a trace into a structured prompt and let an LLM find the root cause — no data ever leaves your browser except the trace summary you choose to send.',
+  'aiRca.uploadLabel': 'Upload trace JSON',
+  'aiRca.noData': 'No trace loaded',
+  'aiRca.noDataDesc': 'Upload a NodeVerdict TracingEvent[] JSON or an OpenTelemetry export to start.',
+  'aiRca.events': 'Events',
+  'aiRca.operations': 'Operations',
+  'aiRca.errorRate': 'Error rate',
+  'aiRca.channels': 'Channels',
+  'aiRca.diagnose': 'AI Diagnose',
+  'aiRca.analyzing': 'Analyzing...',
+  'aiRca.configure': 'Configure API key',
+  'aiRca.localDiagnose': 'Local heuristic analysis',
+  'aiRca.configTitle': 'AI Configuration',
+  'aiRca.configDesc': 'Your API key is stored only in this browser (localStorage) and sent directly to the endpoint. Any OpenAI-compatible endpoint works.',
+  'aiRca.apiKey': 'API key',
+  'aiRca.baseUrl': 'Base URL',
+  'aiRca.model': 'Model',
+  'aiRca.show': 'Show',
+  'aiRca.hide': 'Hide',
+  'aiRca.save': 'Save',
+  'aiRca.cancel': 'Cancel',
+  'aiRca.clearKey': 'Clear saved key',
 };
 
 export default en;

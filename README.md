@@ -204,7 +204,18 @@ Connect to a running Node.js process in real-time via WebSocket — no restart, 
 
 ![Live Monitor](./introduction/LiveMonitor.png)
 
-### 14. Tutorial
+### 14. Alert Rules (NEW)
+
+Define threshold rules over trace/heap metrics and see exactly which rules are firing.
+
+- **Six Metrics** — `heapUsedPercent` (%), `externalMemory` (MB), `heapGrowthRate` (MB/s), `rssGrowthRate` (MB/s), `errorRate` (%), `eventRate` (evt/s)
+- **Three Levels** — `info` / `warning` / `critical` with color-coded badges, border highlights, and a firing state that lights up when a rule is violated
+- **Rule Builder** — Add/remove rules with a metric, comparison operator, threshold, and level; a default rule (`heapUsedPercent > 85`, warning) is included
+- **Recently Fired** — Rules are evaluated against the current metric snapshot; every firing rule is listed with its actual value and message, and can be cleared with one click
+
+![Alert Rules](./introduction/AlertRules.png)
+
+### 15. Tutorial
 
 Built-in interactive guide covering how to generate diagnostic data from Node.js projects and use all NodeVerdict features.
 
@@ -213,6 +224,42 @@ Built-in interactive guide covering how to generate diagnostic data from Node.js
 - **Sample File Reference** — Complete table of all 17 example files with recommended learning path
 
 ![NodeVerdict Tutorial](./introduction/NodeVerdictTutorial.png)
+
+### 16. AI Root Cause Analysis (NEW)
+
+One-click root-cause diagnosis powered by an LLM (or local heuristics when no API key is set).
+
+- **Trace-to-Prompt** — Converts any trace into a compact structured prompt preserving span topology, timing shares, and error chains
+- **Ecosystem-aware Reasoning** — System prompt embeds a Node.js knowledge base (connection pools, event-loop blocking, N+1, Redis KEYS, etc.) so the model reasons against real library behavior
+- **Streaming Output** — Markdown analysis streams into the page as it is generated
+- **Bring Your Own Key** — Any OpenAI-compatible endpoint; the key stays in your browser's localStorage
+- **Local Fallback** — A heuristic analyzer (dominant channel, deepest error, most expensive span) works with zero configuration
+
+![AI Root Cause](./introduction/AIRootCauseAnalysis.png)
+
+### 17. OpenTelemetry Import & .ndv Binary Format (NEW)
+
+- **OTel-native** — Drop in a standard OTLP/JSON trace export (or jaeger-style JSON) and every page auto-detects and converts it to the internal event model. No Jaeger/collector needed.
+- **Compact `.ndv` Format** — Export traces as a memory-map friendly binary (~45% the size of JSON). The Trace Viewer imports/exports `.ndv`; the layout is designed so a Rust/WASM decoder can read the same buffer.
+- **Shared Loader** — One loader normalizes all three sources (NodeVerdict JSON, OTel JSON, `.ndv`) across every feature.
+
+### 18. Performance Gate CLI (NEW)
+
+Turn traces into a CI gate.
+
+- **`node-verdict check`** — CLI with exit codes (`0` pass, `1` fail, `2` error) for easy CI integration
+- **Rules as code** — Configurable thresholds for P99 latency, N+1 SQL patterns, and event-loop delay
+- **GitHub Actions** — `.github/workflows/perf-gate.yml` runs the gate on every PR and posts a diff-style report as a PR comment
+- **Outputs** — Human-readable markdown or `--json` for machine consumption
+
+### 19. NodeVerdictExporter SDK (NEW)
+
+Stream OTel spans from your running Node.js service directly into the viewer.
+
+- **`nodeverdict-exporter`** — OpenTelemetry `SpanProcessor` / `SpanExporter` that converts completed spans into NodeVerdict `TracingEvent[]` and streams them to a callback
+- **One-liner setup** — `startNodeVerdict({ serviceName, onExport })` registers a global `NodeTracerProvider`
+- **Formats** — Native events JSON or OTLP/JSON output, both directly importable in the browser
+- See [`exporter/README.md`](./exporter/README.md) for the full guide.
 
 ---
 
@@ -291,9 +338,62 @@ Navigate to any feature page, upload your diagnostic file, and start exploring:
 | **Memory Timeline** | `memory-timeline.json` | Visualizing RSS/heap/external memory growth trends |
 | **GC Log Analyzer** | `--trace-gc` log files | Analyzing GC pause times and external memory pressure |
 | **Live Monitor** | WebSocket (live) | Real-time memory monitoring, on-demand heap/CPU diagnostics |
+| **Alert Rules** | Tracing events JSON / heap | Threshold monitoring (memory %, growth rates, error/event rates) |
+| **AI Root Cause** | Tracing events JSON / OTel / `.ndv` | LLM or local-heuristic root-cause analysis |
 | **Tutorial** | Built-in MD guide | Learning how to generate and use diagnostic data |
 
-### 3. Share Results
+### 3. AI Root Cause Analysis
+
+Diagnose a trace in one click:
+
+1. **Upload a trace** — a NodeVerdict `TracingEvent[]` JSON, an OpenTelemetry export, or a `.ndv` file.
+2. Click **AI Diagnose**. The first time, the **Configure API key** dialog opens — enter any OpenAI-compatible endpoint (Base URL), model, and API key. The key is stored only in your browser's localStorage and sent directly to the endpoint.
+3. The analysis **streams in as markdown** — symptom, key evidence, root cause, recommended fixes (grounded in the embedded Node.js ecosystem knowledge base), and confidence.
+4. No API key? Click **Local heuristic analysis** — it reports the dominant-cost channel, the deepest error in the span tree, and the most expensive span with zero configuration.
+
+> Privacy: only the trace summary you choose to send leaves the browser. The raw data never does.
+
+### 4. Performance Gate (CI)
+
+Check a trace against performance rules from the command line:
+
+```bash
+npm run build:cli                 # bundle the CLI (also runs as part of npm run build)
+node cli/check.mjs check examples/tracing-perf-before.json
+```
+
+Exit codes: `0` = pass, `1` = fail, `2` = error. Override thresholds with a config file or flags:
+
+```bash
+node cli/check.mjs check examples/tracing-perf-before.json --config gate.json
+node cli/check.mjs check trace.ndv --threshold=p99MaxMs=250 --json --report gate-report.md
+```
+
+Example `gate.json`:
+
+```json
+{ "p99MaxMs": 500, "n1SqlMaxCount": 3, "eventLoopDelayMaxMs": 20 }
+```
+
+The included [`.github/workflows/perf-gate.yml`](./.github/workflows/perf-gate.yml) runs the gate on every PR and posts the report as a PR comment.
+
+### 5. Stream From OpenTelemetry
+
+Use the exporter SDK in your Node.js service and open the output in any NodeVerdict page:
+
+```bash
+cd exporter && npm install
+```
+
+```ts
+import { startNodeVerdict } from 'nodeverdict-exporter';
+
+startNodeVerdict({ serviceName: 'api', onExport: (events) => console.log(JSON.stringify(events)) });
+```
+
+You can also drop a saved OTLP/JSON export (or jaeger-style JSON) straight into any page — the loader auto-detects the format.
+
+### 6. Share Results
 
 Click **Report** → **Copy Link** to share your analysis as a URL. Recipients open the link and see the same results — no server, no installation.
 
@@ -315,12 +415,21 @@ src/
 │   ├── engine/                      # Pipeline parsing engine (pure functions)
 │   │   ├── tracing-parser.ts        # Tracing event parsing pipeline
 │   │   ├── trace-aggregator.ts      # Waterfall building & bottleneck detection
+│   │   ├── data-loader.ts           # Unified loader: NodeVerdict JSON / OTel / .ndv
+│   │   ├── otel-adapter.ts          # OTLP/JSON → TracingEvent conversion
+│   │   ├── ndv-codec.ts             # Compact .ndv binary codec (WASM-ready layout)
 │   │   ├── heap-parser.ts           # Heap snapshot parsing
 │   │   ├── heap-diff.ts             # Heap snapshot comparison engine
 │   │   ├── memory-analyzer.ts       # String/external memory/GC log analysis
 │   │   ├── cpu-profile-parser.ts    # CPU profile parsing & flame tree building
 │   │   ├── validator.ts             # Event format validator
 │   │   └── report-generator.ts      # Report generation & compression
+│   ├── ai/                          # AI root-cause engine
+│   │   ├── tracePrompt.ts           # Trace-to-prompt converter
+│   │   ├── rcaEngine.ts             # LLM client + local heuristic analyzer
+│   │   └── knowledge.ts             # Node.js ecosystem best-practice knowledge base
+│   ├── gate/                        # CI performance-gate rules engine (shared with CLI)
+│   │   └── performance-gate.ts      # Metrics + rules + report formatting
 │   ├── workers/                     # Web Worker factory & handlers
 │   ├── utils/                       # Formatting, I/O, helpers
 │   ├── components/                  # Shared UI components
@@ -431,6 +540,11 @@ Sample data files are available in the [`examples/`](./examples) directory:
 11. **GC Log Analysis** → Upload `examples/gc-trace-gc.log` to analyze GC pause times and external memory pressure
 12. **String Leak Detection** → Upload `examples/heap-string-leak.heapsnapshot` in Heap Analyzer to see external memory stats and string analysis
 13. **Live Monitor** → Start `node server/live-agent.mjs --port 9876`, connect from the Live Monitor page, and monitor a running Node.js process in real-time
+14. **Alert Rules** → Upload any trace, then create rules in Alert Rules (e.g. `errorRate > 5`, warning) and watch them light up
+15. **AI Root Cause** → Upload `examples/tracing-perf-before.json` in AI Root Cause, click **AI Diagnose** (or **Local heuristic analysis** without a key)
+16. **Performance Gate** → Run `node cli/check.mjs check examples/tracing-perf-before.json --threshold=p99MaxMs=250` in the terminal to see the gate fail
+17. **Binary Export** → In Trace Viewer, upload a trace and click **Export .ndv**, then re-import the `.ndv` file
+18. **OTel Import** → Drop an OTLP/JSON trace export into any page — it is auto-detected and converted
 
 ---
 
@@ -452,7 +566,8 @@ Sample data files are available in the [`examples/`](./examples) directory:
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start Vite dev server with HMR |
-| `npm run build` | TypeScript check + production build |
+| `npm run build` | Build CLI bundle + TypeScript check + production build |
+| `npm run build:cli` | Bundle the `node-verdict` CLI to `cli/check.mjs` |
 | `npm run preview` | Preview production build locally |
 
 ### Tech Stack
@@ -474,7 +589,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 A: No. All analysis runs entirely in your browser. No data is uploaded to any server. The Live Monitor feature connects to a local agent via WebSocket, but data stays within your local network.
 
 **Q: What file formats are supported?**  
-A: JSON files for TracingChannel events (up to 3GB, streamed via Web Worker), `.heapsnapshot` files for heap analysis (up to 3GB), `.cpuprofile` files for CPU profiling (up to 3GB), `process.memoryUsage()` JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
+A: JSON files for TracingChannel events (up to 3GB, streamed via Web Worker), standard OpenTelemetry OTLP/JSON trace exports, the compact `.ndv` binary format, `.heapsnapshot` files for heap analysis (up to 3GB), `.cpuprofile` files for CPU profiling (up to 3GB), `process.memoryUsage()` JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
 
 **Q: Can I use this for production monitoring?**  
 A: The Live Monitor feature provides real-time diagnostics via WebSocket without restarting your process — useful for on-demand debugging in staging or production. For persistent production monitoring, consider dedicated APM tools.

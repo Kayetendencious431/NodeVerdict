@@ -10,15 +10,19 @@
     "dev": "vite",
     "build": "npm run build:cli && tsc && vite build",
     "build:cli": "esbuild cli/check.ts --bundle --platform=node --format=esm --outfile=cli/check.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "esbuild": "^0.28.1",
     "typescript": "~6.0.2",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

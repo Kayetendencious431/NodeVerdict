@@ -20,16 +20,28 @@ interface OtlpSpan {
   kind?: number;
   startTimeUnixNano?: string | number;
   endTimeUnixNano?: string | number;
+  /** jaeger-style fields */
+  operationName?: string;
+  startTime?: number;
+  duration?: number;
   attributes?: { key: string; value: { stringValue?: string; intValue?: string; doubleValue?: number; boolValue?: boolean; arrayValue?: { values: unknown[] } } }[];
   status?: { code?: number; message?: string };
   events?: { name?: string; attributes?: unknown }[];
 }
 
-function nanosToMs(nano: string | number | undefined): number {
-  if (nano === undefined) return 0;
-  const n = typeof nano === 'string' ? Number(nano) : nano;
-  if (n < 1e14) return n; // already ms
-  return n / 1e6;
+/**
+ * Converts a raw epoch timestamp to milliseconds using a magnitude heuristic.
+ * Epoch nanos (~1.7e18), micros (~1.7e15) and millis (~1.7e12) are cleanly
+ * separated by two orders of magnitude for dates between 1970 and ~2287:
+ *   >= 1e16 → nanoseconds, >= 1e13 → microseconds, otherwise milliseconds.
+ */
+function timeToMs(value: string | number | undefined): number {
+  if (value === undefined || value === '') return 0;
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (n === 0) return 0;
+  if (n >= 1e16) return n / 1e6;
+  if (n >= 1e13) return n / 1e3;
+  return n;
 }
 
 function attrValue(v: { stringValue?: string; intValue?: string; doubleValue?: number; boolValue?: boolean }): string {
@@ -46,12 +58,21 @@ function findAttr(attrs: OtlpSpan['attributes'], key: string): string {
 }
 
 function spanToEvents(span: OtlpSpan): TracingEvent[] {
-  const channel = findAttr(span.attributes ?? [], 'nodeverdict.channel') || span.name || 'otel.span';
-  const operationId = span.spanId || span.name || `otel:${Math.random().toString(36).slice(2)}`;
+  const channel = findAttr(span.attributes ?? [], 'nodeverdict.channel') || span.name || span.operationName || 'otel.span';
+  const operationId = span.spanId || span.name || span.operationName || `otel:${Math.random().toString(36).slice(2)}`;
   const parentSpanId = span.parentSpanId;
-  const start = nanosToMs(span.startTimeUnixNano);
-  const end = nanosToMs(span.endTimeUnixNano);
-  const duration = end > start ? end - start : 0;
+
+  // OTLP uses start/end nanos; jaeger uses startTime + duration in micros.
+  let start = timeToMs(span.startTimeUnixNano);
+  let end = timeToMs(span.endTimeUnixNano);
+  let duration = end > start ? end - start : 0;
+  if (span.duration !== undefined && span.duration > 0) {
+    const jaegerStart = timeToMs(span.startTime);
+    duration = span.duration / 1e3;
+    start = jaegerStart;
+    end = jaegerStart + duration;
+  }
+
   const statusCode = span.status?.code ?? 1;
   const isError = statusCode === 2;
 

@@ -39,6 +39,12 @@ export function buildWaterfall(operations: PairedOperation[], events: TracingEve
       span.metadata = { ...span.metadata, ...asyncStart.context };
     }
 
+    // Attach the error payload so downstream consumers (AI-RCA, prompt, reports)
+    // can read the actual error message instead of only the status.
+    if (op.status === 'error' && op.error?.error) {
+      span.metadata = { ...span.metadata, error: op.error.error };
+    }
+
     spans.push(span);
   }
 

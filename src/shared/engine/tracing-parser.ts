@@ -3,7 +3,7 @@ import type { TracingEvent, TracingAnalysis, PairedOperation, ChannelStats } fro
 /** Pipeline stage: Normalize raw events */
 function normalize(events: TracingEvent[]): TracingEvent[] {
   return events
-    .filter(e => e.channel && e.eventType && e.timestamp)
+    .filter(e => e.channel && e.eventType && typeof e.timestamp === 'number')
     .sort((a, b) => a.timestamp - b.timestamp);
 }
 

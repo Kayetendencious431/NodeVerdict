@@ -491,7 +491,7 @@ import { resolve } from "node:path";
 
 // src/shared/engine/tracing-parser.ts
 function normalize(events) {
-  return events.filter((e) => e.channel && e.eventType && e.timestamp).sort((a, b) => a.timestamp - b.timestamp);
+  return events.filter((e) => e.channel && e.eventType && typeof e.timestamp === "number").sort((a, b) => a.timestamp - b.timestamp);
 }
 function pairOperations(events) {
   const startMap = /* @__PURE__ */ new Map();
@@ -634,6 +634,9 @@ function buildWaterfall(operations, events) {
     if (asyncStart) {
       span.metadata = { ...span.metadata, ...asyncStart.context };
     }
+    if (op.status === "error" && op.error?.error) {
+      span.metadata = { ...span.metadata, error: op.error.error };
+    }
     spans.push(span);
   }
   spans.sort((a, b) => a.startTime - b.startTime);
@@ -654,11 +657,13 @@ function buildWaterfall(operations, events) {
 var import_lz_string = __toESM(require_lz_string(), 1);
 
 // src/shared/engine/otel-adapter.ts
-function nanosToMs(nano) {
-  if (nano === void 0) return 0;
-  const n = typeof nano === "string" ? Number(nano) : nano;
-  if (n < 1e14) return n;
-  return n / 1e6;
+function timeToMs(value) {
+  if (value === void 0 || value === "") return 0;
+  const n = typeof value === "string" ? Number(value) : value;
+  if (n === 0) return 0;
+  if (n >= 1e16) return n / 1e6;
+  if (n >= 1e13) return n / 1e3;
+  return n;
 }
 function attrValue(v) {
   if (v.stringValue !== void 0) return v.stringValue;
@@ -672,12 +677,18 @@ function findAttr(attrs, key) {
   return found ? attrValue(found.value) : "";
 }
 function spanToEvents(span) {
-  const channel = findAttr(span.attributes ?? [], "nodeverdict.channel") || span.name || "otel.span";
-  const operationId = span.spanId || span.name || `otel:${Math.random().toString(36).slice(2)}`;
+  const channel = findAttr(span.attributes ?? [], "nodeverdict.channel") || span.name || span.operationName || "otel.span";
+  const operationId = span.spanId || span.name || span.operationName || `otel:${Math.random().toString(36).slice(2)}`;
   const parentSpanId = span.parentSpanId;
-  const start = nanosToMs(span.startTimeUnixNano);
-  const end = nanosToMs(span.endTimeUnixNano);
-  const duration = end > start ? end - start : 0;
+  let start = timeToMs(span.startTimeUnixNano);
+  let end = timeToMs(span.endTimeUnixNano);
+  let duration = end > start ? end - start : 0;
+  if (span.duration !== void 0 && span.duration > 0) {
+    const jaegerStart = timeToMs(span.startTime);
+    duration = span.duration / 1e3;
+    start = jaegerStart;
+    end = jaegerStart + duration;
+  }
   const statusCode = span.status?.code ?? 1;
   const isError = statusCode === 2;
   const context = {};
@@ -837,15 +848,16 @@ function decodeNdv(input) {
       } catch {
       }
     }
-    events.push({
+    const event = {
       channel: strings[channelIdx] ?? `channel:${channelIdx}`,
       eventType: numToEventType(typeNum),
       context,
-      timestamp,
-      duration,
-      error,
-      operationId
-    });
+      timestamp
+    };
+    if (duration !== void 0) event.duration = duration;
+    if (operationId !== void 0) event.operationId = operationId;
+    if (error !== void 0) event.error = error;
+    events.push(event);
   }
   return events;
 }
@@ -913,7 +925,8 @@ function flattenSpans(spans, depth) {
   }
   return out;
 }
-function computeGateMetrics(events) {
+function computeGateMetrics(events, config = {}) {
+  const n1Threshold = config.n1SqlMaxCount ?? defaultGateConfig.n1SqlMaxCount;
   const analysis = analyzeTracingEvents(events);
   const spans = buildWaterfall(analysis.operations, analysis.events);
   const durations = analysis.operations.filter((o) => o.duration > 0).map((o) => o.duration).sort((a, b) => a - b);
@@ -927,7 +940,7 @@ function computeGateMetrics(events) {
       byType.set(key, (byType.get(key) ?? 0) + 1);
     }
     for (const [type, count] of byType) {
-      if (count >= defaultGateConfig.n1SqlMaxCount) {
+      if (count >= n1Threshold) {
         n1SqlInstances.push({ parentChannel: span.channel, parentId: span.operationId, queries: count });
       }
     }
@@ -998,7 +1011,7 @@ function evaluateGate(metrics, config = {}) {
 }
 function evaluateTraceGate(content, config) {
   const events = typeof content === "string" ? loadTracingData(content) : loadNdvBuffer(content);
-  const metrics = computeGateMetrics(events);
+  const metrics = computeGateMetrics(events, config);
   return evaluateGate(metrics, config);
 }
 function formatGateReport(result, sourceName) {

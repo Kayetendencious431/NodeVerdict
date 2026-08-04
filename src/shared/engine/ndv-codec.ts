@@ -273,15 +273,16 @@ export function decodeNdv(input: ArrayBuffer | Uint8Array | DataView): TracingEv
       }
     }
 
-    events.push({
+    const event: TracingEvent = {
       channel: strings[channelIdx] ?? `channel:${channelIdx}`,
       eventType: numToEventType(typeNum),
       context,
       timestamp,
-      duration,
-      error,
-      operationId,
-    });
+    };
+    if (duration !== undefined) event.duration = duration;
+    if (operationId !== undefined) event.operationId = operationId;
+    if (error !== undefined) event.error = error;
+    events.push(event);
   }
 
   return events;

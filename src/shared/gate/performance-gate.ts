@@ -69,7 +69,8 @@ function flattenSpans(spans: TraceSpan[], depth: number): { span: TraceSpan; dep
 }
 
 /** Computes raw gate metrics from parsed tracing events. */
-export function computeGateMetrics(events: TracingEvent[]): GateMetrics {
+export function computeGateMetrics(events: TracingEvent[], config: Partial<GateConfig> = {}): GateMetrics {
+  const n1Threshold = config.n1SqlMaxCount ?? defaultGateConfig.n1SqlMaxCount;
   const analysis = analyzeTracingEvents(events);
   const spans = buildWaterfall(analysis.operations, analysis.events);
 
@@ -89,7 +90,7 @@ export function computeGateMetrics(events: TracingEvent[]): GateMetrics {
       byType.set(key, (byType.get(key) ?? 0) + 1);
     }
     for (const [type, count] of byType) {
-      if (count >= defaultGateConfig.n1SqlMaxCount) {
+      if (count >= n1Threshold) {
         n1SqlInstances.push({ parentChannel: span.channel, parentId: span.operationId, queries: count });
       }
     }
@@ -173,7 +174,7 @@ export function evaluateGate(metrics: GateMetrics, config: Partial<GateConfig> =
 /** One-call entry point: parse a trace source (JSON events / OTel JSON / .ndv) and evaluate. */
 export function evaluateTraceGate(content: string | ArrayBuffer, config?: Partial<GateConfig>): GateResult {
   const events = typeof content === 'string' ? loadTracingData(content) : loadNdvBuffer(content);
-  const metrics = computeGateMetrics(events);
+  const metrics = computeGateMetrics(events, config);
   return evaluateGate(metrics, config);
 }
 

@@ -19,6 +19,7 @@ import { SnapshotHistoryPage } from '../features/snapshot-history';
 import { AiRcaPage } from '../features/ai-rca';
 import { TopologyPage } from '../features/topology';
 import { DifferentialDebugPage } from '../features/differential-debug';
+import { JitInsightsPage } from '../features/jit-insights';
 import { useEffect } from 'react';
 import { useI18n } from '../shared/i18n/useI18n';
 
@@ -104,6 +105,12 @@ function HomePage() {
           description={t('feature.gc-log.desc')}
           icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
           onClick={() => navigate('gc-log')}
+        />
+        <FeatureCard
+          title={t('feature.jit-insights')}
+          description={t('feature.jit-insights.desc')}
+          icon="M11 3h8v8h-8V3zM5 5h3v14H5V5zm12 10h3v4h-3v-4zm-6 0h3v4h-3v-4z"
+          onClick={() => navigate('jit-insights')}
         />
         <FeatureCard
           title={t('feature.live-monitor')}
@@ -214,6 +221,7 @@ export function App() {
       <div style={{ display: currentPage === 'ai-rca' ? 'block' : 'none' }}><AiRcaPage /></div>
       <div style={{ display: currentPage === 'topology' ? 'block' : 'none' }}><TopologyPage /></div>
       <div style={{ display: currentPage === 'differential-debug' ? 'block' : 'none' }}><DifferentialDebugPage /></div>
+      <div style={{ display: currentPage === 'jit-insights' ? 'block' : 'none' }}><JitInsightsPage /></div>
     </AppShell>
   );
 }

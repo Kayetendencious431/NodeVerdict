@@ -6,3 +6,8 @@ export type { ValidationResult, ValidationIssue } from '../engine/validator';
 export type { CpuProfileNode, CpuProfile, FlameFrame, HotFunction, CpuProfileAnalysis } from './cpu-profile';
 export type { MemoryUsageSnapshot, MemoryTimeline, MemoryGrowthRate, StringAnalysis, GCEntry, GCLogAnalysis, MemoryAnalysis } from './memory';
 export type { AlertMetric, AlertOperator, AlertLevel, AlertRule, FiredAlert, MetricSnapshot } from './alert';
+export type {
+  IcState, IcKind, IcEvent, MapTransition, OptEvent, DeoptEvent, V8Trace,
+  IcSiteSummary, FunctionSummary, IcGraphNode, IcGraphEdge, IcStateGraph,
+  FindingSeverity, JitFinding, PatchStrategy, EquivalenceResult, JitPatch, JitAnalysis,
+} from './jit';

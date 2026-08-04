@@ -301,6 +301,8 @@ Compare a *normal* and a *fault* execution trace of the same code path to locali
 
 ![Differential Debug](./introduction/DifferentialDebug.png)
 
+- **JIT Insights** — Parse combined V8 `--trace-ic` / `--trace-opt` / `--trace-deopt` output into inline-cache sites, hidden-class (map) flow, and optimize/deoptimize timelines; visualize IC polymorphism as a force-directed graph; detect JIT anti-patterns (megamorphic ICs, deopt storms, optimize/deopt loops, hidden-class fragmentation, optimization suppression) scored by severity with an overall health score; and generate object-literal / field-initialization reorder patches that are verified by an `@babel/parser`-based AST-equivalence checker. Demo trace: `examples/v8-jit-trace.log`.
+
 ---
 
 ## Getting Started

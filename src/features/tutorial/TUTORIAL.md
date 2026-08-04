@@ -357,11 +357,30 @@ Generate shareable diagnostic reports.
 3. Click "Copy Shareable Link" for URL-encoded report
 4. Click "Export Offline Report" for a standalone HTML file
 
+### 4.12 JIT Insights
+
+Analyze V8 JIT compiler traces to find deoptimization and hidden-class problems.
+
+**Features:**
+- Parses combined `--trace-ic`, `--trace-opt`, and `--trace-deopt` output
+- IC State Graph — force-directed visualization of hidden-class (map) flow into each inline-cache site, colored by polymorphism (green/amber/red)
+- Opt Timeline — per-function optimize/deoptimize sequences with loop detection
+- Anti-pattern detection — megamorphic ICs, deopt storms, optimize/deopt loops, hidden-class fragmentation, optimization suppression (with severity + health score)
+- Semantic code patches — rewrites object-literal and field-initialization order to unify hidden classes, verified by an AST-equivalence checker
+
+**Steps:**
+1. Run your app under V8 with all three trace flags: `node --trace-ic --trace-opt --trace-deopt app.js 2> trace.log`
+2. Open "JIT Insights" and upload the file (or click "Load demo trace" to try the bundled example)
+3. Review the Overview for hot IC sites and findings
+4. Open the IC State Graph to see which maps flow into megamorphic sites
+5. Use the Opt Timeline to spot optimize/deopt loops in specific functions
+6. Open "Patches", paste a hot function, and generate AST-verified rewrites
+
 ---
 
 ## 5. Sample Files Quick Start
 
-17 sample files are available in the `examples/` directory:
+18 sample files are available in the `examples/` directory:
 
 | File | Best For | Description |
 |------|----------|-------------|
@@ -382,6 +401,7 @@ Generate shareable diagnostic reports.
 | `heap-string-leak.heapsnapshot` | Heap Analyzer | String concatenation leak with external memory |
 | `memory-timeline.json` | Memory Timeline | 16 snapshots, RSS 65MB→250MB growth |
 | `gc-trace-gc.log` | GC Log Analyzer | 33 GC events (Scavenge + Mark-sweep) |
+| `v8-jit-trace.log` | JIT Insights | V8 trace-ic/opt/deopt output with megamorphic ICs and deopt storms |
 
 ### Recommended Learning Path
 
@@ -395,6 +415,7 @@ Generate shareable diagnostic reports.
 8. **Search & Filter** → `tracing-search-filter.json` — Try advanced search
 9. **Report** → `tracing-events.json` — Generate a shareable report
 10. **Live Monitor** → Start the agent and connect to a running Node.js process
+11. **JIT Insights** → `v8-jit-trace.log` — Detect deopt storms and IC polymorphism
 
 ---
 

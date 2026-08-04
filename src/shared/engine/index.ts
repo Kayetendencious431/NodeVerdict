@@ -20,3 +20,7 @@ export type {
   CriticalPathNode, CascadeStep, RankedService, RootCauseReport,
   ServiceHealth, HealthSignal,
 } from '../distributed';
+export { parseV8Trace, icSiteKey } from './jit-parser';
+export { analyzeJit, DEFAULT_JIT_OPTIONS } from './jit-analysis';
+export type { JitAnalysisOptions } from './jit-analysis';
+export { generatePatches, verifyPatchEquivalence } from './jit-patch';

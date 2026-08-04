@@ -2,12 +2,14 @@ import { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import type { TraceSpan } from '../../../shared/types';
 import { channelColor } from '../../../shared/utils';
+import { useI18n } from '../../../shared/i18n/useI18n';
 
 interface WaterfallChartProps {
   spans: TraceSpan[];
 }
 
 export function WaterfallChart({ spans }: WaterfallChartProps) {
+  const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
   }, [spans]);
 
   if (spans.length === 0) {
-    return <div className="text-sm text-gray-400 text-center py-8">No trace data to display</div>;
+    return <div className="text-sm text-gray-400 text-center py-8">{t('traceViewer.noDataToDisplay')}</div>;
   }
 
   return (

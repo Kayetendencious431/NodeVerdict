@@ -4,3 +4,4 @@ export { StatCard } from './StatCard';
 export { EmptyState } from './EmptyState';
 export { LoadingOverlay } from './LoadingOverlay';
 export { ErrorBoundary } from './ErrorBoundary';
+export { LangSwitch } from './LangSwitch';

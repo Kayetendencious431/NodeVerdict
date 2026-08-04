@@ -1,10 +1,16 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import tutorialMd from './TUTORIAL.md?raw';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 export function TutorialPage() {
+  const { t } = useI18n();
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('tutorial.title')}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('tutorial.description')}</p>
+      </div>
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}

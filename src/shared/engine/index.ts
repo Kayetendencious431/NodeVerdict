@@ -8,3 +8,5 @@ export { parseCpuProfile, buildFlameTree, extractHotFunctions, analyzeCpuProfile
 export { diffHeapSnapshots } from './heap-diff';
 export type { HeapDiffNode, HeapDiffResult } from './heap-diff';
 export { analyzeStrings, analyzeExternalMemory, parseMemoryTimeline, calculateGrowthRate, parseGcLog } from './memory-analyzer';
+export { evaluateAlerts, buildMetricSnapshot, defaultAlertRules } from './alert-engine';
+export type { AlertRule, AlertMetric, AlertOperator, AlertLevel, FiredAlert, MetricSnapshot } from '../types/alert';

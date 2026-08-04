@@ -6,6 +6,7 @@ import { analyzeTracingEvents } from '../../shared/engine';
 import { ChannelFilter, FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatDuration } from '../../shared/utils';
 import type { TracingEvent } from '../../shared/types';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 interface SearchOptions {
   query: string;
@@ -19,6 +20,7 @@ interface SearchOptions {
 }
 
 export function SearchFilterPage() {
+  const { t } = useI18n();
   const { tracingAnalysis, setTracingAnalysis } = useRootStore();
   const [searchOptions, setSearchOptions] = useState<SearchOptions>({
     query: '',
@@ -127,14 +129,14 @@ export function SearchFilterPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Search & Filter</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Advanced search and filtering across tracing events</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('searchFilter.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('searchFilter.description')}</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+        <FileUpload onFile={handleFile} accept=".json" label={t('searchFilter.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message="Parsing events..." />
+        <LoadingOverlay visible={loading} message={t('searchFilter.loading')} />
         <div className="mt-8">
-          <EmptyState title="No data loaded" description="Upload a JSON file with TracingChannel events to search and filter." />
+          <EmptyState title={t('searchFilter.noData')} description={t('searchFilter.description')} />
         </div>
       </div>
     );
@@ -144,11 +146,11 @@ export function SearchFilterPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Search & Filter</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events total</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('searchFilter.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('searchFilter.eventsTotal').replace('{count}', tracingAnalysis.totalEvents.toLocaleString())}</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+          <FileUpload onFile={handleFile} accept=".json" label={t('searchFilter.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         </div>
       </div>
 
@@ -163,7 +165,7 @@ export function SearchFilterPage() {
               type="text"
               value={searchOptions.query}
               onChange={e => updateSearch({ query: e.target.value })}
-              placeholder="Search events (searches channel, context, operationId)..."
+              placeholder={t('searchFilter.searchHint')}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:border-indigo-400 dark:focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             />
           </div>
@@ -174,7 +176,7 @@ export function SearchFilterPage() {
               onChange={e => updateSearch({ useRegex: e.target.checked })}
               className="rounded border-gray-300 dark:border-gray-600"
             />
-            Regex
+            {t('searchFilter.regex')}
           </label>
           <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
             <input
@@ -183,21 +185,21 @@ export function SearchFilterPage() {
               onChange={e => updateSearch({ caseSensitive: e.target.checked })}
               className="rounded border-gray-300 dark:border-gray-600"
             />
-            Case
+            {t('searchFilter.caseSensitive')}
           </label>
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            {showAdvanced ? 'Hide Advanced' : 'Advanced'}
+            {showAdvanced ? t('searchFilter.hideAdvanced') : t('searchFilter.advanced')}
           </button>
         </div>
 
         {/* Results count */}
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          {filteredEvents.events.length} / {tracingAnalysis.totalEvents} events match
+          {t('searchFilter.eventsMatch').replace('{match}', filteredEvents.events.length.toLocaleString()).replace('{total}', tracingAnalysis.totalEvents.toLocaleString())}
           {filteredEvents.events.length !== tracingAnalysis.totalEvents && (
-            <span className="text-gray-400 dark:text-gray-500"> — {tracingAnalysis.totalEvents - filteredEvents.events.length} hidden</span>
+            <span className="text-gray-400 dark:text-gray-500"> {t('searchFilter.hidden').replace('{count}', (tracingAnalysis.totalEvents - filteredEvents.events.length).toLocaleString())}</span>
           )}
         </div>
 
@@ -205,29 +207,29 @@ export function SearchFilterPage() {
         {showAdvanced && (
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Min Duration (ms)</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">{t('searchFilter.durationMin')}</label>
               <input
                 type="number"
                 min={0}
                 value={searchOptions.minDuration ?? ''}
                 onChange={e => updateSearch({ minDuration: e.target.value ? Number(e.target.value) : null })}
-                placeholder="Any"
+                placeholder={t('searchFilter.any')}
                 className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Max Duration (ms)</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">{t('searchFilter.durationMax')}</label>
               <input
                 type="number"
                 min={0}
                 value={searchOptions.maxDuration ?? ''}
                 onChange={e => updateSearch({ maxDuration: e.target.value ? Number(e.target.value) : null })}
-                placeholder="Any"
+                placeholder={t('searchFilter.any')}
                 className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Status</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">{t('searchFilter.status')}</label>
               <div className="flex gap-2">
                 {(['success', 'error', 'incomplete'] as const).map(s => (
                   <label key={s} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
@@ -249,13 +251,13 @@ export function SearchFilterPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Time Range</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">{t('searchFilter.timeRange')}</label>
               <div className="flex gap-1">
                 <input
                   type="number"
                   value={searchOptions.timeRangeStart ?? ''}
                   onChange={e => updateSearch({ timeRangeStart: e.target.value ? Number(e.target.value) : null })}
-                  placeholder="From"
+                  placeholder={t('searchFilter.from')}
                   className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
                 <span className="text-xs text-gray-400 dark:text-gray-500 self-center">-</span>
@@ -263,7 +265,7 @@ export function SearchFilterPage() {
                   type="number"
                   value={searchOptions.timeRangeEnd ?? ''}
                   onChange={e => updateSearch({ timeRangeEnd: e.target.value ? Number(e.target.value) : null })}
-                  placeholder="To"
+                  placeholder={t('searchFilter.to')}
                   className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-800 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
@@ -279,11 +281,11 @@ export function SearchFilterPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Timestamp</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Operation</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Context</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('searchFilter.timestamp')}</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('searchFilter.channel')}</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('searchFilter.eventType')}</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('searchFilter.operation')}</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('searchFilter.context')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -325,7 +327,7 @@ export function SearchFilterPage() {
 
       {filteredEvents.events.length === 0 && (
         <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">No events match your search criteria</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('searchFilter.noMatch')}</p>
         </div>
       )}
     </div>

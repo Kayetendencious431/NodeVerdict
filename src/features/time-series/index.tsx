@@ -6,8 +6,10 @@ import { analyzeTracingEvents } from '../../shared/engine';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import type { TracingEvent, TracingAnalysis } from '../../shared/types';
 import * as d3 from 'd3';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
+  const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -127,7 +129,7 @@ function TimeSeriesChart({ analysis }: { analysis: TracingAnalysis }) {
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
       .attr('fill', 'currentColor')
-      .text('Events / Time Bucket');
+      .text(t('timeSeries.eventsPerBucket'));
 
   }, [chartData, analysis.timeRange.start, dimensions]);
 
@@ -245,6 +247,7 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
 }
 
 export function TimeSeriesPage() {
+  const { t } = useI18n();
   const { tracingAnalysis, setTracingAnalysis } = useRootStore();
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
@@ -262,14 +265,14 @@ export function TimeSeriesPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Time Series Analysis</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Visualize event throughput, latency distribution, and performance trends over time</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('timeSeries.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('timeSeries.description')}</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+        <FileUpload onFile={handleFile} accept=".json" label={t('timeSeries.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message="Analyzing..." />
+        <LoadingOverlay visible={loading} message={t('timeSeries.loading')} />
         <div className="mt-8">
-          <EmptyState title="No data loaded" description="Upload a tracing events JSON file to visualize throughput and latency distribution over time." />
+          <EmptyState title={t('timeSeries.noData')} description={t('timeSeries.description')} />
         </div>
       </div>
     );
@@ -283,19 +286,19 @@ export function TimeSeriesPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Time Series Analysis</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{tracingAnalysis.totalEvents} events, {tracingAnalysis.totalOperations} operations</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('timeSeries.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('timeSeries.eventsCount').replace('{events}', tracingAnalysis.totalEvents.toLocaleString()).replace('{operations}', tracingAnalysis.totalOperations.toLocaleString())}</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+          <FileUpload onFile={handleFile} accept=".json" label={t('timeSeries.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-3 mb-4">
-        <StatCard title="Throughput" value={`${(tracingAnalysis.totalEvents / ((tracingAnalysis.timeRange.end - tracingAnalysis.timeRange.start) / 1000)).toFixed(1)}/s`} subtitle="events per second" />
-        <StatCard title="Avg Latency" value={avgDuration.toFixed(1) + 'ms'} />
-        <StatCard title="P95 Latency" value={p95.toFixed(1) + 'ms'} color={p95 > 100 ? 'text-orange-600 dark:text-orange-400' : undefined} />
-        <StatCard title="Operations" value={tracingAnalysis.totalOperations.toLocaleString()} />
+        <StatCard title={t('timeSeries.avgThroughput')} value={`${(tracingAnalysis.totalEvents / ((tracingAnalysis.timeRange.end - tracingAnalysis.timeRange.start) / 1000)).toFixed(1)}/s`} subtitle={t('timeSeries.eventsPerSecond')} />
+        <StatCard title={t('timeSeries.avgLatency')} value={avgDuration.toFixed(1) + 'ms'} />
+        <StatCard title={t('timeSeries.p95Latency')} value={p95.toFixed(1) + 'ms'} color={p95 > 100 ? 'text-orange-600 dark:text-orange-400' : undefined} />
+        <StatCard title={t('timeSeries.operations')} value={tracingAnalysis.totalOperations.toLocaleString()} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 mb-4">
@@ -309,19 +312,19 @@ export function TimeSeriesPage() {
       {/* Channel Latency Table */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Channel Latency Breakdown</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('timeSeries.channelLatency')}</h2>
         </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Avg</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">P50</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">P95</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">P99</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Min</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Max</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Ops</th>
+              <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.channel')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.avg')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.p50')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.p95')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.p99')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.min')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.max')}</th>
+              <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('timeSeries.ops')}</th>
             </tr>
           </thead>
           <tbody>

@@ -14,10 +14,14 @@ import { TutorialPage } from '../features/tutorial';
 import { MemoryTimelinePage } from '../features/memory-timeline';
 import { GcLogPage } from '../features/gc-log';
 import { LiveMonitorPage } from '../features/live-monitor';
+import { AlertRulesPage } from '../features/alert-rules';
+import { SnapshotHistoryPage } from '../features/snapshot-history';
 import { useEffect } from 'react';
+import { useI18n } from '../shared/i18n/useI18n';
 
 function HomePage() {
   const { navigate } = useUIStore();
+  const { t } = useI18n();
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -27,50 +31,50 @@ function HomePage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">NodeVerdict</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-8">Node.js TracingChannel diagnostic data viewer — all analysis runs locally in your browser.</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">{t('app.title')}</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">{t('app.description')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FeatureCard
-          title="Event Viewer"
-          description="Browse tracing events in a timeline, filter by channel, inspect event context and metadata."
+          title={t('feature.event-viewer')}
+          description={t('feature.event-viewer.desc')}
           icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           onClick={() => navigate('event-viewer')}
         />
         <FeatureCard
-          title="Trace Viewer"
-          description="Visualize async operation chains as a waterfall chart, identify bottlenecks."
+          title={t('feature.trace-viewer')}
+          description={t('feature.trace-viewer.desc')}
           icon="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
           onClick={() => navigate('trace-viewer')}
         />
         <FeatureCard
-          title="CPU Profiler"
-          description="Upload .cpuprofile files, visualize hot functions and call stacks with an interactive flame graph."
+          title={t('feature.cpu-profiler')}
+          description={t('feature.cpu-profiler.desc')}
           icon="M13 10V3L4 14h7v7l9-11h-7z"
           onClick={() => navigate('cpu-profiler')}
         />
         <FeatureCard
-          title="Heap Analyzer"
-          description="Parse .heapsnapshot files, find hot objects and memory leak suspects."
+          title={t('feature.heap-analyzer')}
+          description={t('feature.heap-analyzer.desc')}
           icon="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
           onClick={() => navigate('heap-analyzer')}
         />
         <FeatureCard
-          title="Heap Diff"
-          description="Compare two heap snapshots side-by-side to identify memory growth and new objects."
+          title={t('feature.heap-diff')}
+          description={t('feature.heap-diff.desc')}
           icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
           onClick={() => navigate('heap-diff')}
         />
         <FeatureCard
-          title="Time Series"
-          description="Visualize throughput, latency distribution, and performance trends over time."
+          title={t('feature.time-series')}
+          description={t('feature.time-series.desc')}
           icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
           onClick={() => navigate('time-series')}
         />
         <FeatureCard
-          title="Perf Compare"
-          description="Load two tracing datasets and compare latencies, error rates, and channel metrics."
+          title={t('feature.perf-compare')}
+          description={t('feature.perf-compare.desc')}
           icon="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
           onClick={() => navigate('perf-compare')}
         />
@@ -175,6 +179,8 @@ export function App() {
       <div style={{ display: currentPage === 'memory-timeline' ? 'block' : 'none' }}><MemoryTimelinePage /></div>
       <div style={{ display: currentPage === 'gc-log' ? 'block' : 'none' }}><GcLogPage /></div>
       <div style={{ display: currentPage === 'live-monitor' ? 'block' : 'none' }}><LiveMonitorPage /></div>
+      <div style={{ display: currentPage === 'alert-rules' ? 'block' : 'none' }}><AlertRulesPage /></div>
+      <div style={{ display: currentPage === 'snapshot-history' ? 'block' : 'none' }}><SnapshotHistoryPage /></div>
     </AppShell>
   );
 }

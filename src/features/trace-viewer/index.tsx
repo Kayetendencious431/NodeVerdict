@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
+import { useFileUpload, useRemoteFile } from '../../shared/hooks';
 import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks } from '../../shared/engine';
+import { useI18n } from '../../shared/i18n/useI18n';
 import { WaterfallChart } from './components/WaterfallChart';
 import { BottleneckList } from './components/BottleneckList';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
@@ -10,6 +11,7 @@ import type { TracingEvent, TraceSpan } from '../../shared/types';
 import { formatDuration } from '../../shared/utils';
 
 export function TraceViewerPage() {
+  const { t } = useI18n();
   const { traceData, setTraceData } = useRootStore();
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
@@ -18,8 +20,25 @@ export function TraceViewerPage() {
     setTraceData(analysis);
   }, [setTraceData]), setProgress);
 
+  const {
+    loading: urlLoading,
+    error: urlError,
+    progress: urlProgress,
+    loadFromUrl,
+    cancel: cancelUrl,
+    reset: resetUrl,
+  } = useRemoteFile({
+    onFile: useCallback(async (content: string) => {
+      const events = JSON.parse(content) as TracingEvent[];
+      const analysis = analyzeTracingEvents(events);
+      setTraceData(analysis);
+    }, [setTraceData]),
+    onProgress: setProgress,
+  });
+
   function handleReset() {
     reset();
+    resetUrl();
     setTraceData(null);
   }
 
@@ -44,16 +63,17 @@ export function TraceViewerPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Trace Waterfall View</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Upload tracing events to visualize async operation chains</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('traceViewer.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('traceViewer.uploadHint')}</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events JSON" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+        <FileUpload onFile={handleFile} accept=".json" label={t('traceViewer.uploadTitle')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} onUrlLoad={loadFromUrl} urlLoading={urlLoading} urlError={urlError} urlProgress={urlProgress} onUrlCancel={cancelUrl} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message="Building trace..." />
+        {urlError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{urlError}</p>}
+        <LoadingOverlay visible={loading || urlLoading} message={t('traceViewer.buildingTrace')} />
         <div className="mt-8">
           <EmptyState
-            title="No trace data"
-            description="Upload a JSON file with TracingChannel events. asyncStart/asyncEnd events will be used to build the waterfall."
+            title={t('traceViewer.noData')}
+            description={t('traceViewer.uploadDesc')}
           />
         </div>
       </div>
@@ -64,28 +84,33 @@ export function TraceViewerPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Trace Waterfall</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{traceData.totalOperations} operations, {dependencies.length} dependency links</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('traceViewer.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('traceViewer.operationsAndLinks').replace('{operations}', String(traceData.totalOperations)).replace('{links}', String(dependencies.length))}</p>
         </div>
         <div className="w-72">
           <FileUpload
             onFile={handleFile}
             accept=".json"
-            label="Upload tracing events JSON"
+            label={t('traceViewer.uploadTitle')}
             maxSize={500 * 1024 * 1024}
             fileName={fileName}
             fileSize={fileSize}
             onReset={handleReset}
             loading={loading}
             progress={progress}
+            onUrlLoad={loadFromUrl}
+            urlLoading={urlLoading}
+            urlError={urlError}
+            urlProgress={urlProgress}
+            onUrlCancel={cancelUrl}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <StatCard title="Total Time" value={formatDuration(totalDuration)} subtitle={`${spanCount(spans)} trace spans`} />
-        <StatCard title="Operations" value={traceData.totalOperations.toString()} />
-        <StatCard title="Bottlenecks" value={bottlenecks.length.toString()} color={bottlenecks.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-gray-100'} />
+        <StatCard title={t('traceViewer.totalSpans')} value={formatDuration(totalDuration)} subtitle={t('traceViewer.spanCount').replace('{count}', String(spanCount(spans)))} />
+        <StatCard title={t('traceViewer.operations')} value={traceData.totalOperations.toString()} />
+        <StatCard title={t('traceViewer.bottleneckCount')} value={bottlenecks.length.toString()} color={bottlenecks.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-gray-100'} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

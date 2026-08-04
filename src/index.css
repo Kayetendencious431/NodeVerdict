@@ -54,3 +54,24 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Flame graph search and visualization helpers */
+.flame-search-match {
+  stroke: #f59e0b;
+  stroke-width: 2;
+}
+
+.flame-search-current {
+  stroke: #ef4444;
+  stroke-width: 3;
+}
+
+.flame-filtered-out {
+  opacity: 0.3;
+}
+
+.flame-hover-outline {
+  stroke: #60a5fa;
+  stroke-width: 2;
+  stroke-dasharray: 4 2;
+}

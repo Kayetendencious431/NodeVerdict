@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { TracingEvent } from '../../../shared/types';
 import { formatTimestamp, channelColor, eventTypeColor, truncate } from '../../../shared/utils';
+import { useI18n } from '../../../shared/i18n/useI18n';
 
 interface EventTimelineProps {
   events: TracingEvent[];
@@ -9,6 +10,7 @@ interface EventTimelineProps {
 }
 
 export function EventTimeline({ events, selectedIndex, onSelect }: EventTimelineProps) {
+  const { t } = useI18n();
   const maxTime = events[events.length - 1]?.timestamp ?? 0;
   const minTime = events[0]?.timestamp ?? 0;
   const range = Math.max(maxTime - minTime, 1);
@@ -18,11 +20,11 @@ export function EventTimeline({ events, selectedIndex, onSelect }: EventTimeline
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Timestamp</th>
-            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Channel</th>
-            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
-            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Context</th>
-            <th className="w-24 px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Timeline</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('eventViewer.timestamp')}</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('eventViewer.channel')}</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('eventViewer.type')}</th>
+            <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('eventViewer.context')}</th>
+            <th className="w-24 px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('eventViewer.timeline')}</th>
           </tr>
         </thead>
         <tbody>

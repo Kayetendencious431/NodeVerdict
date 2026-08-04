@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import type { TracingAnalysis, HeapAnalysis, ReportData } from '../shared/types';
+import type { TracingAnalysis, HeapAnalysis, ReportData, SnapshotDiffRecord, AlertRule, FiredAlert } from '../shared/types';
 import type { ValidationResult } from '../shared/engine';
+import { defaultAlertRules } from '../shared/engine';
+import { generateId } from '../shared/utils';
 
 /**
  * Root store using Zustand with slice pattern.
@@ -30,6 +32,22 @@ interface RootState {
   // Report slice
   reportData: ReportData | null;
   setReportData: (data: ReportData | null) => void;
+
+  // Snapshot History slice
+  snapshotHistory: SnapshotDiffRecord[];
+  setSnapshotHistory: (history: SnapshotDiffRecord[]) => void;
+  addSnapshotRecord: (record: Omit<SnapshotDiffRecord, 'id' | 'timestamp'>) => void;
+  clearSnapshotHistory: () => void;
+
+  // Alert Rules slice
+  alertRules: AlertRule[];
+  addAlertRule: (rule: AlertRule) => void;
+  removeAlertRule: (id: string) => void;
+  updateAlertRule: (rule: AlertRule) => void;
+  toggleAlertRule: (id: string) => void;
+  firedAlerts: FiredAlert[];
+  addFiredAlert: (alert: FiredAlert) => void;
+  clearFiredAlerts: () => void;
 }
 
 export const useRootStore = create<RootState>((set) => ({
@@ -56,4 +74,28 @@ export const useRootStore = create<RootState>((set) => ({
   // Report
   reportData: null,
   setReportData: (data) => set({ reportData: data }),
+
+  // Snapshot History
+  snapshotHistory: [],
+  setSnapshotHistory: (history) => set({ snapshotHistory: history }),
+  addSnapshotRecord: (record) =>
+    set((state) => {
+      const newRecord: SnapshotDiffRecord = {
+        ...record,
+        id: `snap-diff-${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+      };
+      return { snapshotHistory: [...state.snapshotHistory, newRecord] };
+    }),
+  clearSnapshotHistory: () => set({ snapshotHistory: [] }),
+
+  // Alert Rules
+  alertRules: defaultAlertRules(),
+  addAlertRule: (rule) => set((state) => ({ alertRules: [...state.alertRules, rule] })),
+  removeAlertRule: (id) => set((state) => ({ alertRules: state.alertRules.filter(r => r.id !== id) })),
+  updateAlertRule: (rule) => set((state) => ({ alertRules: state.alertRules.map(r => r.id === rule.id ? rule : r) })),
+  toggleAlertRule: (id) => set((state) => ({ alertRules: state.alertRules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r) })),
+  firedAlerts: [],
+  addFiredAlert: (alert) => set((state) => ({ firedAlerts: [alert, ...state.firedAlerts].slice(0, 50) })),
+  clearFiredAlerts: () => set({ firedAlerts: [] }),
 }));

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "alrt-001",
+    "name": "Critical Heap Used",
+    "metric": "heapUsedPercent",
+    "operator": "greaterThan",
+    "threshold": 90,
+    "level": "critical",
+    "enabled": true,
+    "createdAt": 1740960000000
+  },
+  {
+    "id": "alrt-002",
+    "name": "High Error Rate",
+    "metric": "errorRate",
+    "operator": "greaterThan",
+    "threshold": 5,
+    "level": "warning",
+    "enabled": true,
+    "createdAt": 1740960000000
+  },
+  {
+    "id": "alrt-003",
+    "name": "External Memory Spike",
+    "metric": "externalMemory",
+    "operator": "greaterThan",
+    "threshold": 200,
+    "level": "critical",
+    "enabled": true,
+    "createdAt": 1740960000000
+  },
+  {
+    "id": "alrt-004",
+    "name": "RSS Growth Rate Alert",
+    "metric": "rssGrowthRate",
+    "operator": "greaterThan",
+    "threshold": 2.5,
+    "level": "warning",
+    "enabled": true,
+    "createdAt": 1740960000000
+  },
+  {
+    "id": "alrt-005",
+    "name": "Heap Growth Rate Warning",
+    "metric": "heapGrowthRate",
+    "operator": "greaterThan",
+    "threshold": 1.5,
+    "level": "info",
+    "enabled": true,
+    "createdAt": 1740960000000
+  },
+  {
+    "id": "alrt-006",
+    "name": "Event Rate Too Low",
+    "metric": "eventRate",
+    "operator": "lessThan",
+    "threshold": 10,
+    "level": "info",
+    "enabled": false,
+    "createdAt": 1740960000000
+  },
+  {
+    "id": "alrt-007",
+    "name": "Low Memory Threshold",
+    "metric": "heapUsedPercent",
+    "operator": "lessThanOrEqual",
+    "threshold": 20,
+    "level": "info",
+    "enabled": true,
+    "createdAt": 1740960000000
+  }
+]

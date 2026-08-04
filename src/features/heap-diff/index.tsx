@@ -6,8 +6,13 @@ import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/c
 import { formatBytes } from '../../shared/utils';
 import type { HeapSnapshot } from '../../shared/types';
 import type { HeapDiffResult } from '../../shared/engine';
+import { useRootStore } from '../../stores/root-store';
+import { ExportButton } from '../report/ExportButton';
+import { toMarkdown } from '../report/exportUtils';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 export function HeapDiffPage() {
+  const { t } = useI18n();
   const [snapshotA, setSnapshotA] = useState<HeapSnapshot | null>(null);
   const [snapshotB, setSnapshotB] = useState<HeapSnapshot | null>(null);
   const [diffResult, setDiffResult] = useState<HeapDiffResult | null>(null);
@@ -17,6 +22,7 @@ export function HeapDiffPage() {
   const [fileBName, setFileBName] = useState<string | null>(null);
   const [progressA, setProgressA] = useState<ProgressInfo | null>(null);
   const [progressB, setProgressB] = useState<ProgressInfo | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const handleFileA = useCallback(async (file: File) => {
     setLoading(true);
@@ -33,14 +39,14 @@ export function HeapDiffPage() {
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes('"snapshot" field')) {
-        setError('This is not a valid .heapsnapshot file. Use Node.js to generate a heap snapshot (node --heapsnapshot-signal=SIGUSR2 app.js) or use the examples/heap-*.heapsnapshot files from the examples directory.');
+        setError(t('heapDiff.error'));
       } else {
         setError(msg);
       }
     } finally {
       setLoading(false);
     }
-  }, [snapshotB]);
+  }, [snapshotB, t]);
 
   const handleFileB = useCallback(async (file: File) => {
     setLoading(true);
@@ -57,14 +63,14 @@ export function HeapDiffPage() {
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes('"snapshot" field')) {
-        setError('This is not a valid .heapsnapshot file. Use Node.js to generate a heap snapshot (node --heapsnapshot-signal=SIGUSR2 app.js) or use the examples/heap-*.heapsnapshot files from the examples directory.');
+        setError(t('heapDiff.error'));
       } else {
         setError(msg);
       }
     } finally {
       setLoading(false);
     }
-  }, [snapshotA]);
+  }, [snapshotA, t]);
 
   function handleReset() {
     setSnapshotA(null);
@@ -75,23 +81,44 @@ export function HeapDiffPage() {
     setFileBName(null);
     setProgressA(null);
     setProgressB(null);
+    setSaveMessage(null);
+  }
+
+  function handleSaveToHistory() {
+    if (!diffResult) return;
+    useRootStore.getState().addSnapshotRecord({
+      label: `${fileAName ?? 'A'} vs ${fileBName ?? 'B'}`,
+      beforeName: fileAName ?? 'Snapshot A',
+      afterName: fileBName ?? 'Snapshot B',
+      beforeSize: diffResult.totalSizeBefore,
+      afterSize: diffResult.totalSizeAfter,
+      newNodeCount: diffResult.newNodes.length,
+      removedNodeCount: diffResult.removedNodes.length,
+      retainedSizeDelta: diffResult.totalSizeDelta,
+      growthRate: diffResult.totalSizeBefore > 0
+        ? (diffResult.totalSizeDelta / diffResult.totalSizeBefore) * 100
+        : null,
+      flagged: diffResult.totalSizeDelta > 0,
+    });
+    setSaveMessage(t('heapDiff.saved'));
+    setTimeout(() => setSaveMessage(null), 3000);
   }
 
   if (!diffResult) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Heap Snapshot Diff</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Upload two .heapsnapshot files to compare memory allocation differences</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('heapDiff.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('heapDiff.description')}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Before (Snapshot A)</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('heapDiff.uploadBefore')}</p>
             <FileUpload
               onFile={handleFileA}
               accept=".heapsnapshot,.json"
-              label="Upload before snapshot"
+              label={t('heapDiff.uploadBefore')}
               maxSize={3 * 1024 * 1024 * 1024}
               fileName={fileAName}
               onReset={() => { setSnapshotA(null); setDiffResult(null); setFileAName(null); }}
@@ -100,11 +127,11 @@ export function HeapDiffPage() {
             />
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">After (Snapshot B)</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('heapDiff.uploadAfter')}</p>
             <FileUpload
               onFile={handleFileB}
               accept=".heapsnapshot,.json"
-              label="Upload after snapshot"
+              label={t('heapDiff.uploadAfter')}
               maxSize={3 * 1024 * 1024 * 1024}
               fileName={fileBName}
               onReset={() => { setSnapshotB(null); setDiffResult(null); setFileBName(null); }}
@@ -115,12 +142,12 @@ export function HeapDiffPage() {
         </div>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message="Comparing snapshots..." />
+        <LoadingOverlay visible={loading} message={t('heapDiff.loading')} />
 
         <div className="mt-8">
           <EmptyState
-            title="No snapshots to compare"
-            description="Upload two .heapsnapshot files (before and after) to identify memory growth, new objects, and potential leaks."
+            title={t('heapDiff.noData')}
+            description={t('heapDiff.uploadHint')}
           />
         </div>
       </div>
@@ -131,30 +158,96 @@ export function HeapDiffPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Heap Diff Results</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('heapDiff.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Comparing {fileAName ?? 'A'} vs {fileBName ?? 'B'}
           </p>
         </div>
-        <button
-          onClick={handleReset}
-          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        >
-          Clear & Start Over
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExportMarkdown={() => toMarkdown({
+              title: 'Heap Snapshot Diff',
+              sections: [
+                {
+                  title: 'Summary',
+                  type: 'stats',
+                  content: [
+                    { label: t('heapDiff.sizeBefore'), value: formatBytes(diffResult.totalSizeBefore) },
+                    { label: t('heapDiff.sizeAfter'), value: formatBytes(diffResult.totalSizeAfter) },
+                    { label: t('heapDiff.sizeDelta'), value: `${diffResult.totalSizeDelta >= 0 ? '+' : ''}${formatBytes(Math.abs(diffResult.totalSizeDelta))}` },
+                    { label: t('heapDiff.objectDelta'), value: `${diffResult.totalCountDelta >= 0 ? '+' : ''}${diffResult.totalCountDelta.toLocaleString()}` },
+                    { label: t('heapDiff.newTypes'), value: diffResult.newNodes.length.toString() },
+                    { label: t('heapDiff.growingTypes'), value: diffResult.growingNodes.length.toString() },
+                    { label: t('heapDiff.removedTypes'), value: diffResult.removedNodes.length.toString() },
+                  ],
+                },
+                {
+                  title: 'Type Comparison',
+                  type: 'table',
+                  content: {
+                    headers: [t('heapAnalyzer.name'), t('heapDiff.type'), t('heapDiff.objectDelta'), t('heapDiff.sizeBeforeLabel'), t('heapDiff.sizeAfterLabel'), t('heapDiff.sizeDeltaLabel')],
+                    rows: diffResult.nodes.slice(0, 50).map(node => [
+                      node.name,
+                      node.type,
+                      `${node.countDelta > 0 ? '+' : ''}${node.countDelta.toLocaleString()}`,
+                      formatBytes(node.beforeSize),
+                      formatBytes(node.afterSize),
+                      `${node.sizeDelta > 0 ? '+' : ''}${formatBytes(node.sizeDelta)}`,
+                    ]),
+                  },
+                },
+                ...(diffResult.growingNodes.length > 0 ? [{
+                  title: t('heapDiff.growingTypes'),
+                  type: 'alert' as const,
+                  content: {
+                    level: 'warning' as const,
+                    message: diffResult.growingNodes.slice(0, 10).map(n => `${n.name} grew by ${formatBytes(n.sizeDelta)}`).join('; '),
+                  },
+                }] : []),
+                ...(diffResult.removedNodes.length > 0 ? [{
+                  title: t('heapDiff.removedTypes'),
+                  type: 'alert' as const,
+                  content: {
+                    level: 'info' as const,
+                    message: `${diffResult.removedNodes.length} type(s) were removed entirely.`,
+                  },
+                }] : []),
+              ],
+            })}
+            filename="heap-diff"
+          />
+          <button
+            onClick={handleSaveToHistory}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            {t('heapDiff.saveToHistory')}
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            {t('common.clear')} & {t('common.reset')}
+          </button>
+        </div>
       </div>
+
+      {saveMessage && (
+        <div className="mb-4 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm text-emerald-700 dark:text-emerald-300">
+          {saveMessage}
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-3 mb-4">
-        <StatCard title="Size Before" value={formatBytes(diffResult.totalSizeBefore)} />
-        <StatCard title="Size After" value={formatBytes(diffResult.totalSizeAfter)} />
+        <StatCard title={t('heapDiff.sizeBeforeLabel')} value={formatBytes(diffResult.totalSizeBefore)} />
+        <StatCard title={t('heapDiff.sizeAfterLabel')} value={formatBytes(diffResult.totalSizeAfter)} />
         <StatCard
-          title="Size Delta"
+          title={t('heapDiff.sizeDeltaLabel')}
           value={`${diffResult.totalSizeDelta >= 0 ? '+' : ''}${formatBytes(Math.abs(diffResult.totalSizeDelta))}`}
           color={diffResult.totalSizeDelta > 0 ? 'text-red-600 dark:text-red-400' : diffResult.totalSizeDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'}
         />
         <StatCard
-          title="Object Delta"
+          title={t('heapDiff.objectDelta')}
           value={`${diffResult.totalCountDelta >= 0 ? '+' : ''}${diffResult.totalCountDelta.toLocaleString()}`}
           color={diffResult.totalCountDelta > 0 ? 'text-red-600 dark:text-red-400' : diffResult.totalCountDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'}
         />
@@ -163,18 +256,18 @@ export function HeapDiffPage() {
       {/* New / Growing / Removed summaries */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <StatCard
-          title="New Object Types"
+          title={t('heapDiff.newTypes')}
           value={diffResult.newNodes.length.toString()}
           color="text-red-600 dark:text-red-400"
         />
         <StatCard
-          title="Growing Types"
+          title={t('heapDiff.growingTypes')}
           value={diffResult.growingNodes.length.toString()}
           color="text-amber-600 dark:text-amber-400"
           subtitle={`${diffResult.growingNodes.slice(0, 3).map(n => `${n.name} +${formatBytes(n.sizeDelta)}`).join(', ')}${diffResult.growingNodes.length > 3 ? '...' : ''}`}
         />
         <StatCard
-          title="Removed Types"
+          title={t('heapDiff.removedTypes')}
           value={diffResult.removedNodes.length.toString()}
           color="text-emerald-600 dark:text-emerald-400"
         />
@@ -183,18 +276,18 @@ export function HeapDiffPage() {
       {/* Full Diff Table */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">All Types — Sorted by Size Delta</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('heapDiff.title')} — {t('heapDiff.sizeDeltaLabel')}</h2>
         </div>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Count Δ</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Before</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">After</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Size Δ</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.name')}</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapDiff.type')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapDiff.objectDelta')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapDiff.sizeBeforeLabel')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapDiff.sizeAfterLabel')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapDiff.sizeDeltaLabel')}</th>
               </tr>
             </thead>
             <tbody>

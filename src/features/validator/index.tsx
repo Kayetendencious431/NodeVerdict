@@ -5,6 +5,7 @@ import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import { validateEvents } from '../../shared/engine';
 import { FileUpload, EmptyState, LoadingOverlay, StatCard } from '../../shared/components';
 import type { TracingEvent } from '../../shared/types';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 function severityBadge(severity: string) {
   switch (severity) {
@@ -16,6 +17,7 @@ function severityBadge(severity: string) {
 }
 
 export function ValidatorPage() {
+  const { t } = useI18n();
   const { validationResults, setValidationResults } = useRootStore();
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
@@ -46,16 +48,16 @@ export function ValidatorPage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Event Validator</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Validate TracingChannel events against spec conventions</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('validator.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('validator.uploadHint')}</p>
         </div>
-        <FileUpload onFile={handleFile} accept=".json" label="Upload tracing events to validate" maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+        <FileUpload onFile={handleFile} accept=".json" label={t('validator.uploadTitle')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message="Validating..." />
+        <LoadingOverlay visible={loading} message={t('validator.validating')} />
         <div className="mt-8">
           <EmptyState
-            title="No data to validate"
-            description="Upload a JSON file with TracingChannel events to check naming conventions, required fields, event pairing, and OpenTelemetry compatibility."
+            title={t('validator.noData')}
+            description={t('validator.uploadDesc')}
           />
         </div>
       </div>
@@ -66,13 +68,13 @@ export function ValidatorPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Validation Results</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('validator.validationResults')}</h1>
         </div>
         <div className="w-72">
           <FileUpload
             onFile={handleFile}
             accept=".json"
-            label="Upload tracing events to validate"
+            label={t('validator.uploadTitle')}
             maxSize={500 * 1024 * 1024}
             fileName={fileName}
             fileSize={fileSize}
@@ -85,10 +87,10 @@ export function ValidatorPage() {
 
       {stats && (
         <div className="grid grid-cols-4 gap-3 mb-4">
-          <StatCard title="Channels" value={stats.channels.toString()} />
-          <StatCard title="Errors" value={stats.errors.toString()} color={stats.errors > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'} />
-          <StatCard title="Warnings" value={stats.warnings.toString()} color={stats.warnings > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'} />
-          <StatCard title="Info" value={stats.infos.toString()} />
+          <StatCard title={t('validator.channels')} value={stats.channels.toString()} />
+          <StatCard title={t('validator.errors')} value={stats.errors.toString()} color={stats.errors > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'} />
+          <StatCard title={t('validator.warnings')} value={stats.warnings.toString()} color={stats.warnings > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'} />
+          <StatCard title={t('validator.issues')} value={stats.infos.toString()} />
         </div>
       )}
 
@@ -120,7 +122,7 @@ export function ValidatorPage() {
             )}
 
             {result.issues.length === 0 && (
-              <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No issues found</div>
+              <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{t('validator.noIssues')}</div>
             )}
           </div>
         ))}

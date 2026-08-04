@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import type { SupportedLanguage } from '../shared/i18n';
 
-type Page = 'home' | 'event-viewer' | 'trace-viewer' | 'validator' | 'heap-analyzer' | 'report' | 'cpu-profiler' | 'heap-diff' | 'search-filter' | 'time-series' | 'perf-compare' | 'tutorial' | 'memory-timeline' | 'gc-log' | 'live-monitor';
+type Page = 'home' | 'event-viewer' | 'trace-viewer' | 'validator' | 'heap-analyzer' | 'report' | 'cpu-profiler' | 'heap-diff' | 'search-filter' | 'time-series' | 'perf-compare' | 'tutorial' | 'memory-timeline' | 'gc-log' | 'live-monitor' | 'snapshot-history' | 'alert-rules';
 
 interface UIState {
   currentPage: Page;
@@ -13,6 +14,9 @@ interface UIState {
   toggleSidebar: () => void;
   darkMode: boolean;
   toggleDarkMode: () => void;
+  language: SupportedLanguage;
+  setLanguage: (lang: SupportedLanguage) => void;
+  toggleLanguage: () => void;
 }
 
 function getInitialDarkMode(): boolean {
@@ -21,6 +25,14 @@ function getInitialDarkMode(): boolean {
     if (stored !== null) return stored === 'true';
   } catch {}
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function getInitialLanguage(): SupportedLanguage {
+  try {
+    const stored = localStorage.getItem('nodeverdict-language');
+    if (stored === 'zh' || stored === 'en') return stored;
+  } catch {}
+  return 'zh';
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -42,5 +54,15 @@ export const useUIStore = create<UIState>((set) => ({
       document.documentElement.classList.remove('dark');
     }
     return { darkMode: next };
+  }),
+  language: getInitialLanguage(),
+  setLanguage: (lang) => set((s) => {
+    try { localStorage.setItem('nodeverdict-language', lang); } catch {}
+    return { language: lang };
+  }),
+  toggleLanguage: () => set((s) => {
+    const next: SupportedLanguage = s.language === 'zh' ? 'en' : 'zh';
+    try { localStorage.setItem('nodeverdict-language', next); } catch {}
+    return { language: next };
   }),
 }));

@@ -7,8 +7,12 @@ import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/c
 import { formatBytes, formatDuration } from '../../shared/utils';
 import type { MemoryTimeline, MemoryGrowthRate } from '../../shared/types';
 import * as d3 from 'd3';
+import { ExportButton } from '../report/ExportButton';
+import { toMarkdown } from '../report/exportUtils';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 function MemoryChart({ timeline }: { timeline: MemoryTimeline }) {
+  const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -115,7 +119,7 @@ function MemoryChart({ timeline }: { timeline: MemoryTimeline }) {
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
       .attr('fill', 'currentColor')
-      .text('Time (seconds)');
+      .text(t('memoryTimeline.timeSeconds'));
 
     g.append('text')
       .attr('transform', 'rotate(-90)')
@@ -124,7 +128,7 @@ function MemoryChart({ timeline }: { timeline: MemoryTimeline }) {
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
       .attr('fill', 'currentColor')
-      .text('Memory (MB)');
+      .text(t('memoryTimeline.memoryMb'));
 
   }, [chartData, dimensions]);
 
@@ -134,15 +138,15 @@ function MemoryChart({ timeline }: { timeline: MemoryTimeline }) {
       <div className="flex items-center gap-6 mb-2 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 rounded bg-blue-500 inline-block" />
-          <span className="text-gray-600 dark:text-gray-300">RSS</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('memoryTimeline.rss')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 rounded bg-green-500 inline-block" />
-          <span className="text-gray-600 dark:text-gray-300">Heap Used</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('memoryTimeline.heapUsed')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 rounded bg-orange-500 inline-block" />
-          <span className="text-gray-600 dark:text-gray-300">External</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('memoryTimeline.external')}</span>
         </div>
       </div>
       {dimensions && (
@@ -158,6 +162,7 @@ function MemoryChart({ timeline }: { timeline: MemoryTimeline }) {
 }
 
 export function MemoryTimelinePage() {
+  const { t } = useI18n();
   const [memoryTimeline, setMemoryTimeline] = useState<MemoryTimeline | null>(null);
   const [growthRate, setGrowthRate] = useState<MemoryGrowthRate | null>(null);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
@@ -173,7 +178,7 @@ export function MemoryTimelinePage() {
 
   // Wrap the error with a more helpful message
   const displayError = error?.includes('JSON')
-    ? 'The file format is invalid. Upload a JSON array of process.memoryUsage() snapshots. Each entry should include timestamp, rss, heapTotal, heapUsed, external, and arrayBuffers fields.'
+    ? t('memoryTimeline.invalidFormat')
     : error;
 
   function handleReset() {
@@ -186,15 +191,15 @@ export function MemoryTimelinePage() {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Memory Timeline</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('memoryTimeline.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Upload a process.memoryUsage() time series to visualize memory trends
+            {t('memoryTimeline.description')}
           </p>
         </div>
         <FileUpload
           onFile={handleFile}
           accept=".json"
-          label="Upload memory timeline JSON"
+          label={t('memoryTimeline.uploadHint')}
           maxSize={3 * 1024 * 1024 * 1024}
           fileName={fileName}
           fileSize={fileSize}
@@ -203,11 +208,11 @@ export function MemoryTimelinePage() {
           progress={progress}
         />
         {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
-        <LoadingOverlay visible={loading} message="Parsing memory timeline..." />
+        <LoadingOverlay visible={loading} message={t('memoryTimeline.loading')} />
         <div className="mt-8">
           <EmptyState
-            title="No memory data"
-            description="Upload a JSON array of process.memoryUsage() snapshots to visualize external, heap, and RSS trends over time."
+            title={t('memoryTimeline.noData')}
+            description={t('memoryTimeline.description')}
           />
         </div>
       </div>
@@ -220,31 +225,77 @@ export function MemoryTimelinePage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Memory Timeline</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('memoryTimeline.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {snapshots.length.toLocaleString()} snapshots over {formatDuration(durationMs)}
+            {t('memoryTimeline.snapshotsCount').replace('{count}', snapshots.length.toLocaleString()).replace('{duration}', formatDuration(durationMs))}
           </p>
         </div>
-        <div className="w-72">
-          <FileUpload
-            onFile={handleFile}
-            accept=".json"
-            label="Upload memory timeline"
-            maxSize={3 * 1024 * 1024 * 1024}
-            fileName={fileName}
-            fileSize={fileSize}
-            onReset={handleReset}
-            loading={loading}
-            progress={progress}
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExportMarkdown={() => toMarkdown({
+              title: t('memoryTimeline.exportTitle'),
+              sections: [
+                {
+                  title: t('memoryTimeline.summary'),
+                  type: 'stats',
+                  content: [
+                    { label: t('memoryTimeline.duration'), value: formatDuration(durationMs) },
+                    { label: t('memoryTimeline.snapshots'), value: snapshots.length.toLocaleString() },
+                    { label: t('memoryTimeline.interval'), value: formatDuration(intervalMs) },
+                  ],
+                },
+                ...(growthRate ? [{
+                  title: t('memoryTimeline.growthRateStatus'),
+                  type: 'alert' as const,
+                  content: {
+                    level: (growthRate.flagged ? 'error' : 'info') as 'error' | 'info',
+                    message: growthRate.summary,
+                  },
+                }] : []),
+                {
+                  title: t('memoryTimeline.allSnapshots'),
+                  type: 'table',
+                  content: {
+                    headers: [t('memoryTimeline.time'), t('memoryTimeline.rss'), t('memoryTimeline.heapUsed'), t('memoryTimeline.heapTotal'), t('memoryTimeline.external'), t('memoryTimeline.arrayBuffers')],
+                    rows: snapshots.slice(0, 50).map((s, idx) => {
+                      const t0 = snapshots[0].timestamp;
+                      const relTime = ((s.timestamp - t0) / 1000).toFixed(2);
+                      return [
+                        `${relTime}s`,
+                        formatBytes(s.rss),
+                        formatBytes(s.heapUsed),
+                        formatBytes(s.heapTotal),
+                        formatBytes(s.external),
+                        formatBytes(s.arrayBuffers),
+                      ];
+                    }),
+                  },
+                },
+              ],
+            })}
+            filename="memory-timeline"
           />
+          <div className="w-72">
+            <FileUpload
+              onFile={handleFile}
+              accept=".json"
+              label={t('memoryTimeline.uploadHint')}
+              maxSize={3 * 1024 * 1024 * 1024}
+              fileName={fileName}
+              fileSize={fileSize}
+              onReset={handleReset}
+              loading={loading}
+              progress={progress}
+            />
+          </div>
         </div>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <StatCard title="Duration" value={formatDuration(durationMs)} />
-        <StatCard title="Total Snapshots" value={snapshots.length.toLocaleString()} />
-        <StatCard title="Sampling Interval" value={formatDuration(intervalMs)} />
+        <StatCard title={t('memoryTimeline.duration')} value={formatDuration(durationMs)} />
+        <StatCard title={t('memoryTimeline.snapshots')} value={snapshots.length.toLocaleString()} />
+        <StatCard title={t('memoryTimeline.interval')} value={formatDuration(intervalMs)} />
       </div>
 
       {/* Growth Rate Alert */}
@@ -268,7 +319,7 @@ export function MemoryTimelinePage() {
               <p className={`text-sm font-semibold ${
                 growthRate.flagged ? 'text-red-800 dark:text-red-300' : 'text-emerald-800 dark:text-emerald-300'
               }`}>
-                {growthRate.flagged ? 'Growth Rate Alert' : 'Memory Growth Status'}
+                {growthRate.flagged ? t('memoryTimeline.growthRateAlert') : t('memoryTimeline.growthRateStatus')}
               </p>
               <p className={`text-xs mt-1 ${
                 growthRate.flagged ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
@@ -282,25 +333,25 @@ export function MemoryTimelinePage() {
 
       {/* Chart */}
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">RSS / Heap / External Trend</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('memoryTimeline.trendChart')}</h2>
         <MemoryChart timeline={memoryTimeline} />
       </div>
 
       {/* Data Table */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">All Snapshots</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('memoryTimeline.allSnapshots')}</h2>
         </div>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Time</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">RSS</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">heapUsed</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">heapTotal</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">external</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">arrayBuffers</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('memoryTimeline.time')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('memoryTimeline.rss')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('memoryTimeline.heapUsed')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('memoryTimeline.heapTotal')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('memoryTimeline.external')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('memoryTimeline.arrayBuffers')}</th>
               </tr>
             </thead>
             <tbody>

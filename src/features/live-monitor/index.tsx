@@ -1,6 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { StatCard } from '../../shared/components';
-import { formatBytes, formatTimestamp } from '../../shared/utils';
+import { formatBytes, formatTimestamp, channelColor } from '../../shared/utils';
+import { RealtimeChart } from './components/RealtimeChart';
+import { MemoryGauge } from './components/MemoryGauge';
+import { EventRateChart } from './components/EventRateChart';
+import { useRootStore } from '../../stores';
+import { evaluateAlerts, buildMetricSnapshot } from '../../shared/engine';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 interface WebSocketMessage {
   type?: string;
@@ -42,6 +48,7 @@ type SnapState = 'idle' | 'receiving' | 'ready';
 type CpuProfileState = 'idle' | 'receiving' | 'ready';
 
 export function LiveMonitorPage() {
+  const { t } = useI18n();
   // Connection
   const [host, setHost] = useState('localhost');
   const [port, setPort] = useState('9876');
@@ -73,6 +80,12 @@ export function LiveMonitorPage() {
   // Memory polling
   const [memPollingActive, setMemPollingActive] = useState(false);
   const [memPollingInterval, setMemPollingInterval] = useState(1000);
+
+  // Live Dashboard
+  const [memoryHistory, setMemoryHistory] = useState<Array<{ time: number; rss: number; heapUsed: number; heapTotal: number; external: number }>>([]);
+  const [eventRateHistory, setEventRateHistory] = useState<Map<string, { count: number; color: string }>>(new Map());
+  const chartRowRef = useRef<HTMLDivElement>(null);
+  const [chartWidth, setChartWidth] = useState(480);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -254,14 +267,14 @@ export function LiveMonitorPage() {
         assembleChunk(idx, tot, String(data), snapBufferRef, (url) => {
           setSnapDownloadUrl(url);
           setSnapState('ready');
-          addLog('Heap snapshot ready');
+          addLog(t('liveMonitor.snapshotReady'));
         });
       } else if (msg.type?.includes('cpu') || msg.type?.includes('profile')) {
         if (cpuProfileState === 'idle') setCpuProfileState('receiving');
         assembleChunk(idx, tot, String(data), cpuProfileBufferRef, (url) => {
           setCpuProfileDownloadUrl(url);
           setCpuProfileState('ready');
-          addLog('CPU profile ready');
+          addLog(t('liveMonitor.profileReady'));
         });
       } else {
         // Generic chunk — try heap snapshot first
@@ -284,23 +297,23 @@ export function LiveMonitorPage() {
   function connect() {
     const url = `ws://${host}:${port}`;
     setConnectionStatus('connecting');
-    addLog(`Connecting to ${url}...`);
+    addLog(t('liveMonitor.connecting') + ` ${url}...`);
 
     const ws = new WebSocket(url);
     ws.onopen = () => {
       setConnectionStatus('connected');
-      addLog('Connected');
+      addLog(t('liveMonitor.connected'));
     };
     ws.onmessage = handleMessage;
     ws.onclose = () => {
       setConnectionStatus('disconnected');
       setAgentPid(null);
-      addLog('Disconnected');
+      addLog(t('liveMonitor.disconnected'));
     };
     ws.onerror = () => {
       setConnectionStatus('disconnected');
       setAgentPid(null);
-      addLog('Connection error', 'error');
+      addLog(t('liveMonitor.connectionError'), 'error');
     };
     wsRef.current = ws;
   }
@@ -323,12 +336,12 @@ export function LiveMonitorPage() {
     if (tracingActive) {
       sendCommand('stop-tracing');
       setTracingActive(false);
-      addLog('Tracing stopped');
+      addLog(t('liveMonitor.tracingStopped'));
     } else {
       setTracingEvents([]);
       sendCommand('start-tracing');
       setTracingActive(true);
-      addLog('Tracing started');
+      addLog(t('liveMonitor.tracingStarted'));
     }
   }
 
@@ -337,7 +350,7 @@ export function LiveMonitorPage() {
     resetSnapBuffer();
     setSnapState('receiving');
     sendCommand('take-heap-snapshot');
-    addLog('Requesting heap snapshot...');
+    addLog(t('liveMonitor.takeHeapSnapshot') + '...');
   }
 
   function downloadSnap() {
@@ -355,12 +368,12 @@ export function LiveMonitorPage() {
       sendCommand('stop-cpu-profile');
       setCpuProfileState('idle');
       resetCpuProfileBuffer();
-      addLog('CPU profile stopped');
+      addLog(t('liveMonitor.profileReady'));
     } else {
       resetCpuProfileBuffer();
       setCpuProfileState('receiving');
       sendCommand('start-cpu-profile');
-      addLog('CPU profile started...');
+      addLog(t('liveMonitor.startCpuProfile') + '...');
     }
   }
 
@@ -378,11 +391,11 @@ export function LiveMonitorPage() {
     if (memPollingActive) {
       sendCommand('stop-memory-polling');
       setMemPollingActive(false);
-      addLog('Memory polling stopped');
+      addLog(t('liveMonitor.stopMemoryPolling'));
     } else {
       sendCommand('start-memory-polling');
       setMemPollingActive(true);
-      addLog(`Memory polling started (interval: ${memPollingInterval}ms)`);
+      addLog(t('liveMonitor.startMemoryPolling') + ` (interval: ${memPollingInterval}ms)`);
     }
   }
 
@@ -393,6 +406,83 @@ export function LiveMonitorPage() {
     };
   }, []);
 
+  // ResizeObserver for chart width
+  useEffect(() => {
+    const el = chartRowRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setChartWidth(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Track memory history
+  const historyRef = useRef(memoryHistory);
+  historyRef.current = memoryHistory;
+  useEffect(() => {
+    if (!memoryData) return;
+    const now = Date.now();
+    const entry = {
+      time: now,
+      rss: memoryData.rss,
+      heapUsed: memoryData.heapUsed,
+      heapTotal: memoryData.heapTotal,
+      external: memoryData.external,
+    };
+    setMemoryHistory(prev => {
+      const next = [...prev, entry];
+      return next.slice(-120);
+    });
+  }, [memoryData]);
+
+  // Track event rate history
+  useEffect(() => {
+    if (tracingEvents.length === 0) return;
+    const latest = tracingEvents[0];
+    if (!latest) return;
+    setEventRateHistory(prev => {
+      const next = new Map(prev);
+      const ch = latest.channel;
+      const existing = next.get(ch);
+      const color = existing?.color ?? channelColor(ch);
+      next.set(ch, {
+        count: (existing?.count ?? 0) + 1,
+        color,
+      });
+      // Prune old entries if too many channels
+      if (next.size > 50) {
+        const sorted = [...next.entries()].sort((a, b) => b[1].count - a[1].count);
+        next.clear();
+        for (const [k, v] of sorted.slice(0, 50)) {
+          next.set(k, v);
+        }
+      }
+      return next;
+    });
+  }, [tracingEvents]);
+
+  // Alert evaluation
+  const { alertRules, addFiredAlert, firedAlerts } = useRootStore();
+  useEffect(() => {
+    if (!memoryData) return;
+    const errorEvents = tracingEvents.filter(e => e.eventType.toLowerCase().includes('error'));
+    const traceErrorRate = tracingEvents.length > 0 ? (errorEvents.length / tracingEvents.length) * 100 : 0;
+    const snapshot = buildMetricSnapshot({
+      memoryData,
+      memoryHistory,
+      errorRate: traceErrorRate,
+      eventRate: tracingEvents.length,
+    });
+    const fired = evaluateAlerts(alertRules, snapshot);
+    if (fired.length > 0) {
+      fired.forEach(f => addFiredAlert(f));
+      fired.forEach(f => addLog(`[ALERT:${f.level}] ${f.message}`, f.level === 'critical' ? 'error' : 'info'));
+    }
+  }, [memoryData, alertRules]);
+
   const statusDot = connectionStatus === 'connected'
     ? 'bg-green-500'
     : connectionStatus === 'connecting'
@@ -400,17 +490,25 @@ export function LiveMonitorPage() {
       : 'bg-red-500';
 
   const statusLabel = connectionStatus === 'connected'
-    ? 'Connected'
+    ? t('liveMonitor.connected')
     : connectionStatus === 'connecting'
-      ? 'Connecting...'
-      : 'Disconnected';
+      ? t('liveMonitor.connecting')
+      : t('liveMonitor.disconnected');
+
+  // Derived data for charts
+  const rssHistory = memoryHistory.map(d => ({ time: d.time, value: d.rss / (1024 * 1024) }));
+  const heapUsedHistory = memoryHistory.map(d => ({ time: d.time, value: d.heapUsed / (1024 * 1024) }));
+  const eventRateEntries: Array<{ channel: string; count: number; color: string }> = [];
+  eventRateHistory.forEach((v, k) => {
+    eventRateEntries.push({ channel: k, count: v.count, color: v.color });
+  });
 
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Live Monitor</h1>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('liveMonitor.title')}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Connect to a running Node.js diagnostic agent via WebSocket
+          {t('liveMonitor.description')}
         </p>
       </div>
 
@@ -418,7 +516,7 @@ export function LiveMonitorPage() {
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
         <div className="flex items-center gap-4 flex-wrap">
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Host</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('liveMonitor.host')}</label>
             <input
               type="text"
               value={host}
@@ -428,7 +526,7 @@ export function LiveMonitorPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Port</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('liveMonitor.port')}</label>
             <input
               type="text"
               value={port}
@@ -443,14 +541,14 @@ export function LiveMonitorPage() {
                 onClick={connect}
                 className="px-4 py-2 rounded-lg font-medium text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
               >
-                Connect
+                {t('liveMonitor.connect')}
               </button>
             ) : (
               <button
                 onClick={disconnect}
                 className="px-4 py-2 rounded-lg font-medium text-sm bg-red-600 hover:bg-red-700 text-white"
               >
-                Disconnect
+                {t('liveMonitor.disconnect')}
               </button>
             )}
           </div>
@@ -458,7 +556,7 @@ export function LiveMonitorPage() {
             <span className={`w-2 h-2 rounded-full inline-block ${statusDot}`} />
             <span className="text-sm text-gray-600 dark:text-gray-300">{statusLabel}</span>
             {agentPid !== null && (
-              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">PID: {agentPid}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">{t('liveMonitor.pid')}: {agentPid}</span>
             )}
           </div>
         </div>
@@ -466,20 +564,77 @@ export function LiveMonitorPage() {
 
       {connectionStatus === 'connected' && (
         <>
+          {/* Alert strip */}
+          {firedAlerts.length > 0 && (
+            <div className="mb-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{t('liveMonitor.alerts')}</span>
+              </div>
+              <div className="space-y-1">
+                {firedAlerts.slice(0, 3).map((fa, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <span className={`px-1.5 py-0.5 rounded font-medium ${
+                      fa.level === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                        : fa.level === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                    }`}>{fa.level.toUpperCase()}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{fa.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Memory Panel */}
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Memory Usage</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('liveMonitor.memory')}</h2>
             <div className="grid grid-cols-4 gap-3">
-              <StatCard title="RSS" value={memoryData ? formatBytes(memoryData.rss) : '-'} />
-              <StatCard title="Heap Used" value={memoryData ? formatBytes(memoryData.heapUsed) : '-'} />
-              <StatCard title="Heap Total" value={memoryData ? formatBytes(memoryData.heapTotal) : '-'} />
-              <StatCard title="External" value={memoryData ? formatBytes(memoryData.external) : '-'} />
+              <StatCard title={t('liveMonitor.rss')} value={memoryData ? formatBytes(memoryData.rss) : '-'} />
+              <StatCard title={t('liveMonitor.heapUsed')} value={memoryData ? formatBytes(memoryData.heapUsed) : '-'} />
+              <StatCard title={t('liveMonitor.heapTotal')} value={memoryData ? formatBytes(memoryData.heapTotal) : '-'} />
+              <StatCard title={t('liveMonitor.external')} value={memoryData ? formatBytes(memoryData.external) : '-'} />
             </div>
+          </div>
+
+          {/* Live Dashboard */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{t('liveMonitor.liveDashboard')}</h2>
+            
+            {/* Memory Gauges Row */}
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <MemoryGauge used={memoryData?.heapUsed ?? 0} total={memoryData?.heapTotal ?? 1} label={t('liveMonitor.heapUsed')} color="#22c55e" />
+              <MemoryGauge used={memoryData?.rss ?? 0} total={memoryData?.rss ?? 1} label={t('liveMonitor.rss')} color="#3b82f6" />
+              <MemoryGauge used={memoryData?.external ?? 0} total={(memoryData?.heapTotal ?? 1)} label={t('liveMonitor.external')} color="#f97316" />
+              <MemoryGauge used={((memoryData?.heapUsed ?? 0) / ((memoryData?.heapTotal ?? 1) || 1)) * 100} total={100} label={t('liveMonitor.heapPercent')} color="#8b5cf6" />
+            </div>
+
+            {/* Real-time Charts Row */}
+            <div ref={chartRowRef} className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('liveMonitor.memoryTrend')}</h3>
+                <RealtimeChart data={rssHistory} width={chartWidth / 2 - 8} height={180} color="#3b82f6" label={t('liveMonitor.rss')} unit=" MB" />
+              </div>
+              <div>
+                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('liveMonitor.heapTrend')}</h3>
+                <RealtimeChart data={heapUsedHistory} width={chartWidth / 2 - 8} height={180} color="#22c55e" label={t('liveMonitor.heapUsed')} unit=" MB" />
+              </div>
+            </div>
+
+            {/* Event Rate Chart */}
+            {eventRateEntries.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('liveMonitor.eventRate')}</h3>
+                <EventRateChart events={eventRateEntries} width={chartWidth} height={Math.min(eventRateEntries.length * 28 + 16, 300)} />
+              </div>
+            )}
           </div>
 
           {/* Actions Panel */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Actions</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{t('liveMonitor.actions')}</h2>
             <div className="flex flex-wrap gap-3 items-center">
               {/* Heap Snapshot */}
               <button
@@ -487,14 +642,14 @@ export function LiveMonitorPage() {
                 disabled={snapState === 'receiving'}
                 className="px-4 py-2 rounded-lg font-medium text-sm bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
               >
-                {snapState === 'receiving' ? 'Receiving...' : 'Take Heap Snapshot'}
+                {snapState === 'receiving' ? t('common.loading') : t('liveMonitor.takeHeapSnapshot')}
               </button>
               {snapState === 'ready' && snapDownloadUrl && (
                 <button
                   onClick={downloadSnap}
                   className="px-4 py-2 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  Download Snapshot
+                  {t('liveMonitor.downloadSnapshot')}
                 </button>
               )}
 
@@ -505,15 +660,15 @@ export function LiveMonitorPage() {
                 className="px-4 py-2 rounded-lg font-medium text-sm bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-50"
               >
                 {cpuProfileState === 'ready' || cpuProfileState === 'receiving'
-                  ? 'Stop CPU Profile'
-                  : 'Start CPU Profile'}
+                  ? t('liveMonitor.stopCpuProfile')
+                  : t('liveMonitor.startCpuProfile')}
               </button>
               {cpuProfileState === 'ready' && cpuProfileDownloadUrl && (
                 <button
                   onClick={downloadCpuProfile}
                   className="px-4 py-2 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  Download CPU Profile
+                  {t('liveMonitor.downloadProfile')}
                 </button>
               )}
 
@@ -533,7 +688,7 @@ export function LiveMonitorPage() {
                   onClick={toggleMemPolling}
                   className="px-4 py-2 rounded-lg font-medium text-sm bg-cyan-600 hover:bg-cyan-700 text-white"
                 >
-                  {memPollingActive ? 'Stop Memory Polling' : 'Start Memory Polling'}
+                  {memPollingActive ? t('liveMonitor.stopMemoryPolling') : t('liveMonitor.startMemoryPolling')}
                 </button>
               </div>
             </div>
@@ -542,18 +697,18 @@ export function LiveMonitorPage() {
           {/* Tracing Panel */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Tracing</h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('liveMonitor.tracing')}</h2>
               <div className="flex items-center gap-3">
                 {tracingActive && (
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Events: {tracingEvents.length}
+                    {t('report.totalEvents')}: {tracingEvents.length}
                   </span>
                 )}
                 <button
                   onClick={toggleTracing}
                   className="px-4 py-2 rounded-lg font-medium text-sm bg-amber-600 hover:bg-amber-700 text-white"
                 >
-                  {tracingActive ? 'Stop Tracing' : 'Start Tracing'}
+                  {tracingActive ? t('liveMonitor.stopTracing') : t('liveMonitor.startTracing')}
                 </button>
               </div>
             </div>
@@ -583,10 +738,10 @@ export function LiveMonitorPage() {
 
       {/* Status Log */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Status Log</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('liveMonitor.statusLog')}</h2>
         <div className="max-h-48 overflow-y-auto font-mono text-xs space-y-0.5">
           {logs.length === 0 ? (
-            <p className="text-gray-400 dark:text-gray-500">No messages yet</p>
+            <p className="text-gray-400 dark:text-gray-500">{t('liveMonitor.noLogs')}</p>
           ) : (
             logs.map((entry, idx) => (
               <div key={idx} className={`${entry.type === 'error' ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
@@ -600,15 +755,4 @@ export function LiveMonitorPage() {
       </div>
     </div>
   );
-}
-
-// Simple channel color based on channel name
-function channelColor(channel: string): string {
-  let hash = 0;
-  for (let i = 0; i < channel.length; i++) {
-    hash = ((hash << 5) - hash) + channel.charCodeAt(i);
-    hash |= 0;
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 65%, 55%)`;
 }

@@ -54,3 +54,24 @@ export interface HeapAnalysis {
   totalSize: number;
   topRetainedNodes: { name: string; size: number; count: number }[];
 }
+
+/** A single recorded heap snapshot diff comparison, part of the history. */
+export interface SnapshotDiffRecord {
+  id: string;
+  timestamp: number;
+  label: string;
+  beforeName: string;
+  afterName: string;
+  beforeSize: number;
+  afterSize: number;
+  newNodeCount: number;
+  removedNodeCount: number;
+  retainedSizeDelta: number;
+  growthRate: number | null;
+  flagged: boolean;
+}
+
+/** Snapshot diff history model. */
+export interface SnapshotHistory {
+  records: SnapshotDiffRecord[];
+}

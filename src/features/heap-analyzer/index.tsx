@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { parseHeapSnapshot, analyzeHeap, analyzeStrings, analyzeExternalMemory, calculateGrowthRate } from '../../shared/engine';
-import { useFileUpload } from '../../shared/hooks';
+import { useFileUpload, useRemoteFile } from '../../shared/hooks';
 import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
 import type { StringAnalysis, MemoryGrowthRate } from '../../shared/types';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
+import { ExportButton } from '../report/ExportButton';
+import { toMarkdown } from '../report/exportUtils';
+import { useI18n } from '../../shared/i18n/useI18n';
 
 function severityColor(severity: string) {
   switch (severity) {
@@ -17,6 +20,7 @@ function severityColor(severity: string) {
 }
 
 export function HeapAnalyzerPage() {
+  const { t } = useI18n();
   const { heapAnalysis, setHeapAnalysis } = useRootStore();
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [stringAnalysis, setStringAnalysis] = useState<StringAnalysis | null>(null);
@@ -31,8 +35,29 @@ export function HeapAnalyzerPage() {
     setExternalMemory(externalResult);
   }, [setHeapAnalysis, setStringAnalysis, setExternalMemory]), setProgress);
 
+  const {
+    loading: urlLoading,
+    error: urlError,
+    progress: urlProgress,
+    loadFromUrl,
+    cancel: cancelUrl,
+    reset: resetUrl,
+  } = useRemoteFile({
+    onFile: useCallback(async (content: string) => {
+      const snapshot = parseHeapSnapshot(content);
+      const analysis = analyzeHeap(snapshot);
+      setHeapAnalysis(analysis);
+      const stringResult = analyzeStrings(snapshot);
+      const externalResult = analyzeExternalMemory(snapshot);
+      setStringAnalysis(stringResult);
+      setExternalMemory(externalResult);
+    }, [setHeapAnalysis, setStringAnalysis, setExternalMemory]),
+    onProgress: setProgress,
+  });
+
   function handleReset() {
     reset();
+    resetUrl();
     setHeapAnalysis(null);
     setStringAnalysis(null);
     setExternalMemory(null);
@@ -40,33 +65,39 @@ export function HeapAnalyzerPage() {
 
   // Wrap the raw error from parseHeapSnapshot with a more helpful message
   const displayError = error?.includes('"snapshot" field')
-    ? 'This is not a valid .heapsnapshot file. Use Node.js to generate a heap snapshot (node --heapsnapshot-signal=SIGUSR2 app.js) or use the examples/heap-*.heapsnapshot files from the examples directory.'
+    ? t('heapAnalyzer.error')
     : error;
 
   if (!heapAnalysis) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Heap Snapshot Analyzer</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Upload .heapsnapshot files from Node.js to analyze memory usage</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('heapAnalyzer.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('heapAnalyzer.description')}</p>
         </div>
         <FileUpload
           onFile={handleFile}
           accept=".heapsnapshot,.json"
-          label="Upload heap snapshot (.heapsnapshot)"
+          label={t('heapAnalyzer.uploadTitle')}
           maxSize={3 * 1024 * 1024 * 1024}
           fileName={fileName}
           fileSize={fileSize}
           onReset={handleReset}
           loading={loading}
           progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
         />
         {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
-        <LoadingOverlay visible={loading} message="Parsing heap snapshot..." />
+        {(error || urlError) && !displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{urlError}</p>}
+        <LoadingOverlay visible={loading || urlLoading} message={t('heapAnalyzer.loading')} />
         <div className="mt-8">
           <EmptyState
-            title="No heap data"
-            description="Upload a .heapsnapshot file to analyze memory allocation, detect hot objects, and identify potential memory leaks."
+            title={t('heapAnalyzer.noData')}
+            description={t('heapAnalyzer.uploadHint')}
           />
         </div>
       </div>
@@ -77,40 +108,105 @@ export function HeapAnalyzerPage() {
     <div className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Heap Analysis</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('heapAnalyzer.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">{heapAnalysis.snapshot.nodeCount.toLocaleString()} nodes, {heapAnalysis.snapshot.edgeCount.toLocaleString()} edges</p>
         </div>
-        <div className="w-72">
-          <FileUpload
-            onFile={handleFile}
-            accept=".heapsnapshot,.json"
-            label="Upload heap snapshot (.heapsnapshot)"
-            maxSize={3 * 1024 * 1024 * 1024}
-            fileName={fileName}
-            fileSize={fileSize}
-            onReset={handleReset}
-            loading={loading}
-            progress={progress}
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExportMarkdown={() => toMarkdown({
+              title: 'Heap Snapshot Analysis',
+              sections: [
+                {
+                  title: 'Summary',
+                  type: 'stats',
+                  content: [
+                    { label: t('heapAnalyzer.totalSize'), value: formatBytes(heapAnalysis.totalSize) },
+                    { label: t('heapAnalyzer.totalRetained'), value: formatBytes(heapAnalysis.snapshot.totalRetainedSize) },
+                    { label: t('heapAnalyzer.leakSuspects'), value: heapAnalysis.leakSuspects.length.toString() },
+                    { label: 'Nodes', value: heapAnalysis.snapshot.nodeCount.toLocaleString() },
+                    { label: 'Edges', value: heapAnalysis.snapshot.edgeCount.toLocaleString() },
+                  ],
+                },
+                {
+                  title: t('heapAnalyzer.topRetained'),
+                  type: 'table',
+                  content: {
+                    headers: [t('heapAnalyzer.name'), t('heapAnalyzer.retainedSize'), t('heapAnalyzer.count')],
+                    rows: heapAnalysis.topRetainedNodes.slice(0, 20).map(item => [
+                      item.name,
+                      formatBytes(item.size),
+                      item.count.toLocaleString(),
+                    ]),
+                  },
+                },
+                ...(heapAnalysis.leakSuspects.length > 0 ? [{
+                  title: t('heapAnalyzer.leakSuspects'),
+                  type: 'alert' as const,
+                  content: {
+                    level: 'error' as const,
+                    message: heapAnalysis.leakSuspects.map(s => `[${s.severity}] ${s.description} — ${s.evidence}`).join('; '),
+                  },
+                }] : []),
+                ...(externalMemory ? [{
+                  title: t('heapAnalyzer.externalMemory'),
+                  type: 'stats' as const,
+                  content: [
+                    { label: t('heapAnalyzer.externalMemory'), value: formatBytes(externalMemory.totalExternal) },
+                    { label: t('heapAnalyzer.arrayBuffers'), value: formatBytes(externalMemory.totalArrayBuffers) },
+                    { label: t('heapAnalyzer.externalPercent'), value: externalMemory.externalPercent.toFixed(1) + '%' },
+                  ],
+                }] : []),
+                ...(stringAnalysis ? [{
+                  title: t('heapAnalyzer.stringAnalysis'),
+                  type: 'stats' as const,
+                  content: [
+                    { label: t('heapAnalyzer.totalStrings'), value: stringAnalysis.totalStrings.toLocaleString() },
+                    { label: t('heapAnalyzer.stringSize'), value: formatBytes(stringAnalysis.totalSelfSize) },
+                    { label: t('heapAnalyzer.uniqueStrings'), value: stringAnalysis.uniqueStrings.toLocaleString() },
+                    { label: t('heapAnalyzer.dedupRatio'), value: (stringAnalysis.dedupRatio * 100).toFixed(1) + '%' },
+                  ],
+                }] : []),
+              ],
+            })}
+            filename="heap-analysis"
           />
+          <div className="w-72">
+            <FileUpload
+              onFile={handleFile}
+              accept=".heapsnapshot,.json"
+              label={t('heapAnalyzer.uploadTitle')}
+              maxSize={3 * 1024 * 1024 * 1024}
+              fileName={fileName}
+              fileSize={fileSize}
+              onReset={handleReset}
+              loading={loading}
+              progress={progress}
+              onUrlLoad={loadFromUrl}
+              urlLoading={urlLoading}
+              urlError={urlError}
+              urlProgress={urlProgress}
+              onUrlCancel={cancelUrl}
+            />
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <StatCard title="Total Size" value={formatBytes(heapAnalysis.totalSize)} />
-        <StatCard title="Total Retained" value={formatBytes(heapAnalysis.snapshot.totalRetainedSize)} />
-        <StatCard title="Leak Suspects" value={heapAnalysis.leakSuspects.length.toString()} color={heapAnalysis.leakSuspects.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'} />
+        <StatCard title={t('heapAnalyzer.totalSize')} value={formatBytes(heapAnalysis.totalSize)} />
+        <StatCard title={t('heapAnalyzer.totalRetained')} value={formatBytes(heapAnalysis.snapshot.totalRetainedSize)} />
+        <StatCard title={t('heapAnalyzer.leakSuspects')} value={heapAnalysis.leakSuspects.length.toString()} color={heapAnalysis.leakSuspects.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'} />
       </div>
 
       {/* Top Retained Objects */}
       <div className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Top Retained Objects</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('heapAnalyzer.topRetained')}</h2>
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Retained Size</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Instances</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.name')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.retainedSize')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.count')}</th>
               </tr>
             </thead>
             <tbody>
@@ -129,7 +225,7 @@ export function HeapAnalyzerPage() {
       {/* Leak Suspects */}
       {heapAnalysis.leakSuspects.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Leak Suspects</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('heapAnalyzer.leakSuspects')}</h2>
           <div className="space-y-2">
             {heapAnalysis.leakSuspects.map((suspect, idx) => (
               <div
@@ -157,12 +253,12 @@ export function HeapAnalyzerPage() {
       {/* External Memory */}
       {externalMemory && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">External Memory</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('heapAnalyzer.externalMemory')}</h2>
           <div className="grid grid-cols-3 gap-3">
-            <StatCard title="External Memory" value={formatBytes(externalMemory.totalExternal)} color="text-orange-600 dark:text-orange-400" />
-            <StatCard title="ArrayBuffers" value={formatBytes(externalMemory.totalArrayBuffers)} color="text-purple-600 dark:text-purple-400" />
+            <StatCard title={t('heapAnalyzer.externalMemory')} value={formatBytes(externalMemory.totalExternal)} color="text-orange-600 dark:text-orange-400" />
+            <StatCard title={t('heapAnalyzer.arrayBuffers')} value={formatBytes(externalMemory.totalArrayBuffers)} color="text-purple-600 dark:text-purple-400" />
             <StatCard
-              title="External %"
+              title={t('heapAnalyzer.externalPercent')}
               value={externalMemory.externalPercent.toFixed(1) + '%'}
               color={externalMemory.externalPercent > 20 ? 'text-red-600 dark:text-red-400' : undefined}
             />
@@ -173,24 +269,24 @@ export function HeapAnalyzerPage() {
       {/* String Analysis */}
       {stringAnalysis && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">String Analysis</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('heapAnalyzer.stringAnalysis')}</h2>
           <div className="grid grid-cols-4 gap-3 mb-4">
-            <StatCard title="Total Strings" value={stringAnalysis.totalStrings.toLocaleString()} />
-            <StatCard title="String Size" value={formatBytes(stringAnalysis.totalSelfSize)} />
-            <StatCard title="Unique Strings" value={stringAnalysis.uniqueStrings.toLocaleString()} />
-            <StatCard title="Dedup Ratio" value={(stringAnalysis.dedupRatio * 100).toFixed(1) + '%'} />
+            <StatCard title={t('heapAnalyzer.totalStrings')} value={stringAnalysis.totalStrings.toLocaleString()} />
+            <StatCard title={t('heapAnalyzer.stringSize')} value={formatBytes(stringAnalysis.totalSelfSize)} />
+            <StatCard title={t('heapAnalyzer.uniqueStrings')} value={stringAnalysis.uniqueStrings.toLocaleString()} />
+            <StatCard title={t('heapAnalyzer.dedupRatio')} value={(stringAnalysis.dedupRatio * 100).toFixed(1) + '%'} />
           </div>
 
           {/* Top Largest Strings */}
           <div className="mb-4">
-            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Top Largest Strings</h3>
+            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">{t('heapAnalyzer.topStrings')}</h3>
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Value</th>
-                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Self Size</th>
-                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Retained Size</th>
+                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.value')}</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.selfSize')}</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.retainedSize')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -208,14 +304,14 @@ export function HeapAnalyzerPage() {
 
           {/* Strings by Type */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Strings by Type</h3>
+            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">{t('heapAnalyzer.stringsByType')}</h3>
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Type</th>
-                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Count</th>
-                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Size</th>
+                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.type')}</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.count')}</th>
+                    <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">{t('heapAnalyzer.size')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,9 +331,9 @@ export function HeapAnalyzerPage() {
 
       {/* Memory Growth Rate */}
       <div className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Memory Growth Rate</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('heapAnalyzer.leakPattern')}</h2>
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Upload a memory usage timeline (Memory Timeline page) to calculate growth rates.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('heapAnalyzer.leakPattern.desc')}</p>
         </div>
       </div>
 

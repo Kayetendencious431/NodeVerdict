@@ -273,6 +273,8 @@ Turn cross-service OTel traces into a live dependency map and a ranked root-caus
 - **Cascade impact chain** — Shows the causal chain ("service A latency ↑ → service B timeout → service C queue backlog") and actionable fix recommendations (e.g. connection-pool exhaustion)
 - **Trace Viewer linkage** — "Open traces in Trace Viewer" jumps to the existing waterfall for the same dataset
 
+![Service Topology](./introduction/ServiceTopology.png)
+
 ### 21. Streaming Large-File Import (NEW)
 
 Never `JSON.parse` a multi-GB file again. Large trace files are parsed incrementally in a dedicated Web Worker so the UI thread is never blocked and memory stays bounded.
@@ -296,6 +298,8 @@ Compare a *normal* and a *fault* execution trace of the same code path to locali
 - **Cause vs. effect** — The first divergence region is classified as the **cause**; later same-channel or error-bearing regions are **effects**, each with a 0–1 confidence score and a human-readable reason
 - **Variable & stack diffs** — Every divergence shows the aligned event pair side-by-side plus per-key value diffs and per-frame stack diffs
 - **Natural-language report** — A generated summary and ordered fix recommendations (e.g. "the fault run reads 512 bytes where the normal run reads 1024 — check the DB connection pooling config")
+
+![Differential Debug](./introduction/DifferentialDebug.png)
 
 ---
 

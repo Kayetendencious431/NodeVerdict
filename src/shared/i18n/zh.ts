@@ -245,6 +245,7 @@ const zh: Record<string, string> = {
   'eventViewer.selectEvent': '选择一个事件查看详情',
   'eventViewer.sqlQuery': 'SQL 查询',
   'eventViewer.stackTrace': '堆栈追踪',
+  'eventViewer.truncatedNotice': '文件已流式解析 — 当前仅展示保留的前段事件；通道统计、错误率与时间范围覆盖全部 {events} 个事件。',
   'eventViewer.status': '状态',
   'eventViewer.summary': '摘要',
   'eventViewer.timeRange': '时间范围',

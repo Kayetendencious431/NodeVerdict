@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { analyzeTracingEvents } from '../../shared/engine';
-import { useFileUpload, useRemoteFile } from '../../shared/hooks';
+import { analyzeTracingEvents, loadTracingData } from '../../shared/engine';
+import { useRemoteFile, useStreamingTraceFile } from '../../shared/hooks';
 import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import type { TracingAnalysis } from '../../shared/types';
+import type { TraceStreamResult } from '../../shared/streaming/trace-stream-client';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { EventTimeline } from './components/EventTimeline';
 import { EventDetail } from './components/EventDetail';
@@ -11,7 +13,6 @@ import { ChannelFilter } from '../../shared/components';
 import { FileUpload } from '../../shared/components';
 import { EmptyState } from '../../shared/components';
 import { LoadingOverlay } from '../../shared/components';
-import type { TracingEvent } from '../../shared/types';
 import { ExportButton } from '../report/ExportButton';
 import { toMarkdown } from '../report/exportUtils';
 
@@ -26,15 +27,30 @@ export function EventViewerPage() {
     setSelectedEventIndex,
   } = useRootStore();
 
-  const handleFileRead = useCallback(async (content: string) => {
-    const events = JSON.parse(content) as TracingEvent[];
-    const analysis = analyzeTracingEvents(events);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const [streamMeta, setStreamMeta] = useState<{ truncated: boolean; eventsSeen: number } | null>(null);
+
+  const handleAnalysis = useCallback((analysis: TracingAnalysis, meta: TraceStreamResult['meta']) => {
     setTracingAnalysis(analysis);
     setSelectedChannels(analysis.channels);
+    setStreamMeta({ truncated: meta.truncated, eventsSeen: meta.eventsSeen });
   }, [setTracingAnalysis, setSelectedChannels]);
 
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead, setProgress);
+  const { loading, error, fileName, fileSize, handleFile, reset } = useStreamingTraceFile({
+    onAnalysis: handleAnalysis,
+    onProgress: setProgress,
+  });
+
+  // URL-sourced files still use the in-memory path.
+  const handleFileRead = useCallback(async (content: string) => {
+    const analysis = analyzeTracingEvents(loadTracingData(content));
+    handleAnalysis(analysis, {
+      truncated: false,
+      eventsSeen: analysis.totalEvents,
+      invalid: 0,
+      wallTimeMs: 0,
+    });
+  }, [handleAnalysis]);
 
   const {
     loading: urlLoading,
@@ -66,6 +82,7 @@ export function EventViewerPage() {
     setTracingAnalysis(null);
     setSelectedChannels([]);
     setSelectedEventIndex(null);
+    setStreamMeta(null);
   }
 
   if (!tracingAnalysis) {
@@ -166,6 +183,12 @@ export function EventViewerPage() {
       </div>
 
       <EventSummary analysis={tracingAnalysis} />
+
+      {streamMeta?.truncated && (
+        <div className="mt-3 px-4 py-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-sm text-amber-700 dark:text-amber-400">
+          {t('eventViewer.truncatedNotice').replace('{events}', streamMeta.eventsSeen.toLocaleString())}
+        </div>
+      )}
 
       <div className="mt-4 mb-3">
         <ChannelFilter

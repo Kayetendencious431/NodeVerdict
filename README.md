@@ -273,6 +273,20 @@ Turn cross-service OTel traces into a live dependency map and a ranked root-caus
 - **Cascade impact chain** — Shows the causal chain ("service A latency ↑ → service B timeout → service C queue backlog") and actionable fix recommendations (e.g. connection-pool exhaustion)
 - **Trace Viewer linkage** — "Open traces in Trace Viewer" jumps to the existing waterfall for the same dataset
 
+### 21. Streaming Large-File Import (NEW)
+
+Never `JSON.parse` a multi-GB file again. Large trace files are parsed incrementally in a dedicated Web Worker so the UI thread is never blocked and memory stays bounded.
+
+- **True streaming** — Reads via `file.stream().pipeThrough(new TextDecoderStream())` instead of `FileReader.readAsText()`, so a 3GB file never exists as a single in-memory string
+- **Incremental JSON tokenizer** — `IncrementalJsonParser` is a resumable state machine that emits each complete top-level `{...}` the moment its closing brace arrives, no matter where chunk boundaries fall (mid-string, mid-escape, mid-number, or split multi-byte UTF-8). Memory is bounded by the *largest single event*, not the file size
+- **Incremental analyzer** — `StreamingTraceAnalyzer` mirrors the `Normalize → Pair → Stats` pipeline but consumes events one at a time: pairing is done with a streaming `startMap`, channel stats accumulate into per-channel duration arrays, and aggregates cover the *entire* file
+- **Worker + zero main-thread blocking** — parsing runs in a module worker; progress (`%`, events seen) is relayed back every ~100ms and the UI stays at 60fps
+- **Bounded retention** — Full `events[]` / `operations[]` arrays are capped (250k each by default) so peak memory stays under control; channel stats, error rate, and time range are always computed over 100% of events, and a notice appears when the view is truncated
+- **Auto-routing** — `useStreamingTraceFile` is a drop-in for `useFileUpload`: files under 64MB use the existing in-memory path (identical behavior, OTel/ndv support), larger files stream through the worker
+- **Verification** — `test/streaming-bench.perf.test.ts` runs a streaming-vs-in-memory parity + timing benchmark (`BENCH_STREAM=1 npx vitest run test/streaming-bench.perf.test.ts`); on a 21MB / 200k-event file the streaming pipeline completes in ~0.5s wall time with identical aggregates
+
+> **Roadmap** — the same interface is designed so the tokenizer/analyzer core can later be swapped for a Rust + WASM implementation (`wasm-bindgen` + `serde`) to push raw throughput toward the 3GB/5s target; streaming, worker, retention, and progress plumbing stay unchanged.
+
 ---
 
 ## Getting Started

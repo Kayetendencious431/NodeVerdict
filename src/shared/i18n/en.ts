@@ -257,6 +257,7 @@ const en: Record<string, string> = {
   'eventViewer.selectEvent': 'Click an event to see details',
   'eventViewer.sqlQuery': 'SQL Query',
   'eventViewer.stackTrace': 'Stack Trace',
+  'eventViewer.truncatedNotice': 'File streamed successfully — showing the first retained events. Channel stats, error rate and time range cover all {events} events.',
   'eventViewer.status': 'Status',
   'eventViewer.summary': 'Summary',
   'eventViewer.timeRange': 'Time Range',

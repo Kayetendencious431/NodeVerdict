@@ -17,6 +17,7 @@ import { LiveMonitorPage } from '../features/live-monitor';
 import { AlertRulesPage } from '../features/alert-rules';
 import { SnapshotHistoryPage } from '../features/snapshot-history';
 import { AiRcaPage } from '../features/ai-rca';
+import { TopologyPage } from '../features/topology';
 import { useEffect } from 'react';
 import { useI18n } from '../shared/i18n/useI18n';
 
@@ -120,6 +121,15 @@ function HomePage() {
 
       <div className="mt-6">
         <FeatureCard
+          title={t('feature.topology')}
+          description={t('feature.topology.desc')}
+          icon="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+          onClick={() => navigate('topology')}
+        />
+      </div>
+
+      <div className="mt-6">
+        <FeatureCard
           title={t('feature.ai-rca')}
           description={t('feature.ai-rca.desc')}
           icon="M13 10V3L4 14h7v7l9-11h-7z"
@@ -192,6 +202,7 @@ export function App() {
       <div style={{ display: currentPage === 'alert-rules' ? 'block' : 'none' }}><AlertRulesPage /></div>
       <div style={{ display: currentPage === 'snapshot-history' ? 'block' : 'none' }}><SnapshotHistoryPage /></div>
       <div style={{ display: currentPage === 'ai-rca' ? 'block' : 'none' }}><AiRcaPage /></div>
+      <div style={{ display: currentPage === 'topology' ? 'block' : 'none' }}><TopologyPage /></div>
     </AppShell>
   );
 }

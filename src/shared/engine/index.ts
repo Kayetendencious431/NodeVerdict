@@ -14,3 +14,9 @@ export { detectTraceFormat, loadTracingData, loadAndAnalyzeTrace, loadNdvBuffer 
 export type { TraceFormat } from './data-loader';
 export { isOtelExport, convertOtelToTracingEvents, loadOtelTraceJson } from './otel-adapter';
 export { encodeNdv, decodeNdv, decodeNdvFromArrayBuffer, NdvError } from './ndv-codec';
+export { analyzeDistributed, buildDistributedTraces, buildTopology, analyzeRootCause, correctClockSkew } from '../distributed';
+export type {
+  DistSpan, DistTrace, ServiceNode, ServiceEdge, TopologyGraph,
+  CriticalPathNode, CascadeStep, RankedService, RootCauseReport,
+  ServiceHealth, HealthSignal,
+} from '../distributed';

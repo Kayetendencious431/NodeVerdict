@@ -657,6 +657,10 @@ function buildWaterfall(operations, events) {
 var import_lz_string = __toESM(require_lz_string(), 1);
 
 // src/shared/engine/otel-adapter.ts
+function extractServiceName(resource) {
+  const found = resource?.attributes?.find((a) => a.key === "service.name");
+  return found?.value?.stringValue;
+}
 function timeToMs(value) {
   if (value === void 0 || value === "") return 0;
   const n = typeof value === "string" ? Number(value) : value;
@@ -676,7 +680,7 @@ function findAttr(attrs, key) {
   const found = attrs?.find((a) => a.key === key);
   return found ? attrValue(found.value) : "";
 }
-function spanToEvents(span) {
+function spanToEvents(span, serviceName) {
   const channel = findAttr(span.attributes ?? [], "nodeverdict.channel") || span.name || span.operationName || "otel.span";
   const operationId = span.spanId || span.name || span.operationName || `otel:${Math.random().toString(36).slice(2)}`;
   const parentSpanId = span.parentSpanId;
@@ -699,6 +703,7 @@ function spanToEvents(span) {
   context.traceId = span.traceId;
   context.kind = span.kind;
   context.statusMessage = span.status?.message;
+  if (serviceName) context.serviceName = serviceName;
   const events = [];
   events.push({
     channel,
@@ -730,24 +735,30 @@ function spanToEvents(span) {
   }
   return events;
 }
-function extractOtlpSpans(obj) {
-  const out = [];
+function extractOtlpGroups(obj) {
+  const groups = [];
   const resourceSpans = obj.resourceSpans;
   if (Array.isArray(resourceSpans)) {
     for (const rs of resourceSpans) {
+      const serviceName = extractServiceName(rs.resource);
       for (const ss of rs.scopeSpans ?? []) {
-        for (const span of ss.spans ?? []) out.push(span);
+        const spans = ss.spans ?? [];
+        if (spans.length === 0) continue;
+        groups.push({ serviceName, spans });
       }
     }
-    return out;
+    return groups;
   }
-  if (Array.isArray(obj.spans)) return obj.spans;
+  if (Array.isArray(obj.spans)) return [{ spans: obj.spans }];
   const data = obj.data;
   if (Array.isArray(data)) {
-    for (const d of data) for (const span of d.spans ?? []) out.push(span);
-    return out;
+    for (const d of data) {
+      const spans = d.spans ?? [];
+      if (spans.length === 0) continue;
+      groups.push({ serviceName: d.process?.serviceName, spans });
+    }
   }
-  return [];
+  return groups;
 }
 function isOtelExport(obj) {
   if (!obj || typeof obj !== "object") return false;
@@ -755,9 +766,11 @@ function isOtelExport(obj) {
   return Array.isArray(o.resourceSpans) || Array.isArray(o.spans) || Array.isArray(o.data) && typeof o.data[0]?.spans !== "undefined";
 }
 function convertOtelToTracingEvents(obj) {
-  const spans = extractOtlpSpans(obj);
+  const groups = extractOtlpGroups(obj);
   const events = [];
-  for (const span of spans) events.push(...spanToEvents(span));
+  for (const group of groups) {
+    for (const span of group.spans) events.push(...spanToEvents(span, group.serviceName));
+  }
   return events.sort((a, b) => a.timestamp - b.timestamp);
 }
 

@@ -261,6 +261,18 @@ Stream OTel spans from your running Node.js service directly into the viewer.
 - **Formats** — Native events JSON or OTLP/JSON output, both directly importable in the browser
 - See [`exporter/README.md`](./exporter/README.md) for the full guide.
 
+### 20. Service Topology & Distributed Root Cause (NEW)
+
+Turn cross-service OTel traces into a live dependency map and a ranked root-cause verdict — fully in the browser.
+
+- **Span-tree reconstruction** — Parses `trace_id` / `span_id` / `parent_span_id` from OTel exports and rebuilds per-trace span trees; multi-trace span-ID reuse is handled safely
+- **Logical-clock skew correction** — Cross-host wall-clock drift is corrected with a Lamport-style re-anchoring pass (durations are preserved; causality is enforced), so event ordering is trustworthy even with millisecond-level clock skew
+- **Service dependency graph** — Nodes are services, edges are caller→callee calls, aggregated with call frequency, P50/P95/P99 latency, and error rate; nodes are colored healthy / warning / faulty
+- **Force-directed rendering** — D3-force simulation drawn on `<canvas>` (labels appear on hover when the graph is large), built to stay at 60fps for 100+ services; click a node to inspect metrics and dependencies
+- **Root-cause localization** — Combines critical-path analysis, unexplained-self-time anomaly detection, error signal, and a reverse personalized PageRank over the dependency graph into a ranked hypothesis list with a **confidence score**
+- **Cascade impact chain** — Shows the causal chain ("service A latency ↑ → service B timeout → service C queue backlog") and actionable fix recommendations (e.g. connection-pool exhaustion)
+- **Trace Viewer linkage** — "Open traces in Trace Viewer" jumps to the existing waterfall for the same dataset
+
 ---
 
 ## Getting Started
@@ -522,6 +534,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 | `examples/heap-string-leak.heapsnapshot` | 22-node heap with concatenated strings, sliced strings, and large string cache to test string analysis | Heap Analyzer |
 | `examples/memory-timeline.json` | 16-point process.memoryUsage() time series showing steady external/RSS/heap growth over 15s | Memory Timeline |
 | `examples/gc-trace-gc.log` | 33 GC events (Scavenge + Mark-sweep) over 15 seconds, showing 4x heap growth | GC Log Analyzer |
+| `examples/otel-distributed-trace.json` | 7-service OTel export (api → auth → users-db, order → inventory → inventory-db, payment-gateway) with injected clock skew and a connection-pool-exhausted failure on payment-gateway | Service Topology |
 
 ### Quick Start Guide
 
@@ -545,6 +558,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 16. **Performance Gate** → Run `node cli/check.mjs check examples/tracing-perf-before.json --threshold=p99MaxMs=250` in the terminal to see the gate fail
 17. **Binary Export** → In Trace Viewer, upload a trace and click **Export .ndv**, then re-import the `.ndv` file
 18. **OTel Import** → Drop an OTLP/JSON trace export into any page — it is auto-detected and converted
+19. **Service Topology** → Upload `examples/otel-distributed-trace.json` in Service Topology to see the dependency graph, then click the red payment-gateway node to read its root-cause verdict
 
 ---
 

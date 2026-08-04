@@ -29,6 +29,18 @@ interface OtlpSpan {
   events?: { name?: string; attributes?: unknown }[];
 }
 
+/** A group of spans plus the service (or process) they belong to. */
+interface SpanGroup {
+  serviceName?: string;
+  spans: OtlpSpan[];
+}
+
+/** Extracts `service.name` from an OTLP resource or a jaeger process. */
+function extractServiceName(resource?: { attributes?: { key: string; value: { stringValue?: string } }[] }): string | undefined {
+  const found = resource?.attributes?.find(a => a.key === 'service.name');
+  return found?.value?.stringValue;
+}
+
 /**
  * Converts a raw epoch timestamp to milliseconds using a magnitude heuristic.
  * Epoch nanos (~1.7e18), micros (~1.7e15) and millis (~1.7e12) are cleanly
@@ -57,7 +69,7 @@ function findAttr(attrs: OtlpSpan['attributes'], key: string): string {
   return found ? attrValue(found.value) : '';
 }
 
-function spanToEvents(span: OtlpSpan): TracingEvent[] {
+function spanToEvents(span: OtlpSpan, serviceName?: string): TracingEvent[] {
   const channel = findAttr(span.attributes ?? [], 'nodeverdict.channel') || span.name || span.operationName || 'otel.span';
   const operationId = span.spanId || span.name || span.operationName || `otel:${Math.random().toString(36).slice(2)}`;
   const parentSpanId = span.parentSpanId;
@@ -84,6 +96,7 @@ function spanToEvents(span: OtlpSpan): TracingEvent[] {
   context.traceId = span.traceId;
   context.kind = span.kind;
   context.statusMessage = span.status?.message;
+  if (serviceName) context.serviceName = serviceName;
 
   const events: TracingEvent[] = [];
   events.push({
@@ -117,28 +130,36 @@ function spanToEvents(span: OtlpSpan): TracingEvent[] {
   return events;
 }
 
-function extractOtlpSpans(obj: Record<string, unknown>): OtlpSpan[] {
-  const out: OtlpSpan[] = [];
-  const resourceSpans = obj.resourceSpans as { scopeSpans?: { spans?: OtlpSpan[] }[] }[] | undefined;
+function extractOtlpGroups(obj: Record<string, unknown>): SpanGroup[] {
+  const groups: SpanGroup[] = [];
+
+  // Standard OTLP/JSON: resourceSpans[{ resource, scopeSpans[{ spans[] }] }]
+  const resourceSpans = obj.resourceSpans as { resource?: { attributes?: { key: string; value: { stringValue?: string } }[] }; scopeSpans?: { spans?: OtlpSpan[] }[] }[] | undefined;
   if (Array.isArray(resourceSpans)) {
     for (const rs of resourceSpans) {
+      const serviceName = extractServiceName(rs.resource);
       for (const ss of rs.scopeSpans ?? []) {
-        for (const span of ss.spans ?? []) out.push(span);
+        const spans = ss.spans ?? [];
+        if (spans.length === 0) continue;
+        groups.push({ serviceName, spans });
       }
     }
-    return out;
+    return groups;
   }
 
   // Flat spans array
-  if (Array.isArray(obj.spans)) return obj.spans as OtlpSpan[];
+  if (Array.isArray(obj.spans)) return [{ spans: obj.spans as OtlpSpan[] }];
 
-  // Jaeger-style { data: [{ traceID, spans: [...] }] }
-  const data = obj.data as { spans?: OtlpSpan[] }[] | undefined;
+  // Jaeger-style { data: [{ traceID, process: { serviceName }, spans: [...] }] }
+  const data = obj.data as { process?: { serviceName?: string }; spans?: OtlpSpan[] }[] | undefined;
   if (Array.isArray(data)) {
-    for (const d of data) for (const span of d.spans ?? []) out.push(span);
-    return out;
+    for (const d of data) {
+      const spans = d.spans ?? [];
+      if (spans.length === 0) continue;
+      groups.push({ serviceName: d.process?.serviceName, spans });
+    }
   }
-  return [];
+  return groups;
 }
 
 export function isOtelExport(obj: unknown): boolean {
@@ -150,9 +171,11 @@ export function isOtelExport(obj: unknown): boolean {
 
 /** Converts an OTel JSON export object into TracingEvent[]. */
 export function convertOtelToTracingEvents(obj: Record<string, unknown>): TracingEvent[] {
-  const spans = extractOtlpSpans(obj);
+  const groups = extractOtlpGroups(obj);
   const events: TracingEvent[] = [];
-  for (const span of spans) events.push(...spanToEvents(span));
+  for (const group of groups) {
+    for (const span of group.spans) events.push(...spanToEvents(span, group.serviceName));
+  }
   // Sort by timestamp for a stable, chronological feed
   return events.sort((a, b) => a.timestamp - b.timestamp);
 }

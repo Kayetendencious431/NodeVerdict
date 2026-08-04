@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { SupportedLanguage } from '../shared/i18n';
 
-type Page = 'home' | 'event-viewer' | 'trace-viewer' | 'validator' | 'heap-analyzer' | 'report' | 'cpu-profiler' | 'heap-diff' | 'search-filter' | 'time-series' | 'perf-compare' | 'tutorial' | 'memory-timeline' | 'gc-log' | 'live-monitor' | 'snapshot-history' | 'alert-rules' | 'ai-rca';
+type Page = 'home' | 'event-viewer' | 'trace-viewer' | 'validator' | 'heap-analyzer' | 'report' | 'cpu-profiler' | 'heap-diff' | 'search-filter' | 'time-series' | 'perf-compare' | 'tutorial' | 'memory-timeline' | 'gc-log' | 'live-monitor' | 'snapshot-history' | 'alert-rules' | 'ai-rca' | 'topology';
 
 interface UIState {
   currentPage: Page;

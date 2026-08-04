@@ -1,0 +1,881 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "api"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000001",
+              "name": "api POST /checkout",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000000000000",
+              "endTimeUnixNano": "1701000000600000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "api"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000001",
+              "name": "api POST /checkout",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000000000000",
+              "endTimeUnixNano": "1701000005200000000",
+              "status": {
+                "code": 2,
+                "message": "checkout failed: payment provider timeout"
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "api"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "auth"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000002",
+              "parentSpanId": "0100000000000001",
+              "name": "auth.authorize",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000001000000",
+              "endTimeUnixNano": "1701000000120000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "auth"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000002",
+              "parentSpanId": "0200000000000001",
+              "name": "auth.authorize",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000001000000",
+              "endTimeUnixNano": "1701000000150000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "auth"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "users-db"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000003",
+              "parentSpanId": "0100000000000002",
+              "name": "users-db SELECT",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000005000000",
+              "endTimeUnixNano": "1701000000110000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "users-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000003",
+              "parentSpanId": "0200000000000002",
+              "name": "users-db SELECT",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000005000000",
+              "endTimeUnixNano": "1701000000140000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "users-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "cart"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000004",
+              "parentSpanId": "0100000000000001",
+              "name": "cart.getCart",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000001000000",
+              "endTimeUnixNano": "1701000000080000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "cart"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000004",
+              "parentSpanId": "0200000000000001",
+              "name": "cart.getCart",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000001000000",
+              "endTimeUnixNano": "1701000001500000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "cart"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "cart-db"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000005",
+              "parentSpanId": "0100000000000004",
+              "name": "cart-db SELECT",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000004000000",
+              "endTimeUnixNano": "1701000000070000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "cart-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000005",
+              "parentSpanId": "0200000000000004",
+              "name": "cart-db SELECT",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000004000000",
+              "endTimeUnixNano": "1701000001400000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "cart-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "checkout"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000006",
+              "parentSpanId": "0100000000000001",
+              "name": "checkout.createOrder",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000002000000",
+              "endTimeUnixNano": "1701000000500000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "checkout"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000006",
+              "parentSpanId": "0200000000000001",
+              "name": "checkout.createOrder",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000002000000",
+              "endTimeUnixNano": "1701000005000000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "checkout"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "orders-db"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000007",
+              "parentSpanId": "0100000000000006",
+              "name": "orders-db INSERT",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000006000000",
+              "endTimeUnixNano": "1701000000060000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "orders-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000007",
+              "parentSpanId": "0200000000000006",
+              "name": "orders-db INSERT",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000006000000",
+              "endTimeUnixNano": "1701000000070000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "orders-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "inventory"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000008",
+              "parentSpanId": "0100000000000006",
+              "name": "inventory.reserve",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000010000000",
+              "endTimeUnixNano": "1701000000200000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "inventory"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000008",
+              "parentSpanId": "0200000000000006",
+              "name": "inventory.reserve",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000010000000",
+              "endTimeUnixNano": "1701000003000000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "inventory"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "inventory-db"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000009",
+              "parentSpanId": "0100000000000008",
+              "name": "inventory-db UPDATE",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000012000000",
+              "endTimeUnixNano": "1701000000150000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "inventory-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000009",
+              "parentSpanId": "0200000000000008",
+              "name": "inventory-db UPDATE",
+              "kind": 1,
+              "startTimeUnixNano": "1701000000012000000",
+              "endTimeUnixNano": "1701000002900000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "inventory-db"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "recommendation"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000010",
+              "parentSpanId": "0100000000000001",
+              "name": "recommendation.getRecommendations",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000002000000",
+              "endTimeUnixNano": "1701000000350000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "recommendation"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000010",
+              "parentSpanId": "0200000000000001",
+              "name": "recommendation.getRecommendations",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000002000000",
+              "endTimeUnixNano": "1701000004800000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "recommendation"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "payment"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000011",
+              "parentSpanId": "0100000000000006",
+              "name": "payment.charge",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000060000000",
+              "endTimeUnixNano": "1701000000420000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "payment"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000011",
+              "parentSpanId": "0200000000000006",
+              "name": "payment.charge",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000500000000",
+              "endTimeUnixNano": "1701000005000000000",
+              "status": {
+                "code": 2,
+                "message": "payment.charge failed: payment-gateway: 502 Bad Gateway"
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "payment"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "payment-gateway"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "nodeverdict-demo"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0100000000000012",
+              "parentSpanId": "0100000000000011",
+              "name": "payment-gateway.charge",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000070000000",
+              "endTimeUnixNano": "1701000000400000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "payment-gateway"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0200000000000012",
+              "parentSpanId": "0200000000000011",
+              "name": "payment-gateway.charge",
+              "kind": 2,
+              "startTimeUnixNano": "1701000000510000000",
+              "endTimeUnixNano": "1701000004990000000",
+              "status": {
+                "code": 2,
+                "message": "payment-gateway: 502 Bad Gateway: upstream provider timeout"
+              },
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "payment-gateway"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/checkout"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

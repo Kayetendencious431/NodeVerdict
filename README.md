@@ -573,10 +573,20 @@ Sample data files are available in the [`examples/`](./examples) directory:
 | `examples/heap-diff-after.heapsnapshot` | After snapshot: 18 nodes with grown cache (4 entries) + leaked event listeners | Heap Diff |
 | `examples/heap-string-leak.heapsnapshot` | 22-node heap with concatenated strings, sliced strings, and large string cache to test string analysis | Heap Analyzer |
 | `examples/memory-timeline.json` | 16-point process.memoryUsage() time series showing steady external/RSS/heap growth over 15s | Memory Timeline |
+| `examples/memory-timeline-leak.json` | 61 snapshots over 60s of an unbounded session-cache leak: heap +7.9 MB/s, RSS +10 MB/s (flags abnormal growth) | Memory Timeline |
 | `examples/gc-trace-gc.log` | 33 GC events (Scavenge + Mark-sweep) over 15 seconds, showing 4x heap growth | GC Log Analyzer |
+| `examples/gc-memory-leak.log` | 60s of GC with a progressive heap leak: 11 major GCs at escalating frequency, growing pauses (avg ~59ms), +315MB growth | GC Log Analyzer |
 | `examples/otel-distributed-trace.json` | 7-service OTel export (api → auth → users-db, order → inventory → inventory-db, payment-gateway) with injected clock skew and a connection-pool-exhausted failure on payment-gateway | Service Topology |
+| `examples/otel-cascade-failure.json` | 12-service OTel export (2 checkout traces) with a cascading failure: payment-gateway 502 error + slow recommendation/cart-db/inventory-db → api 500 | Service Topology |
+| `examples/tracing-large.json` | ~427k events / 64MB trace file — large enough to route through the Streaming Large-File Import worker (files ≥64MB) | Streaming Import, Event Viewer |
 | `examples/differential-normal.json` | Healthy run: 5 GET /api/users requests, all 200, 1024-byte socket reads | Differential Debug |
 | `examples/differential-fault.json` | Same code path with an injected DB connection-lost bug: request req-004 reads 512 bytes, throws `mysql2:query error`, returns 500 | Differential Debug |
+| `examples/differential-timeout-normal.json` | Healthy run: 5 GET /api/orders requests; upstream calls complete in ~50ms, all 200 | Differential Debug |
+| `examples/differential-timeout-fault.json` | req-004's upstream call times out after 5000ms → `TimeoutError`, HTTP 504 | Differential Debug |
+| `examples/differential-pool-normal.json` | 6 GET /api/orders requests, each acquires and releases a pool connection | Differential Debug |
+| `examples/differential-pool-fault.json` | req-005's connection is never released (leak) → req-006 times out waiting, HTTP 503 | Differential Debug |
+| `examples/differential-cache-normal.json` | GET /api/orders: first request warms the cache, next 4 hit it (no DB query) | Differential Debug |
+| `examples/differential-cache-fault.json` | Cache set is skipped (bug) so every request misses and hits the DB — `cacheHit` flips and extra queries appear | Differential Debug |
 
 ### Quick Start Guide
 

@@ -6,6 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+# Sample GC logs are intentionally committed as demo data
+!examples/gc-*.log
 
 node_modules
 dist

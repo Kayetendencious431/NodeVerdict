@@ -1,0 +1,30 @@
+[
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710003000000, "context": { "method": "GET", "url": "/api/orders", "reqId": "req-001" }, "operationId": "req-001" },
+  { "channel": "redis:cache", "eventType": "start", "timestamp": 1710003000001, "context": { "operation": "get", "key": "orders:list", "reqId": "req-001" }, "operationId": "req-001:cache" },
+  { "channel": "redis:cache", "eventType": "end", "timestamp": 1710003000002, "context": { "operation": "get", "key": "orders:list", "cacheHit": false, "reqId": "req-001" }, "operationId": "req-001:cache" },
+  { "channel": "mysql2:query", "eventType": "start", "timestamp": 1710003000003, "context": { "query": "SELECT * FROM orders", "reqId": "req-001" }, "operationId": "req-001:db" },
+  { "channel": "mysql2:query", "eventType": "end", "timestamp": 1710003000013, "context": { "query": "SELECT * FROM orders", "rows": 20, "reqId": "req-001" }, "operationId": "req-001:db" },
+  { "channel": "redis:cache", "eventType": "start", "timestamp": 1710003000014, "context": { "operation": "set", "key": "orders:list", "ttlMs": 60000, "reqId": "req-001" }, "operationId": "req-001:cache" },
+  { "channel": "redis:cache", "eventType": "end", "timestamp": 1710003000015, "context": { "operation": "set", "key": "orders:list", "ttlMs": 60000, "reqId": "req-001" }, "operationId": "req-001:cache" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710003000016, "context": { "method": "GET", "url": "/api/orders", "status": 200, "reqId": "req-001" }, "operationId": "req-001" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710003000100, "context": { "method": "GET", "url": "/api/orders", "reqId": "req-002" }, "operationId": "req-002" },
+  { "channel": "redis:cache", "eventType": "start", "timestamp": 1710003000101, "context": { "operation": "get", "key": "orders:list", "reqId": "req-002" }, "operationId": "req-002:cache" },
+  { "channel": "redis:cache", "eventType": "end", "timestamp": 1710003000102, "context": { "operation": "get", "key": "orders:list", "cacheHit": true, "reqId": "req-002" }, "operationId": "req-002:cache" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710003000103, "context": { "method": "GET", "url": "/api/orders", "status": 200, "reqId": "req-002" }, "operationId": "req-002" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710003000200, "context": { "method": "GET", "url": "/api/orders", "reqId": "req-003" }, "operationId": "req-003" },
+  { "channel": "redis:cache", "eventType": "start", "timestamp": 1710003000201, "context": { "operation": "get", "key": "orders:list", "reqId": "req-003" }, "operationId": "req-003:cache" },
+  { "channel": "redis:cache", "eventType": "end", "timestamp": 1710003000202, "context": { "operation": "get", "key": "orders:list", "cacheHit": true, "reqId": "req-003" }, "operationId": "req-003:cache" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710003000203, "context": { "method": "GET", "url": "/api/orders", "status": 200, "reqId": "req-003" }, "operationId": "req-003" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710003000300, "context": { "method": "GET", "url": "/api/orders", "reqId": "req-004" }, "operationId": "req-004" },
+  { "channel": "redis:cache", "eventType": "start", "timestamp": 1710003000301, "context": { "operation": "get", "key": "orders:list", "reqId": "req-004" }, "operationId": "req-004:cache" },
+  { "channel": "redis:cache", "eventType": "end", "timestamp": 1710003000302, "context": { "operation": "get", "key": "orders:list", "cacheHit": true, "reqId": "req-004" }, "operationId": "req-004:cache" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710003000303, "context": { "method": "GET", "url": "/api/orders", "status": 200, "reqId": "req-004" }, "operationId": "req-004" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710003000400, "context": { "method": "GET", "url": "/api/orders", "reqId": "req-005" }, "operationId": "req-005" },
+  { "channel": "redis:cache", "eventType": "start", "timestamp": 1710003000401, "context": { "operation": "get", "key": "orders:list", "reqId": "req-005" }, "operationId": "req-005:cache" },
+  { "channel": "redis:cache", "eventType": "end", "timestamp": 1710003000402, "context": { "operation": "get", "key": "orders:list", "cacheHit": true, "reqId": "req-005" }, "operationId": "req-005:cache" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710003000403, "context": { "method": "GET", "url": "/api/orders", "status": 200, "reqId": "req-005" }, "operationId": "req-005" }
+]

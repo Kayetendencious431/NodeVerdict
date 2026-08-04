@@ -547,9 +547,20 @@ graph TB
 | `examples/heap-diff-after.heapsnapshot` | 后快照：18 个节点，增长的缓存（4 条目）+ 泄漏的事件监听器 | 堆对比 |
 | `examples/heap-string-leak.heapsnapshot` | 22 节点堆，包含拼接字符串、切片字符串和大字符串缓存，用于测试字符串分析 | 堆分析器 |
 | `examples/memory-timeline.json` | 16 个数据点的 process.memoryUsage() 时间序列，展示 15 秒内外部/RSS/堆的稳定增长 | 内存时间线 |
+| `examples/memory-timeline-leak.json` | 60 秒 61 个快照的无界会话缓存泄漏：堆 +7.9 MB/s、RSS +10 MB/s（触发异常增长告警） | 内存时间线 |
 | `examples/gc-trace-gc.log` | 15 秒内 33 个 GC 事件（Scavenge + Mark-sweep），展示 4 倍堆增长 | GC 日志分析器 |
+| `examples/gc-memory-leak.log` | 60 秒渐进式堆泄漏：11 次大 GC 频率持续攀升、暂停不断拉长（平均约 59ms）、增长 +315MB | GC 日志分析器 |
+| `examples/otel-distributed-trace.json` | 7 服务 OTel 导出（api → auth → users-db，order → inventory → inventory-db，payment-gateway），含注入的时钟偏斜与 payment-gateway 连接池耗尽故障 | 服务拓扑 |
+| `examples/otel-cascade-failure.json` | 12 服务 OTel 导出（2 条结账追踪）的级联故障：payment-gateway 502 + recommendation/cart-db/inventory-db 变慢 → api 500 | 服务拓扑 |
+| `examples/tracing-large.json` | 约 42.7 万事件 / 64MB 追踪文件，足以走 Streaming 大文件导入 Worker（≥64MB 自动流式处理） | 流式导入、事件查看器 |
 | `examples/differential-normal.json` | 健康运行：5 个 GET /api/users 请求，全部 200，1024 字节 socket 读取 | 微分调试 |
 | `examples/differential-fault.json` | 同一代码路径注入数据库连接丢失 bug：请求 req-004 读取 512 字节，抛出 `mysql2:query error`，返回 500 | 微分调试 |
+| `examples/differential-timeout-normal.json` | 健康运行：5 个 GET /api/orders 请求，上游调用约 50ms 完成，全部 200 | 微分调试 |
+| `examples/differential-timeout-fault.json` | req-004 的上游调用 5000ms 超时 → `TimeoutError`，HTTP 504 | 微分调试 |
+| `examples/differential-pool-normal.json` | 6 个 GET /api/orders 请求，各自获取并归还连接池连接 | 微分调试 |
+| `examples/differential-pool-fault.json` | req-005 的连接从未归还（泄漏）→ req-006 等待连接超时，HTTP 503 | 微分调试 |
+| `examples/differential-cache-normal.json` | GET /api/orders：首个请求预热缓存，后续 4 个命中缓存（无 DB 查询） | 微分调试 |
+| `examples/differential-cache-fault.json` | 缓存写入被跳过（bug），每个请求都未命中并打库 —— `cacheHit` 翻转、出现多余查询 | 微分调试 |
 
 ### 快速入门指南
 

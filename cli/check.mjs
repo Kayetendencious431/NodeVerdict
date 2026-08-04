@@ -1037,7 +1037,8 @@ function formatGateReport(result, sourceName) {
   lines.push("|---|---|---|---|");
   for (const r of result.rules) {
     const status = r.status === "pass" ? "\u2705 pass" : r.status === "fail" ? "\u274C fail" : "\u23ED skip";
-    lines.push(`| ${r.description} | ${status} | ${r.actual.toLocaleString()}${r.unit} | ${r.threshold.toLocaleString()}${r.unit} |`);
+    const unit = r.unit && r.unit !== "ms" ? ` ${r.unit}` : r.unit;
+    lines.push(`| ${r.description} | ${status} | ${r.actual.toLocaleString()}${unit} | ${r.threshold.toLocaleString()}${unit} |`);
   }
   lines.push("");
   lines.push(`Trace: ${result.metrics.totalEvents} events, ${result.metrics.totalOperations} operations, error rate ${(result.metrics.errorRate * 100).toFixed(2)}%.`);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { StreamingTraceAnalyzer } from '../src/shared/streaming';
+import { IncrementalJsonParser, StreamingTraceAnalyzer } from '../src/shared/streaming';
 import { analyzeTracingEvents } from '../src/shared/engine';
 import type { TracingEvent } from '../src/shared/types';
 
@@ -119,5 +119,38 @@ describe('StreamingTraceAnalyzer parity with analyzeTracingEvents', () => {
     }
     expect(seen.length).toBeGreaterThan(0);
     expect(seen[seen.length - 1]).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('worker byte-stream decode path (raw bytes + TextDecoder stream:true)', () => {
+  it('handles UTF-8 split across arbitrary byte boundaries and matches sync', () => {
+    const events = buildDataset();
+    const sync = analyzeTracingEvents(events);
+    // Serialize to UTF-8 JSON with multibyte content.
+    events[0].context = { msg: '你好世界 🚀' };
+    const text = JSON.stringify(events);
+    const bytes = new TextEncoder().encode(text);
+
+    const decoder = new TextDecoder();
+    const parser = new IncrementalJsonParser();
+    const analyzer = new StreamingTraceAnalyzer({ maxEvents: 1000, maxOperations: 1000 });
+
+    // Feed in 3-byte slices to force mid-code-point splits.
+    let out = '';
+    for (let i = 0; i < bytes.length; i += 3) {
+      out += decoder.decode(bytes.subarray(i, i + 3), { stream: true });
+      parser.push(out);
+      out = '';
+      let v: string | null;
+      while ((v = parser.next()) !== null) analyzer.feed(JSON.parse(v) as TracingEvent);
+    }
+    parser.push(decoder.decode());
+
+    const { analysis } = analyzer.finish(bytes.length);
+    expect(analysis.totalEvents).toBe(sync.totalEvents);
+    expect(analysis.totalOperations).toBe(sync.totalOperations);
+    expect(analysis.errorRate).toBeCloseTo(sync.errorRate, 10);
+    // The first event's context survived multibyte decoding.
+    expect(analysis.events[0].context.msg).toBe('你好世界 🚀');
   });
 });

@@ -1,6 +1,6 @@
 # NodeVerdict
 
-> A browser-based **Node.js diagnostic data viewer** — consume TracingChannel native diagnostic events, analyze CPU profiles, inspect heap snapshots, compare performance data, and share findings — all locally in your browser.
+> A browser-based **Node.js diagnostic data viewer** — consumes native `diagnostics_channel.TracingChannel` JSON events, providing event lists, waterfall charts, CPU flame graphs, heap snapshot analysis, GC log parsing, performance comparison, and report generation. All data is processed locally — nothing is uploaded to any server. An optional WebSocket Live Agent enables real-time diagnostics from running Node.js processes. Designed for development debugging and tooling validation within the TracingChannel ecosystem.
 
 ![NodeVerdict](./introduction/NodeVerdict.png)
 

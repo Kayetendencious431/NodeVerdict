@@ -287,6 +287,16 @@ Never `JSON.parse` a multi-GB file again. Large trace files are parsed increment
 
 > **Roadmap** — the same interface is designed so the tokenizer/analyzer core can later be swapped for a Rust + WASM implementation (`wasm-bindgen` + `serde`) to push raw throughput toward the 3GB/5s target; streaming, worker, retention, and progress plumbing stay unchanged.
 
+### 22. Differential Debug (NEW)
+
+Compare a *normal* and a *fault* execution trace of the same code path to localize exactly where and why the two runs diverged — the debugging analog of a git diff for execution traces.
+
+- **Band-limited alignment** — The two event streams are aligned with a banded dynamic-programming edit-distance aligner (common-prefix/suffix trim + O(band) memory) so 100k-event traces align in well under a second
+- **Run-specific noise ignored** — Timestamps, request/trace/span/session IDs, and `now()`/`hrtime` values are excluded by default so uninteresting deltas don't produce false divergences
+- **Cause vs. effect** — The first divergence region is classified as the **cause**; later same-channel or error-bearing regions are **effects**, each with a 0–1 confidence score and a human-readable reason
+- **Variable & stack diffs** — Every divergence shows the aligned event pair side-by-side plus per-key value diffs and per-frame stack diffs
+- **Natural-language report** — A generated summary and ordered fix recommendations (e.g. "the fault run reads 512 bytes where the normal run reads 1024 — check the DB connection pooling config")
+
 ---
 
 ## Getting Started
@@ -561,6 +571,8 @@ Sample data files are available in the [`examples/`](./examples) directory:
 | `examples/memory-timeline.json` | 16-point process.memoryUsage() time series showing steady external/RSS/heap growth over 15s | Memory Timeline |
 | `examples/gc-trace-gc.log` | 33 GC events (Scavenge + Mark-sweep) over 15 seconds, showing 4x heap growth | GC Log Analyzer |
 | `examples/otel-distributed-trace.json` | 7-service OTel export (api → auth → users-db, order → inventory → inventory-db, payment-gateway) with injected clock skew and a connection-pool-exhausted failure on payment-gateway | Service Topology |
+| `examples/differential-normal.json` | Healthy run: 5 GET /api/users requests, all 200, 1024-byte socket reads | Differential Debug |
+| `examples/differential-fault.json` | Same code path with an injected DB connection-lost bug: request req-004 reads 512 bytes, throws `mysql2:query error`, returns 500 | Differential Debug |
 
 ### Quick Start Guide
 

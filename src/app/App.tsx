@@ -18,6 +18,7 @@ import { AlertRulesPage } from '../features/alert-rules';
 import { SnapshotHistoryPage } from '../features/snapshot-history';
 import { AiRcaPage } from '../features/ai-rca';
 import { TopologyPage } from '../features/topology';
+import { DifferentialDebugPage } from '../features/differential-debug';
 import { useEffect } from 'react';
 import { useI18n } from '../shared/i18n/useI18n';
 
@@ -139,6 +140,15 @@ function HomePage() {
 
       <div className="mt-6">
         <FeatureCard
+          title={t('feature.differential-debug')}
+          description={t('feature.differential-debug.desc')}
+          icon="M12 8v-1m0 12v-1m4.95-10.95l-.707.707m-8.486 8.486l-.707.707M21 12h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          onClick={() => navigate('differential-debug')}
+        />
+      </div>
+
+      <div className="mt-6">
+        <FeatureCard
           title={t('feature.tutorial')}
           description={t('feature.tutorial.desc')}
           icon="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
@@ -203,6 +213,7 @@ export function App() {
       <div style={{ display: currentPage === 'snapshot-history' ? 'block' : 'none' }}><SnapshotHistoryPage /></div>
       <div style={{ display: currentPage === 'ai-rca' ? 'block' : 'none' }}><AiRcaPage /></div>
       <div style={{ display: currentPage === 'topology' ? 'block' : 'none' }}><TopologyPage /></div>
+      <div style={{ display: currentPage === 'differential-debug' ? 'block' : 'none' }}><DifferentialDebugPage /></div>
     </AppShell>
   );
 }

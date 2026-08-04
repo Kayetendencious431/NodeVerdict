@@ -261,6 +261,16 @@ graph LR
 - **格式** — 原生事件 JSON 或 OTLP/JSON 输出，浏览器可直接导入
 - 完整指南见 [`exporter/README.md`](./exporter/README.md)。
 
+### 20. 微分调试（新增）
+
+对比同一代码路径的**正常**与**故障**执行轨迹，精确定位两次运行在哪一点、因何而分叉 —— 相当于执行轨迹的 git diff。
+
+- **带状对齐** — 事件流以带约束的动态规划编辑距离对齐（先裁剪公共前缀/后缀，内存 O(band)），10 万事件轨迹可在 1 秒内完成对齐
+- **忽略运行性噪声** — 默认排除时间戳、请求/追踪/跨度/会话 ID、`now()`/`hrtime` 等字段，避免无关差异产生误报分叉
+- **原因 vs. 结果** — 首个分叉区域被分类为**原因**，其后同通道或携带错误的分叉区域为**结果**，均附 0–1 置信度与可读原因
+- **变量与调用栈差异** — 每个分叉点并排展示对齐事件对、逐键变量差异与逐帧调用栈差异
+- **自然语言报告** — 自动生成摘要与有序修复建议（例如"故障运行读取 512 字节而正常运行为 1024 字节 —— 请检查数据库连接池配置"）
+
 ---
 
 ## 快速开始
@@ -522,6 +532,8 @@ graph TB
 | `examples/heap-string-leak.heapsnapshot` | 22 节点堆，包含拼接字符串、切片字符串和大字符串缓存，用于测试字符串分析 | 堆分析器 |
 | `examples/memory-timeline.json` | 16 个数据点的 process.memoryUsage() 时间序列，展示 15 秒内外部/RSS/堆的稳定增长 | 内存时间线 |
 | `examples/gc-trace-gc.log` | 15 秒内 33 个 GC 事件（Scavenge + Mark-sweep），展示 4 倍堆增长 | GC 日志分析器 |
+| `examples/differential-normal.json` | 健康运行：5 个 GET /api/users 请求，全部 200，1024 字节 socket 读取 | 微分调试 |
+| `examples/differential-fault.json` | 同一代码路径注入数据库连接丢失 bug：请求 req-004 读取 512 字节，抛出 `mysql2:query error`，返回 500 | 微分调试 |
 
 ### 快速入门指南
 

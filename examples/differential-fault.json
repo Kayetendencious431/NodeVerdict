@@ -1,0 +1,41 @@
+[
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710000000000, "context": { "method": "GET", "url": "/api/users", "reqId": "req-001" }, "operationId": "req-001" },
+  { "channel": "http:server", "eventType": "start", "timestamp": 1710000000001, "context": { "remoteAddress": "127.0.0.1", "reqId": "req-001" }, "operationId": "req-001:socket" },
+  { "channel": "net:socket", "eventType": "start", "timestamp": 1710000000002, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-001" }, "operationId": "req-001:read" },
+  { "channel": "net:socket", "eventType": "end", "timestamp": 1710000000003, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-001" }, "operationId": "req-001:read" },
+  { "channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000004, "context": { "query": "SELECT * FROM users", "reqId": "req-001" }, "operationId": "req-001:db" },
+  { "channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000014, "context": { "query": "SELECT * FROM users", "rows": 42, "reqId": "req-001" }, "operationId": "req-001:db" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710000000015, "context": { "method": "GET", "url": "/api/users", "status": 200, "reqId": "req-001" }, "operationId": "req-001" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710000000100, "context": { "method": "GET", "url": "/api/users", "reqId": "req-002" }, "operationId": "req-002" },
+  { "channel": "http:server", "eventType": "start", "timestamp": 1710000000101, "context": { "remoteAddress": "127.0.0.1", "reqId": "req-002" }, "operationId": "req-002:socket" },
+  { "channel": "net:socket", "eventType": "start", "timestamp": 1710000000102, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-002" }, "operationId": "req-002:read" },
+  { "channel": "net:socket", "eventType": "end", "timestamp": 1710000000103, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-002" }, "operationId": "req-002:read" },
+  { "channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000104, "context": { "query": "SELECT * FROM users", "reqId": "req-002" }, "operationId": "req-002:db" },
+  { "channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000114, "context": { "query": "SELECT * FROM users", "rows": 42, "reqId": "req-002" }, "operationId": "req-002:db" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710000000115, "context": { "method": "GET", "url": "/api/users", "status": 200, "reqId": "req-002" }, "operationId": "req-002" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710000000200, "context": { "method": "GET", "url": "/api/users", "reqId": "req-003" }, "operationId": "req-003" },
+  { "channel": "http:server", "eventType": "start", "timestamp": 1710000000201, "context": { "remoteAddress": "127.0.0.1", "reqId": "req-003" }, "operationId": "req-003:socket" },
+  { "channel": "net:socket", "eventType": "start", "timestamp": 1710000000202, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-003" }, "operationId": "req-003:read" },
+  { "channel": "net:socket", "eventType": "end", "timestamp": 1710000000203, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-003" }, "operationId": "req-003:read" },
+  { "channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000204, "context": { "query": "SELECT * FROM users", "reqId": "req-003" }, "operationId": "req-003:db" },
+  { "channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000214, "context": { "query": "SELECT * FROM users", "rows": 42, "reqId": "req-003" }, "operationId": "req-003:db" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710000000215, "context": { "method": "GET", "url": "/api/users", "status": 200, "reqId": "req-003" }, "operationId": "req-003" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710000000300, "context": { "method": "GET", "url": "/api/users", "reqId": "req-004" }, "operationId": "req-004" },
+  { "channel": "http:server", "eventType": "start", "timestamp": 1710000000301, "context": { "remoteAddress": "127.0.0.1", "reqId": "req-004" }, "operationId": "req-004:socket" },
+  { "channel": "net:socket", "eventType": "start", "timestamp": 1710000000302, "context": { "bytes": 512, "chunk": 1, "reqId": "req-004" }, "operationId": "req-004:read" },
+  { "channel": "net:socket", "eventType": "end", "timestamp": 1710000000303, "context": { "bytes": 512, "chunk": 1, "reqId": "req-004" }, "operationId": "req-004:read" },
+  { "channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000304, "context": { "query": "SELECT * FROM users", "reqId": "req-004" }, "operationId": "req-004:db" },
+  { "channel": "mysql2:query", "eventType": "error", "timestamp": 1710000000380, "context": { "query": "SELECT * FROM users", "rows": 0, "reqId": "req-004" }, "operationId": "req-004:db", "error": { "name": "Error", "message": "Connection lost: server closed the connection.", "stack": "Error: Connection lost: server closed the connection.\n    at Handshake (mysql2/lib/commands/handshake.js:61:19)\n    at PacketParser.onPacket (mysql2/lib/packet_parser.js:89:12)\n    at Socket.<anonymous> (mysql2/lib/connection.js:215:49)\n    at Socket.emit (node:events:511:28)" } },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710000000381, "context": { "method": "GET", "url": "/api/users", "status": 500, "reqId": "req-004" }, "operationId": "req-004" },
+
+  { "channel": "express:request", "eventType": "start", "timestamp": 1710000000400, "context": { "method": "GET", "url": "/api/users", "reqId": "req-005" }, "operationId": "req-005" },
+  { "channel": "http:server", "eventType": "start", "timestamp": 1710000000401, "context": { "remoteAddress": "127.0.0.1", "reqId": "req-005" }, "operationId": "req-005:socket" },
+  { "channel": "net:socket", "eventType": "start", "timestamp": 1710000000402, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-005" }, "operationId": "req-005:read" },
+  { "channel": "net:socket", "eventType": "end", "timestamp": 1710000000403, "context": { "bytes": 1024, "chunk": 1, "reqId": "req-005" }, "operationId": "req-005:read" },
+  { "channel": "mysql2:query", "eventType": "start", "timestamp": 1710000000404, "context": { "query": "SELECT * FROM users", "reqId": "req-005" }, "operationId": "req-005:db" },
+  { "channel": "mysql2:query", "eventType": "end", "timestamp": 1710000000414, "context": { "query": "SELECT * FROM users", "rows": 42, "reqId": "req-005" }, "operationId": "req-005:db" },
+  { "channel": "express:request", "eventType": "end", "timestamp": 1710000000415, "context": { "method": "GET", "url": "/api/users", "status": 200, "reqId": "req-005" }, "operationId": "req-005" }
+]

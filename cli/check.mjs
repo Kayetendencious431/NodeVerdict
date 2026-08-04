@@ -487,7 +487,8 @@ var require_lz_string = __commonJS({
 
 // cli/check.ts
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve, join } from "node:path";
 
 // src/shared/engine/tracing-parser.ts
 function normalize(events) {
@@ -1053,6 +1054,14 @@ function formatGateReport(result, sourceName) {
 }
 
 // cli/check.ts
+function readVersion() {
+  try {
+    const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../package.json"), "utf-8"));
+    return typeof pkg.version === "string" ? pkg.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 function parseArgs(argv) {
   const positional = [];
   const flags = {};
@@ -1060,6 +1069,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--json" || arg === "-j") flags.json = true;
     else if (arg === "--help" || arg === "-h") flags.help = true;
+    else if (arg === "--version" || arg === "-v") flags.version = true;
     else if (arg.startsWith("--config=")) flags.config = arg.slice("--config=".length);
     else if (arg === "--config") flags.config = argv[++i];
     else if (arg.startsWith("--report=")) flags.report = arg.slice("--report=".length);
@@ -1080,6 +1090,8 @@ Options:
   --json                Output machine-readable JSON result
   --report <file.md>    Write a markdown report to the given file
   --threshold=k=v       Override a single threshold (e.g. p99MaxMs=250)
+  --version, -v         Print the CLI version
+  --help, -h            Show this help
 
 Exit codes:
   0  gate PASS
@@ -1089,6 +1101,10 @@ Exit codes:
 }
 function main() {
   const { positional, flags } = parseArgs(process.argv.slice(2));
+  if (flags.version) {
+    console.log(readVersion());
+    process.exit(0);
+  }
   if (flags.help) {
     printHelp();
     process.exit(0);

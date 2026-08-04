@@ -11,13 +11,22 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, join } from 'node:path';
 import {
   evaluateTraceGate,
   formatGateReport,
   defaultGateConfig,
 } from '../src/shared/gate/performance-gate.ts';
 import type { GateConfig } from '../src/shared/gate/performance-gate.ts';
+
+function readVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../package.json'), 'utf-8'));
+    return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 
 function parseArgs(argv: string[]) {
   const positional: string[] = [];
@@ -26,6 +35,7 @@ function parseArgs(argv: string[]) {
     const arg = argv[i];
     if (arg === '--json' || arg === '-j') flags.json = true;
     else if (arg === '--help' || arg === '-h') flags.help = true;
+    else if (arg === '--version' || arg === '-v') flags.version = true;
     else if (arg.startsWith('--config=')) flags.config = arg.slice('--config='.length);
     else if (arg === '--config') flags.config = argv[++i];
     else if (arg.startsWith('--report=')) flags.report = arg.slice('--report='.length);
@@ -47,6 +57,8 @@ Options:
   --json                Output machine-readable JSON result
   --report <file.md>    Write a markdown report to the given file
   --threshold=k=v       Override a single threshold (e.g. p99MaxMs=250)
+  --version, -v         Print the CLI version
+  --help, -h            Show this help
 
 Exit codes:
   0  gate PASS
@@ -57,6 +69,11 @@ Exit codes:
 
 function main() {
   const { positional, flags } = parseArgs(process.argv.slice(2));
+
+  if (flags.version) {
+    console.log(readVersion());
+    process.exit(0);
+  }
 
   if (flags.help) {
     printHelp();

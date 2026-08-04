@@ -381,11 +381,23 @@ Diagnose a trace in one click:
 
 ### 4. Performance Gate (CI)
 
-Check a trace against performance rules from the command line:
+Check a trace against performance rules from the command line.
+
+**How to start the CLI** — three equivalent ways:
 
 ```bash
-npm run build:cli                 # bundle the CLI (also runs as part of npm run build)
+# 1. Direct (no install, works in this repo)
+npm run build:cli                          # bundle cli/check.mjs (also runs via npm run build)
 node cli/check.mjs check examples/tracing-perf-before.json
+
+# 2. Local npm bin (no global install)
+npm exec -- node-verdict check examples/tracing-perf-before.json
+
+# 3. Install the `node-verdict` command globally (then use it anywhere)
+npm install -g .                            # or: npm link
+node-verdict check examples/tracing-perf-before.json
+node-verdict --version                      # → 1.0.0
+node-verdict check --help                   # full options
 ```
 
 Exit codes: `0` = pass, `1` = fail, `2` = error. Override thresholds with a config file or flags:

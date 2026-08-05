@@ -13,7 +13,7 @@ export function MemoryGauge({ used, total, label, color }: MemoryGaugeProps) {
 
   const size = 120;
   const strokeWidth = 10;
-  const radius = (size - strokeWidth) / 2;
+  const radius = size / 2 - strokeWidth / 2 - 1;
   const center = size / 2;
 
   const ratio = total > 0 ? Math.min(used / total, 1) : 0;
@@ -41,8 +41,8 @@ export function MemoryGauge({ used, total, label, color }: MemoryGaugeProps) {
     // Foreground arc (used portion)
     root.append('path')
       .attr('d', d3.arc()({
-        innerRadius: radius - strokeWidth / 2,
-        outerRadius: radius + strokeWidth / 2,
+        innerRadius: radius,
+        outerRadius: radius,
         startAngle: -Math.PI / 2,
         endAngle: -Math.PI / 2 + Math.PI * 2 * ratio,
       }) as string)
@@ -79,8 +79,8 @@ export function MemoryGauge({ used, total, label, color }: MemoryGaugeProps) {
     <div className="flex flex-col items-center">
       <svg
         ref={svgRef}
-        width={size}
-        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ width: '100%', maxWidth: size, height: 'auto' }}
         className="text-gray-600 dark:text-gray-300"
         role="img"
         aria-label={`${label}: ${percentage.toFixed(1)}%`}

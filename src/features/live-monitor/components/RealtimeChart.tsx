@@ -26,22 +26,22 @@ export function RealtimeChart({
   const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const margin = { top: 10, right: 50, bottom: 24, left: 42 };
+  const margin = { top: 24, right: 50, bottom: 24, left: 42 };
   const innerWidth = Math.max(width - margin.left - margin.right, 10);
   const innerHeight = Math.max(height - margin.top - margin.bottom, 10);
 
-  // Snap values: X is "seconds before now" (last maxDataPoints window).
-  // Use the actual time window (last data point minus last N seconds for the axis).
+  // X maps the actual time window (last maxDataPoints seconds) to the plot.
   const latestTime = data.length > 0 ? data[data.length - 1].time : Date.now();
+  const windowStart = latestTime - maxDataPoints * 1000;
 
   const chartData = useMemo(() => {
-    const windowStart = latestTime - maxDataPoints * 1000;
     return data.filter(d => d.time >= windowStart);
-  }, [data, latestTime, maxDataPoints]);
+  }, [data, windowStart]);
 
   const scales = useMemo(() => {
-    const x = d3.scaleLinear()
-      .domain([0, maxDataPoints])
+    const earliestTime = chartData.length > 0 ? Math.min(...chartData.map(d => d.time)) : windowStart;
+    const x = d3.scaleTime()
+      .domain([earliestTime, latestTime])
       .range([0, innerWidth]);
 
     const values = chartData.map(d => d.value);
@@ -52,10 +52,11 @@ export function RealtimeChart({
 
     const y = d3.scaleLinear()
       .domain([Math.max(0, min), Math.max(max, 1)])
-      .nice();
+      .nice()
+      .range([innerHeight, 0]);
 
     return { x, y };
-  }, [chartData, innerWidth]);
+  }, [chartData, innerWidth, windowStart, latestTime]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -88,7 +89,7 @@ export function RealtimeChart({
       .call(
         d3.axisBottom(x)
           .ticks(5)
-          .tickFormat(d => `${Number(d)}s`)
+          .tickFormat((d) => `${Math.round((latestTime - (d as Date).getTime()) / 1000)}s`)
       )
       .call(gAxis => gAxis.selectAll('text')
         .attr('fill', 'currentColor')
@@ -106,15 +107,34 @@ export function RealtimeChart({
         .attr('font-size', 10));
 
     const line = d3.line<{ time: number; value: number }>()
-      .x((d, i) => x(maxDataPoints - (chartData.length - 1 - i)))
+      .x(d => x(d.time))
       .y(d => y(d.value))
       .curve(d3.curveMonotoneX);
 
     const area = d3.area<{ time: number; value: number }>()
-      .x((d, i) => x(maxDataPoints - (chartData.length - 1 - i)))
+      .x(d => x(d.time))
       .y0(innerHeight)
       .y1(d => y(d.value))
       .curve(d3.curveMonotoneX);
+
+    // Latest value label, anchored in the whitespace strip above the plot so it
+    // never collides with axis ticks or the line.
+    const valueLabel = (point: { time: number; value: number }) => {
+      g.append('circle')
+        .attr('cx', x(point.time))
+        .attr('cy', y(point.value))
+        .attr('r', 3.5)
+        .attr('fill', color);
+
+      g.append('text')
+        .attr('x', innerWidth)
+        .attr('y', 8)
+        .attr('text-anchor', 'end')
+        .attr('fill', color)
+        .attr('font-size', 11)
+        .attr('font-weight', 600)
+        .text(`${label}: ${Number(point.value).toFixed(1)}${unit}`);
+    };
 
     if (chartData.length > 1) {
       g.append('path')
@@ -132,36 +152,9 @@ export function RealtimeChart({
         .attr('stroke-linecap', 'round')
         .attr('d', line);
 
-      const last = chartData[chartData.length - 1];
-      const lastX = x(maxDataPoints - (chartData.length - 1 - (chartData.length - 1)));
-      g.append('circle')
-        .attr('cx', lastX)
-        .attr('cy', y(last.value))
-        .attr('r', 3.5)
-        .attr('fill', color);
-
-      // Latest value label
-      g.append('text')
-        .attr('x', lastX + 6)
-        .attr('y', y(last.value) - 8)
-        .attr('fill', color)
-        .attr('font-size', 11)
-        .attr('font-weight', 600)
-        .text(`${label}: ${Number(last.value).toFixed(1)}${unit}`);
+      valueLabel(chartData[chartData.length - 1]);
     } else if (chartData.length === 1) {
-      const only = chartData[0];
-      g.append('circle')
-        .attr('cx', x(maxDataPoints - 1))
-        .attr('cy', y(only.value))
-        .attr('r', 3.5)
-        .attr('fill', color);
-      g.append('text')
-        .attr('x', x(maxDataPoints - 1) + 6)
-        .attr('y', y(only.value) - 8)
-        .attr('fill', color)
-        .attr('font-size', 11)
-        .attr('font-weight', 600)
-        .text(`${label}: ${Number(only.value).toFixed(1)}${unit}`);
+      valueLabel(chartData[0]);
     } else {
       g.append('text')
         .attr('x', innerWidth / 2)
@@ -172,7 +165,7 @@ export function RealtimeChart({
         .attr('font-size', 12)
         .text(t('common.noData'));
     }
-  }, [chartData, scales, innerWidth, innerHeight, color, label, unit, maxDataPoints, margin]);
+  }, [chartData, scales, innerWidth, innerHeight, color, label, unit, latestTime, margin]);
 
   return (
     <svg

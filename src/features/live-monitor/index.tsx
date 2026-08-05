@@ -825,7 +825,7 @@ export function LiveMonitorPage() {
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{t('liveMonitor.liveDashboard')}</h2>
             
             {/* Memory Gauges Row */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <MemoryGauge used={memoryData?.heapUsed ?? 0} total={memoryData?.heapTotal ?? 1} label={t('liveMonitor.heapUsed')} color="#22c55e" />
               <MemoryGauge used={memoryData?.rss ?? 0} total={memoryData?.rss ?? 1} label={t('liveMonitor.rss')} color="#3b82f6" />
               <MemoryGauge used={memoryData?.external ?? 0} total={(memoryData?.heapTotal ?? 1)} label={t('liveMonitor.external')} color="#f97316" />
@@ -833,7 +833,7 @@ export function LiveMonitorPage() {
             </div>
 
             {/* Real-time Charts Row */}
-            <div ref={chartRowRef} className="grid grid-cols-2 gap-4">
+            <div ref={chartRowRef} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('liveMonitor.memoryTrend')}</h3>
                 <RealtimeChart data={rssHistory} width={chartWidth / 2 - 8} height={180} color="#3b82f6" label={t('liveMonitor.rss')} unit=" MB" />

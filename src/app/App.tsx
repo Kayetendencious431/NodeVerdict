@@ -62,11 +62,11 @@ function HomePage() {
         <p className="text-gray-500 dark:text-gray-400 mb-8">{t('app.description')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[minmax(7.5rem,auto)]">
         {features.map((f, i) => (
           <div
             key={f.page}
-            className="animate-fade-up"
+            className="animate-fade-up h-full"
             style={{ animationDelay: `${80 + i * 40}ms` }}
           >
             <FeatureCard
@@ -86,7 +86,7 @@ function FeatureCard({ title, description, icon, onClick, className = '' }: {
   title: string; description: string; icon: string; onClick: () => void; className?: string;
 }) {
   return (
-    <button onClick={onClick} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 hover:-translate-y-0.5 transition-all group h-full flex flex-col ${className}`}>
+    <button onClick={onClick} className={`w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 hover:-translate-y-0.5 transition-all group h-full flex flex-col ${className}`}>
       <div className="flex items-start gap-4 flex-1">
         <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
           <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

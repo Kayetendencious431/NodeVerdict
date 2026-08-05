@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useUnifiedFileUpload } from '../../shared/hooks';
-import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks, loadTracingData, loadNdvBuffer } from '../../shared/engine';
+import { analyzeTracingEvents, buildWaterfall, buildDependencies, buildCausalGraph, findBottlenecks, loadTracingData, loadNdvBuffer } from '../../shared/engine';
 import { analyzeDistributed } from '../../shared/distributed';
 import type { TopologyGraph, RootCauseReport, ServiceNode, ServiceHealth } from '../../shared/distributed';
 import type { TracingEvent, TraceViewerData, TraceSpan } from '../../shared/types';
@@ -106,8 +106,9 @@ export function TopologyPage() {
     // Re-parse through the Worker for the viewer page
     // For now, compute on main thread (events are already loaded)
     const analysis = analyzeTracingEvents(events);
+    const graph = buildCausalGraph(analysis.events);
     const spans = buildWaterfall(analysis.operations, analysis.events);
-    const dependencies = buildDependencies(analysis.operations);
+    const dependencies = buildDependencies(analysis.operations, graph);
     const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
     const bottlenecks = findBottlenecks(allSpans);
     setTraceData({

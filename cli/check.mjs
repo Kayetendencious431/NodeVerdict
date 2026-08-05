@@ -15195,50 +15195,337 @@ function analyzeTracingEvents(rawEvents) {
   };
 }
 
-// src/shared/engine/trace-aggregator.ts
-function buildWaterfall(operations, events) {
-  const asyncStarts = /* @__PURE__ */ new Map();
-  for (const event of events) {
-    if (event.eventType === "asyncStart" && event.operationId) {
-      asyncStarts.set(event.operationId, event);
-    }
+// src/shared/engine/causal-rebuilder.ts
+function confidenceOf(kind) {
+  switch (kind) {
+    case "explicit-parent":
+    case "async-context":
+      return "high";
+    case "containment":
+    case "out-of-order":
+      return "medium";
+    case "gap-healed":
+      return "low";
   }
-  const spans = [];
-  for (const op of operations) {
-    const span = {
-      id: op.operationId,
-      operationId: op.operationId,
-      channel: op.channel,
-      label: op.channel,
-      startTime: op.start.timestamp,
-      endTime: op.end?.timestamp ?? op.start.timestamp,
-      duration: op.duration,
-      depth: 0,
-      children: [],
-      status: op.status,
-      metadata: op.start.context
-    };
-    const asyncStart = asyncStarts.get(op.operationId);
-    if (asyncStart) {
-      span.metadata = { ...span.metadata, ...asyncStart.context };
-    }
-    if (op.status === "error" && op.error?.error) {
-      span.metadata = { ...span.metadata, error: op.error.error };
-    }
-    spans.push(span);
+}
+function ctxId(ctx, ...keys) {
+  const c = ctx;
+  for (const key of keys) {
+    const v = c[key];
+    if (v === void 0 || v === null) continue;
+    if (typeof v === "string" && v.length > 0) return v;
+    if (typeof v === "number" && Number.isFinite(v)) return String(v);
   }
-  spans.sort((a, b) => a.startTime - b.startTime);
-  for (let i = 0; i < spans.length; i++) {
-    for (let j = i - 1; j >= 0; j--) {
-      if (spans[j].startTime <= spans[i].startTime && spans[j].endTime >= spans[i].endTime) {
-        spans[i].parentId = spans[j].id;
-        spans[j].children.push(spans[i]);
-        spans[i].depth = spans[j].depth + 1;
-        break;
+  return void 0;
+}
+function opKey(event) {
+  return event.operationId ?? `${event.channel}:${event.timestamp}`;
+}
+var PARENT_KEYS = ["parentOperationId", "parentId", "parentSpanId", "parent_span_id"];
+var ASYNC_ID_KEYS = ["asyncId", "async_id"];
+var TRIGGER_KEYS = ["triggerAsyncId", "trigger_async_id"];
+var CausalGraphBuilder = class {
+  byId = /* @__PURE__ */ new Map();
+  openStarts = /* @__PURE__ */ new Map();
+  /** Ops whose end/error arrived before their start (unpair-able). */
+  unpairedEnds = /* @__PURE__ */ new Set();
+  asyncIdToOp = /* @__PURE__ */ new Map();
+  /** Accept a single event. Streaming-safe and idempotent per op. */
+  ingest(event) {
+    if (!event.channel || !event.eventType || typeof event.timestamp !== "number") return;
+    const key = opKey(event);
+    const existing = this.byId.get(key);
+    if (event.eventType === "start") {
+      const asyncId = ctxId(event.context, ...ASYNC_ID_KEYS);
+      if (existing) {
+        if (!existing.hasStart) {
+          existing.startTime = event.timestamp;
+          existing.hasStart = true;
+          existing.context = event.context;
+          existing.declaredParent = ctxId(event.context, ...PARENT_KEYS);
+          existing.triggerAsyncId = ctxId(event.context, ...TRIGGER_KEYS);
+          this.unpairedEnds.delete(key);
+        }
+        return;
+      }
+      this.byId.set(key, {
+        id: key,
+        channel: event.channel,
+        startTime: event.timestamp,
+        status: "incomplete",
+        context: event.context,
+        declaredParent: ctxId(event.context, ...PARENT_KEYS),
+        triggerAsyncId: ctxId(event.context, ...TRIGGER_KEYS),
+        isVirtual: false,
+        hasStart: true
+      });
+      this.openStarts.set(key, event);
+      if (asyncId) this.asyncIdToOp.set(asyncId, key);
+    } else if (event.eventType === "end" || event.eventType === "error") {
+      if (existing && existing.hasStart) {
+        existing.endTime = event.timestamp;
+        existing.status = event.eventType === "error" ? "error" : "success";
+        this.openStarts.delete(key);
+      } else if (existing && !existing.hasStart) {
+        existing.endTime = event.timestamp;
+        existing.status = event.eventType === "error" ? "error" : "success";
+      } else {
+        this.byId.set(key, {
+          id: key,
+          channel: event.channel,
+          startTime: event.timestamp,
+          endTime: event.timestamp,
+          status: event.eventType === "error" ? "error" : "success",
+          context: event.context,
+          declaredParent: ctxId(event.context, ...PARENT_KEYS),
+          triggerAsyncId: ctxId(event.context, ...TRIGGER_KEYS),
+          isVirtual: false,
+          hasStart: false
+        });
+        this.unpairedEnds.add(key);
       }
     }
   }
-  return spans.filter((s) => !s.parentId);
+  /** Number of distinct operations seen so far. */
+  get size() {
+    return this.byId.size;
+  }
+  ensureVirtual(id, at) {
+    const existing = this.byId.get(id);
+    if (existing) return existing;
+    const op = {
+      id,
+      channel: "virtual",
+      startTime: at,
+      endTime: at,
+      status: "virtual",
+      context: {},
+      isVirtual: true,
+      hasStart: false
+    };
+    this.byId.set(id, op);
+    return op;
+  }
+  build() {
+    const byId = this.byId;
+    const edges = [];
+    const childToParent = /* @__PURE__ */ new Map();
+    const orphanIds = new Set(this.unpairedEnds);
+    const orderedIds = Array.from(byId.keys()).sort(
+      (a, b) => byId.get(a).startTime - byId.get(b).startTime
+    );
+    const activeStack = [];
+    for (const id of orderedIds) {
+      const op = byId.get(id);
+      if (op.isVirtual) continue;
+      let parent;
+      const dp = op.declaredParent;
+      if (dp && dp !== id) {
+        if (byId.has(dp) && !byId.get(dp).isVirtual) {
+          parent = dp;
+          edges.push({ parentId: dp, childId: id, kind: "explicit-parent", confidence: confidenceOf("explicit-parent") });
+        } else {
+          const v = this.ensureVirtual(`virtual:${dp}`, op.startTime);
+          parent = v.id;
+          orphanIds.add(id);
+          edges.push({ parentId: v.id, childId: id, kind: "gap-healed", confidence: confidenceOf("gap-healed") });
+        }
+      }
+      if (!parent) {
+        const trig = op.triggerAsyncId;
+        const linked = trig ? this.asyncIdToOp.get(trig) : void 0;
+        if (linked && linked !== id && byId.has(linked)) {
+          parent = linked;
+          edges.push({ parentId: linked, childId: id, kind: "async-context", confidence: confidenceOf("async-context") });
+        }
+      }
+      if (!parent) {
+        while (activeStack.length > 0 && (activeStack[activeStack.length - 1].endTime ?? Infinity) < op.startTime) {
+          activeStack.pop();
+        }
+        const opEnd = op.endTime ?? Infinity;
+        for (let k = activeStack.length - 1; k >= 0; k--) {
+          const cand = activeStack[k];
+          if ((cand.endTime ?? Infinity) >= opEnd) {
+            if (cand.id !== id) {
+              parent = cand.id;
+              edges.push({ parentId: cand.id, childId: id, kind: "containment", confidence: confidenceOf("containment") });
+            }
+            break;
+          }
+        }
+      }
+      if (parent !== void 0) {
+        childToParent.set(id, parent);
+      } else {
+        childToParent.set(id, "(root)");
+      }
+      activeStack.push({ id, endTime: op.endTime ?? Infinity });
+    }
+    const healTargets = Array.from(orphanIds).filter(
+      (id) => byId.has(id) && !byId.get(id).isVirtual && (childToParent.get(id) ?? "(root)") === "(root)"
+    );
+    for (const id of healTargets) {
+      const v = this.ensureVirtual(`virtual:orphan:${id}`, byId.get(id).startTime);
+      childToParent.set(id, v.id);
+      edges.push({ parentId: v.id, childId: id, kind: "gap-healed", confidence: confidenceOf("gap-healed") });
+    }
+    const rootIds = /* @__PURE__ */ new Set();
+    for (const [id, p] of childToParent) if (p === "(root)") rootIds.add(id);
+    for (const [id, op] of byId) {
+      if (op.isVirtual && !childToParent.has(id)) rootIds.add(id);
+    }
+    const nodeMap = /* @__PURE__ */ new Map();
+    for (const id of Array.from(byId.keys()).sort((a, b) => byId.get(a).startTime - byId.get(b).startTime)) {
+      const op = byId.get(id);
+      nodeMap.set(id, {
+        id,
+        channel: op.channel,
+        opId: op.id,
+        startTime: op.startTime,
+        endTime: op.endTime,
+        duration: op.endTime !== void 0 ? Math.max(0, op.endTime - op.startTime) : 0,
+        status: op.status,
+        virtual: op.isVirtual,
+        orphan: orphanIds.has(id),
+        cyclic: false,
+        metadata: op.context
+      });
+    }
+    const adjacency = /* @__PURE__ */ new Map();
+    for (const e of edges) {
+      if (e.childId === e.parentId) continue;
+      if (!adjacency.has(e.parentId)) adjacency.set(e.parentId, []);
+      adjacency.get(e.parentId).push(e.childId);
+    }
+    const cycles = [];
+    const visited = /* @__PURE__ */ new Set();
+    const onStack = /* @__PURE__ */ new Set();
+    const stack = [];
+    const dfs = (node) => {
+      visited.add(node);
+      onStack.add(node);
+      stack.push(node);
+      for (const next of adjacency.get(node) ?? []) {
+        if (!visited.has(next)) {
+          dfs(next);
+        } else if (onStack.has(next)) {
+          const cut = stack.indexOf(next);
+          const path = stack.slice(cut);
+          path.push(next);
+          cycles.push({ path, nodeIds: Array.from(new Set(path)) });
+        }
+      }
+      stack.pop();
+      onStack.delete(node);
+    };
+    for (const id of nodeMap.keys()) if (!visited.has(id)) dfs(id);
+    const cyclicIds = /* @__PURE__ */ new Set();
+    for (const c of cycles) for (const id of c.nodeIds) cyclicIds.add(id);
+    const finalEdges = edges.filter((e) => e.childId !== e.parentId);
+    const confidenceCounts = { high: 0, medium: 0, low: 0 };
+    let gapHealCount = 0;
+    for (const e of finalEdges) {
+      confidenceCounts[e.confidence]++;
+      if (e.kind === "gap-healed") gapHealCount++;
+    }
+    return {
+      nodes: Array.from(nodeMap.values()).sort((a, b) => a.startTime - b.startTime).map((n) => cyclicIds.has(n.id) ? { ...n, cyclic: true } : n),
+      edges: finalEdges,
+      cycles,
+      rootIds: Array.from(rootIds),
+      gapHealCount,
+      orphanCount: orphanIds.size,
+      confidenceCounts
+    };
+  }
+};
+function buildCausalGraph(events) {
+  const builder = new CausalGraphBuilder();
+  for (const e of events) builder.ingest(e);
+  return builder.build();
+}
+
+// src/shared/engine/trace-aggregator.ts
+function buildWaterfall(operations, events) {
+  const graph = buildCausalGraph(events);
+  return causalGraphToSpans(graph, operations);
+}
+function causalGraphToSpans(graph, operations) {
+  const opsById = /* @__PURE__ */ new Map();
+  for (const op of operations ?? []) opsById.set(op.operationId, op);
+  const opError = /* @__PURE__ */ new Map();
+  for (const op of operations ?? []) {
+    if (op.status === "error" && op.error?.error) opError.set(op.operationId, op.error.error);
+  }
+  const childrenByParent = /* @__PURE__ */ new Map();
+  const childEdge = /* @__PURE__ */ new Map();
+  for (const edge of graph.edges) {
+    if (edge.childId === edge.parentId) continue;
+    if (!childrenByParent.has(edge.parentId)) childrenByParent.set(edge.parentId, []);
+    childrenByParent.get(edge.parentId).push(edge.childId);
+    if (!childEdge.has(edge.childId)) childEdge.set(edge.childId, edge);
+  }
+  const byId = /* @__PURE__ */ new Map();
+  for (const n of graph.nodes) {
+    if (n.virtual) continue;
+    byId.set(n.id, n);
+  }
+  const buildSpan = (id) => {
+    const node = byId.get(id);
+    if (!node) return void 0;
+    const edge = childEdge.get(id);
+    const op = opsById.get(id);
+    const metadata = { ...node.metadata };
+    const opErr = opError.get(id);
+    if (opErr !== void 0) metadata.error = opErr;
+    return {
+      id,
+      operationId: node.opId ?? id,
+      channel: node.channel ?? "unknown",
+      label: node.channel ?? "unknown",
+      startTime: node.startTime,
+      endTime: node.endTime ?? node.startTime,
+      duration: node.duration ?? 0,
+      depth: 0,
+      parentId: edge ? edge.parentId : void 0,
+      children: [],
+      status: node.status === "virtual" ? "incomplete" : node.status,
+      metadata,
+      edgeKind: edge?.kind,
+      edgeConfidence: edge?.confidence
+    };
+  };
+  const spanById = /* @__PURE__ */ new Map();
+  for (const id of byId.keys()) {
+    const span = buildSpan(id);
+    if (span) spanById.set(id, span);
+  }
+  const hasParent = /* @__PURE__ */ new Set();
+  for (const span of spanById.values()) {
+    if (!span.parentId) continue;
+    const parent = spanById.get(span.parentId);
+    if (parent) {
+      parent.children.push(span);
+      hasParent.add(span.id);
+    } else {
+      span.parentId = void 0;
+    }
+  }
+  const roots = [];
+  const assignDepth = (span, depth) => {
+    span.depth = depth;
+    span.children.sort((a, b) => a.startTime - b.startTime);
+    for (const c of span.children) assignDepth(c, depth + 1);
+  };
+  for (const span of spanById.values()) {
+    if (!hasParent.has(span.id)) {
+      assignDepth(span, 0);
+      roots.push(span);
+    }
+  }
+  roots.sort((a, b) => a.startTime - b.startTime);
+  return roots;
 }
 
 // src/shared/engine/report-generator.ts

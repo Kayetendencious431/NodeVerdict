@@ -85,6 +85,10 @@ export interface TraceSpan {
   children: TraceSpan[];
   status: 'success' | 'error' | 'incomplete';
   metadata: Record<string, unknown>;
+  /** Causal edge that produced this parent-child relation (unified IR). */
+  edgeKind?: 'explicit-parent' | 'async-context' | 'containment' | 'out-of-order' | 'gap-healed';
+  /** Confidence of the causal edge that linked this span to its parent. */
+  edgeConfidence?: 'high' | 'medium' | 'low';
 }
 
 /** Dependency link between spans */

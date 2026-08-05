@@ -226,15 +226,22 @@ export class CausalGraphBuilder {
       }
 
       // 3) Interval containment via a sweep stack (medium trust).
+      // A candidate is a parent only if it FULLY contains this op — an op that
+      // overlaps but ends earlier (a sibling started while this one is still
+      // active) must not be treated as its parent.
       if (!parent) {
         while (activeStack.length > 0 && (activeStack[activeStack.length - 1].endTime ?? Infinity) < op.startTime) {
           activeStack.pop();
         }
-        if (activeStack.length > 0) {
-          const cand = activeStack[activeStack.length - 1].id;
-          if (cand !== id) {
-            parent = cand;
-            edges.push({ parentId: cand, childId: id, kind: 'containment', confidence: confidenceOf('containment') });
+        const opEnd = op.endTime ?? Infinity;
+        for (let k = activeStack.length - 1; k >= 0; k--) {
+          const cand = activeStack[k];
+          if ((cand.endTime ?? Infinity) >= opEnd) {
+            if (cand.id !== id) {
+              parent = cand.id;
+              edges.push({ parentId: cand.id, childId: id, kind: 'containment', confidence: confidenceOf('containment') });
+            }
+            break;
           }
         }
       }

@@ -1,4 +1,4 @@
-import { analyzeTracingEvents, loadTracingData, loadNdvBuffer, buildWaterfall, buildDependencies, findBottlenecks } from '../engine';
+import { analyzeTracingEvents, loadTracingData, loadNdvBuffer, buildWaterfall, buildDependencies, findBottlenecks, buildCausalGraph } from '../engine';
 import type { TracingAnalysis, TraceViewerData, TraceSpan } from '../types';
 import { createWorkerHandler } from './worker-factory';
 
@@ -29,9 +29,12 @@ self.onmessage = createWorkerHandler((input: TracingWorkerInput): TraceViewerDat
 
   const analysis: TracingAnalysis = analyzeTracingEvents(events);
 
-  // All heavy computation done here in the Worker
+  // All heavy computation done here in the Worker.
+  // The causal DAG is the single source of truth for topology: both the
+  // waterfall tree and the parent-child dependency links derive from its edges.
+  const graph = buildCausalGraph(analysis.events);
   const spans = buildWaterfall(analysis.operations, analysis.events);
-  const dependencies = buildDependencies(analysis.operations);
+  const dependencies = buildDependencies(analysis.operations, graph);
   const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
   const bottlenecks = findBottlenecks(allSpans);
 

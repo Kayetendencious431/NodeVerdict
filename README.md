@@ -608,10 +608,17 @@ graph TB
         H[Hooks]
     end
 
+    subgraph IR["Unified Causal IR"]
+        CG[Causal DAG - single source of topology]
+    end
+
     FE --> S
     FE --> SH
     UI --> FE
     UI --> SH
+    E --> CG
+    TV --> CG
+    LM[Live Monitor] --> CG
 ```
 
 ### Key Design Patterns
@@ -619,6 +626,7 @@ graph TB
 | Pattern | Description |
 |---------|-------------|
 | **Pipeline Engine** | `Normalize → Pair → Stats → Index` — each stage is a pure function, independently testable |
+| **Unified Causal IR** | The causal DAG is the single source of topology — waterfall spans and parent-child dependency links derive from its edges (each carrying `edgeKind`/`edgeConfidence`), not from separate containment heuristics |
 | **Store Slice** | Each feature registers its slice in a central Zustand store — no circular dependencies |
 | **Worker Factory** | Type-safe generic worker client generated from handler functions |
 | **Feature Isolation** | Each feature owns its components and logic, sharing only through the store |

@@ -63,6 +63,23 @@ describe('buildCausalGraph', () => {
     expect(e.confidence).toBe('medium');
   });
 
+  it('does not treat an overlapping-but-earlier sibling as a parent (strict containment)', () => {
+    // q0 [10,60] and q1 [20,70] overlap but neither contains the other;
+    // both are children of root [0,500], never a q0 -> q1 nesting.
+    const g = buildCausalGraph([
+      ev('express:request', 'start', 0, 'root'),
+      ev('mysql2:query', 'start', 10, 'q0'),
+      ev('mysql2:query', 'end', 60, 'q0'),
+      ev('mysql2:query', 'start', 20, 'q1'),
+      ev('mysql2:query', 'end', 70, 'q1'),
+      ev('express:request', 'end', 500, 'root'),
+    ]);
+    expect(edgeIds(g)).toContainEqual(['root', 'q0']);
+    expect(edgeIds(g)).toContainEqual(['root', 'q1']);
+    expect(edgeIds(g).some(([p, c]) => p === 'q0' && c === 'q1')).toBe(false);
+    expect(edgeIds(g).some(([p, c]) => p === 'q1' && c === 'q0')).toBe(false);
+  });
+
   it('gap-heals a missing declared parent into a virtual node (low confidence)', () => {
     const g = buildCausalGraph([
       ev('express:request', 'start', 0, 'orphan-req', { parentOperationId: 'ghost-ancestor' }),

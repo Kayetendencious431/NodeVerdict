@@ -90,6 +90,15 @@ export function FlameGraph({ flameTree, totalTime }: FlameGraphProps) {
 
   const currentFrame = zoomStack[zoomStack.length - 1];
 
+  // Reset zoom/filter/view when the flame tree is replaced (live streaming updates)
+  useEffect(() => {
+    setZoomStack([flameTree]);
+    setActiveFilter(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setCurrentMatchIndex(-1);
+  }, [flameTree]);
+
   // Compute effective frame (filtered by name if activeFilter is set)
   const effectiveFrame = useMemo(() => {
     if (activeFilter) {

@@ -91,7 +91,7 @@ function healthPayload() {
     startedAt: STARTED_AT,
     nodeVersion: process.version,
     channels: channelsToWatch,
-    features: ['tracing', 'heap-snapshot', 'cpu-profile', 'memory-polling', 'gc-events', 'alerts'],
+    features: ['tracing', 'heap-snapshot', 'cpu-profile', 'memory-polling', 'gc-events', 'alerts', 'flame-stream'],
     ws: `ws://localhost:${PORT}`,
   };
 }
@@ -148,6 +148,7 @@ function startServer(port) {
       if (tracingActive) stopTracing();
       if (memoryInterval) clearInterval(memoryInterval);
       if (leakConfig) stopLeakDetector();
+      if (flameSession) stopFlameStream();
       stopGcListener();
     });
   });
@@ -199,6 +200,12 @@ function handleCommand(ws, msg) {
     case 'stop-gc':
       stopGcListener();
       send(ws, { type: 'status', message: 'GC event capture stopped' });
+      break;
+    case 'start-flame-stream':
+      startFlameStream(ws, msg);
+      break;
+    case 'stop-flame-stream':
+      stopFlameStream(ws);
       break;
     case 'start-leak-detector':
       startLeakDetector(ws, msg);
@@ -385,6 +392,136 @@ function stopCpuProfile(ws) {
     console.log(`[agent] CPU profile sent (${duration.toFixed(0)}ms, ${(raw.length / 1024).toFixed(1)} KB)`);
     cpuProfileSession = null;
   });
+}
+
+// ─── Flame Stream (real-time flame graph push) ──────────────────────────────
+let flameSession = null;
+let flameWindowIndex = 0;
+
+function buildFlameTree(profile) {
+  const nodeMap = new Map();
+  for (const node of profile.nodes ?? []) nodeMap.set(node.id, node);
+
+  const nodeCount = new Map();
+  for (const sid of profile.samples ?? []) nodeCount.set(sid, (nodeCount.get(sid) ?? 0) + 1);
+
+  const totalTime = (profile.timeDeltas?.length ?? 0) > 0
+    ? profile.timeDeltas.reduce((a, b) => a + b, 0) / 1000
+    : ((profile.endTime ?? 0) - (profile.startTime ?? 0));
+
+  const parentMap = new Map();
+  for (const node of profile.nodes ?? []) {
+    for (const childId of node.children ?? []) parentMap.set(childId, node.id);
+  }
+
+  const rootIds = (profile.nodes ?? []).filter(n => !parentMap.has(n.id)).map(n => n.id);
+  const sampleLen = (profile.samples ?? []).length;
+
+  function buildFrame(nodeId, depth) {
+    const node = nodeMap.get(nodeId);
+    const count = nodeCount.get(nodeId) ?? 0;
+    const value = sampleLen > 0 ? (count / sampleLen) * totalTime : count;
+    const frame = {
+      name: node?.callFrame?.functionName ?? '(anonymous)',
+      url: node?.callFrame?.url ?? '',
+      line: node?.callFrame?.lineNumber ?? 0,
+      col: node?.callFrame?.columnNumber ?? 0,
+      value,
+      children: [],
+      nodeId,
+      depth,
+    };
+    if (node) {
+      for (const childId of node.children ?? []) {
+        if ((nodeCount.get(childId) ?? 0) > 0) {
+          frame.children.push(buildFrame(childId, depth + 1));
+        }
+      }
+    }
+    return frame;
+  }
+
+  return {
+    name: '(root)',
+    url: '',
+    line: 0,
+    col: 0,
+    value: totalTime,
+    children: rootIds.map(id => buildFrame(id, 1)),
+    nodeId: 0,
+    depth: 0,
+  };
+}
+
+function startFlameStream(ws, config) {
+  if (flameSession) {
+    send(ws, { type: 'status', message: 'Flame stream already active' });
+    return;
+  }
+
+  const windowMs = Math.min(60000, Math.max(500, Number(config?.windowMs) || 3000));
+  const sampleInterval = Math.min(5000, Math.max(100, Number(config?.sampleInterval) || 1000));
+  flameWindowIndex = 0;
+
+  function runWindow() {
+    const profiler = new inspector.Session();
+    profiler.connect();
+    profiler.post('Profiler.enable');
+    profiler.post('Profiler.setSamplingInterval', { interval: sampleInterval });
+    profiler.post('Profiler.start', (err) => {
+      if (err) {
+        send(ws, { type: 'error', message: `Flame stream: ${err.message}` });
+        stopFlameStream();
+        return;
+      }
+      setTimeout(() => {
+        profiler.post('Profiler.stop', (stopErr, data) => {
+          try { profiler.post('Profiler.disable'); profiler.disconnect(); } catch {}
+          if (stopErr) {
+            send(ws, { type: 'error', message: `Flame stream: ${stopErr.message}` });
+            stopFlameStream();
+            return;
+          }
+          const profile = data?.profile;
+          if (!profile) {
+            stopFlameStream();
+            return;
+          }
+          const tree = buildFlameTree(profile);
+          const totalTimeMs = (profile.timeDeltas?.length ?? 0) > 0
+            ? profile.timeDeltas.reduce((a, b) => a + b, 0) / 1000
+            : 0;
+          broadcast({
+            type: 'flame-stream',
+            data: {
+              windowIndex: flameWindowIndex,
+              sampleCount: profile.samples?.length ?? 0,
+              totalTimeMs,
+              windowMs,
+              flameTree: tree,
+              timestamp: Date.now(),
+            },
+          });
+          flameWindowIndex++;
+          if (flameSession) runWindow();
+        });
+      }, windowMs);
+    });
+  }
+
+  flameSession = { active: true };
+  runWindow();
+  send(ws, {
+    type: 'status',
+    message: `Flame stream started (window ${windowMs}ms, sampling ${sampleInterval}µs)`,
+  });
+  console.log(`[agent] Flame stream started (window ${windowMs}ms, sampling ${sampleInterval}µs)`);
+}
+
+function stopFlameStream(ws) {
+  flameSession = null;
+  if (ws) send(ws, { type: 'status', message: 'Flame stream stopped' });
+  console.log('[agent] Flame stream stopped');
 }
 
 // ─── GC Events ──────────────────────────────────────────────────────────────
@@ -657,6 +794,7 @@ process.on('SIGINT', () => {
   if (tracingActive) stopTracing();
   if (memoryInterval) clearInterval(memoryInterval);
   if (leakConfig) stopLeakDetector();
+  if (flameSession) stopFlameStream();
   stopGcListener();
   if (cpuProfileSession) {
     try { cpuProfileSession.post('Profiler.disable'); cpuProfileSession.disconnect(); } catch {}

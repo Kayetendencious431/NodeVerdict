@@ -594,7 +594,7 @@ graph TB
 10. **内存时间线** → 上传 `examples/memory-timeline.json` 可视化外部内存增长及 RSS/堆随时间的变化趋势
 11. **GC 日志分析** → 上传 `examples/gc-trace-gc.log` 分析 GC 暂停时间和外部内存压力
 12. **字符串泄漏检测** → 在堆分析器中上传 `examples/heap-string-leak.heapsnapshot` 查看外部内存统计和字符串分析
-13. **实时监控** → 用 `npm run agent` 启动后端（或 `cd server && npm install && npx nodeverdict-agent`），然后打开实时监控页面——页面会自动检测后端并实时连接 `ws://localhost:9876`。没有后端时页面会显示"需要后端服务器"面板并给出启动命令。连接后可点击 **启动 GC**（流式推送 `node:v8.gc`/堆推断回收事件及回收量）和 **启动泄漏检测**（对活跃集增长或堆上限告警），告警会显示在"后端告警"条中
+13. **实时监控** → 用 `npm run agent` 启动后端（或 `cd server && npm install && npx nodeverdict-agent`），然后打开实时监控页面——页面会自动检测后端并实时连接 `ws://localhost:9876`。没有后端时页面会显示"需要后端服务器"面板并给出启动命令。连接后可点击 **启动 GC**（流式推送 `node:v8.gc`/堆推断回收事件及回收量）和 **启动泄漏检测**（对活跃集增长或堆上限告警），也可点 **启动火焰图流**（每 `windowMs` 推送一张实时火焰图并即时渲染）。所有告警会显示在"后端告警"条中
 14. **告警规则** → 上传任意追踪数据，在告警规则中创建规则（如 `errorRate > 5`，warning），观察规则点亮
 15. **AI 根因分析** → 在 AI 根因分析中上传 `examples/tracing-perf-before.json`，点击 **AI 诊断**（无密钥时点击 **本地启发式分析**）
 16. **性能门禁** → 在终端运行 `node cli/check.mjs check examples/tracing-perf-before.json --threshold=p99MaxMs=250`，观察门禁失败

@@ -8,6 +8,8 @@ import { useRootStore } from '../../stores';
 import { evaluateAlerts, buildMetricSnapshot } from '../../shared/engine';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { useBackend, BackendOfflineBanner } from '../../shared/backend';
+import { FlameGraph } from '../cpu-profiler/components/FlameGraph';
+import type { FlameFrame } from '../../shared/types';
 
 interface WebSocketMessage {
   type?: string;
@@ -132,6 +134,12 @@ export function LiveMonitorPage() {
   // Backend-pushed alerts (GC churn, leak detector, ...)
   const [serverAlerts, setServerAlerts] = useState<ServerAlert[]>([]);
 
+  // Real-time flame graph streaming
+  const [flameStreamActive, setFlameStreamActive] = useState(false);
+  const [flameWindowMs, setFlameWindowMs] = useState(3000);
+  const [flameSampleInterval, setFlameSampleInterval] = useState(1000);
+  const [flameData, setFlameData] = useState<{ flameTree: FlameFrame; totalTimeMs: number; sampleCount: number; windowIndex: number; updatedAt: number } | null>(null);
+
   // Live Dashboard
   const [memoryHistory, setMemoryHistory] = useState<Array<{ time: number; rss: number; heapUsed: number; heapTotal: number; external: number }>>([]);
   const [eventRateHistory, setEventRateHistory] = useState<Map<string, { count: number; color: string }>>(new Map());
@@ -211,6 +219,9 @@ export function LiveMonitorPage() {
     // Try to detect backend-pushed alerts (GC churn, leak detector)
     tryExtractServerAlert(msg);
 
+    // Try to detect streaming flame graph windows
+    tryExtractFlameStream(msg);
+
     // Handle known protocol messages
     const msgType = msg.type ?? '';
     switch (msgType) {
@@ -255,6 +266,10 @@ export function LiveMonitorPage() {
       case 'alert':
       case 'alarm':
         // Already handled by tryExtractServerAlert above
+        break;
+      case 'flame-stream':
+      case 'flame':
+        // Already handled by tryExtractFlameStream above
         break;
       default:
          // Silently ignore unknown types — no noisy logs
@@ -405,6 +420,25 @@ export function LiveMonitorPage() {
     return false;
   }
 
+  /** Attempt to extract real-time flame graph windows */
+  function tryExtractFlameStream(msg: Record<string, any>) {
+    const data = msg.data ?? msg;
+    const tree = data.flameTree ?? data.tree;
+    const isFlameType = msg.type === 'flame-stream' || msg.type === 'flame';
+
+    if (isFlameType || (tree && tree.value != null && Array.isArray(tree.children))) {
+      setFlameData({
+        flameTree: tree as FlameFrame,
+        totalTimeMs: Number(data.totalTimeMs ?? data.totalTime ?? tree.value ?? 0),
+        sampleCount: Number(data.sampleCount ?? 0),
+        windowIndex: Number(data.windowIndex ?? 0),
+        updatedAt: Number(data.timestamp ?? Date.now()),
+      });
+      return true;
+    }
+    return false;
+  }
+
   function msgTypeName(msg: Record<string, any>): string {
     return msg.type ?? msg.event ?? msg.name ?? 'message';
   }
@@ -541,6 +575,23 @@ export function LiveMonitorPage() {
       });
       setLeakDetectorActive(true);
       addLog(t('liveMonitor.leak.started'));
+    }
+  }
+
+  // Flame graph streaming
+  function toggleFlameStream() {
+    if (flameStreamActive) {
+      sendCommand('stop-flame-stream');
+      setFlameStreamActive(false);
+      addLog(t('liveMonitor.flame.stopped'));
+    } else {
+      setFlameData(null);
+      sendCommand('start-flame-stream', {
+        windowMs: flameWindowMs,
+        sampleInterval: flameSampleInterval,
+      });
+      setFlameStreamActive(true);
+      addLog(t('liveMonitor.flame.started') + ` (window: ${flameWindowMs}ms)`);
     }
   }
 
@@ -995,6 +1046,74 @@ export function LiveMonitorPage() {
             )}
             {gcStarted && gcEvents.length === 0 && (
               <p className="text-xs text-gray-400 dark:text-gray-500">{t('liveMonitor.gc.waiting')}</p>
+            )}
+          </div>
+
+          {/* Live Flame Graph (streaming) */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('liveMonitor.flame.title')}</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('liveMonitor.flame.window')}
+                  <input
+                    type="number"
+                    value={flameWindowMs}
+                    onChange={e => setFlameWindowMs(Number(e.target.value))}
+                    min={500}
+                    max={30000}
+                    step={500}
+                    disabled={flameStreamActive}
+                    className="ml-1 w-20 px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                  />
+                  <span className="ml-1">ms</span>
+                </label>
+                <label className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('liveMonitor.flame.sampling')}
+                  <input
+                    type="number"
+                    value={flameSampleInterval}
+                    onChange={e => setFlameSampleInterval(Number(e.target.value))}
+                    min={100}
+                    max={5000}
+                    step={100}
+                    disabled={flameStreamActive}
+                    className="ml-1 w-20 px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                  />
+                  <span className="ml-1">µs</span>
+                </label>
+                <button
+                  onClick={toggleFlameStream}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm text-white ${flameStreamActive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                >
+                  {flameStreamActive ? t('liveMonitor.flame.stop') : t('liveMonitor.flame.start')}
+                </button>
+              </div>
+            </div>
+
+            {flameData && (
+              <div className="mb-3 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+                <span>
+                  {t('liveMonitor.flame.windowIndex')}: <span className="font-mono">{flameData.windowIndex}</span>
+                </span>
+                <span>
+                  {t('liveMonitor.flame.samples')}: <span className="font-mono">{flameData.sampleCount}</span>
+                </span>
+                <span>
+                  {t('liveMonitor.flame.time')}: <span className="font-mono">{flameData.totalTimeMs.toFixed(1)}ms</span>
+                </span>
+                <span>
+                  {t('liveMonitor.flame.updated')}: <span className="font-mono">{formatTimestamp(flameData.updatedAt)}</span>
+                </span>
+              </div>
+            )}
+
+            {flameData ? (
+              <FlameGraph flameTree={flameData.flameTree} totalTime={flameData.totalTimeMs || 1} />
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                {flameStreamActive ? t('liveMonitor.flame.waiting') : t('liveMonitor.flame.idle')}
+              </p>
             )}
           </div>
 

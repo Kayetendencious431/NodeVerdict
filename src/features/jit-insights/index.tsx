@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useFileUpload } from '../../shared/hooks/useFileUpload';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { parseV8Trace, analyzeJit, generatePatches } from '../../shared/engine';
 import type { JitAnalysis, JitFinding } from '../../shared/types';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
@@ -10,7 +9,7 @@ import { IcStateGraph } from './components/IcStateGraph';
 import { OptTimeline } from './components/OptTimeline';
 import { FindingsList } from './components/FindingsList';
 import { PatchPanel } from './components/PatchPanel';
-import { demoV8Trace } from './demoTrace';
+import { AutoFixPanel } from './components/AutoFixPanel';
 
 type Tab = 'overview' | 'graph' | 'timeline' | 'findings' | 'patches';
 
@@ -27,12 +26,12 @@ export function JitInsightsPage() {
 
   const [analysis, setAnalysis] = useState<JitAnalysis | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [selectedSite, setSelectedSite] = useState<string | null>(null);
+  const [patchMode, setPatchMode] = useState<'autofix' | 'manual'>('autofix');
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
-    useCallback((content: string) => {
+  const upload = useUnifiedFileUpload({
+     onFile: useCallback(async (content: string) => {
       setParseError(null);
       try {
         const trace = parseV8Trace(content);
@@ -49,24 +48,16 @@ export function JitInsightsPage() {
         setAnalysis(null);
       }
     }, [t]),
-    setProgress,
-  );
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   const displayError = parseError || error;
 
   function handleReset() {
-    reset();
+    uploadReset();
     setAnalysis(null);
     setParseError(null);
     setSelectedSite(null);
-  }
-
-  function loadDemo() {
-    setParseError(null);
-    const trace = parseV8Trace(demoV8Trace);
-    setAnalysis(analyzeJit(trace));
-    setSelectedSite(null);
-    setTab('overview');
   }
 
   const demoTrace = useMemo(() => (analysis ? analysis.trace : null), [analysis]);
@@ -98,20 +89,17 @@ export function JitInsightsPage() {
           onReset={handleReset}
           loading={loading}
           progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
         />
-        {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
-        <div className="mt-4">
-          <button
-            onClick={loadDemo}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            {t('jitInsights.loadDemo')}
-          </button>
-        </div>
+        {(error || urlError) && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
         <div className="mt-8">
           <EmptyState title={t('jitInsights.noData')} description={t('jitInsights.description')} />
         </div>
-        <LoadingOverlay visible={loading} />
+        <LoadingOverlay visible={loading || urlLoading} />
       </div>
     );
   }
@@ -128,12 +116,6 @@ export function JitInsightsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={loadDemo}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
-          >
-            {t('jitInsights.loadDemo')}
-          </button>
           <div className="w-56">
             <FileUpload
               onFile={handleFile}
@@ -145,7 +127,13 @@ export function JitInsightsPage() {
               onReset={handleReset}
               loading={loading}
               progress={progress}
+              onUrlLoad={loadFromUrl}
+              urlLoading={urlLoading}
+              urlError={urlError}
+              urlProgress={urlProgress}
+              onUrlCancel={cancelUrl}
             />
+            {(error || urlError) && <p className="text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
           </div>
         </div>
       </div>
@@ -240,7 +228,25 @@ export function JitInsightsPage() {
 
       {tab === 'findings' && <FindingsList findings={findings} />}
 
-      {tab === 'patches' && <PatchPanel />}
+      {tab === 'patches' && (
+        <div>
+          <div className="mb-3 flex items-center gap-1">
+            <button
+              onClick={() => setPatchMode('autofix')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${patchMode === 'autofix' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}
+            >
+              {t('jitInsights.patchAutofix')}
+            </button>
+            <button
+              onClick={() => setPatchMode('manual')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${patchMode === 'manual' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}
+            >
+              {t('jitInsights.patchManual')}
+            </button>
+          </div>
+          {patchMode === 'autofix' ? <AutoFixPanel findings={findings} /> : <PatchPanel />}
+        </div>
+      )}
     </div>
   );
 }

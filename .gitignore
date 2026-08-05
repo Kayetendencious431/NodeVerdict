@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 # Sample GC logs are intentionally committed as demo data
 !examples/gc-*.log
+# Sample V8 JIT trace is intentionally committed
+!examples/v8-jit-trace.log
 
 node_modules
 dist

@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeCpuProfile } from '../../shared/engine';
 import { FlameGraph } from './components/FlameGraph';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
@@ -14,11 +13,6 @@ export function CpuProfilerPage() {
   const { t } = useI18n();
   const [analysis, setAnalysis] = useState<CpuProfileAnalysis | null>(null);
   const [sortBy, setSortBy] = useState<'self' | 'total'>('total');
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
-    const result = analyzeCpuProfile(content);
-    setAnalysis(result);
-  }, []), setProgress);
 
   // Must be before any early return to keep hooks consistent
   const sortedFunctions = useMemo(() => {
@@ -31,11 +25,13 @@ export function CpuProfilerPage() {
     }
     return list.slice(0, 100);
   }, [analysis, sortBy]);
-
-  function handleReset() {
-    reset();
-    setAnalysis(null);
-  }
+  const upload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      const result = analyzeCpuProfile(content);
+      setAnalysis(result);
+    }, []),
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset } = upload;
 
   if (!analysis) {
     return (
@@ -54,9 +50,14 @@ export function CpuProfilerPage() {
           onReset={handleReset}
           loading={loading}
           progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
         />
-        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message={t('cpuProfiler.loading')} />
+        {(error || urlError) && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
+        <LoadingOverlay visible={loading || urlLoading} message={t('cpuProfiler.loading')} />
         <div className="mt-8">
           <EmptyState
             title={t('cpuProfiler.noData')}
@@ -123,6 +124,11 @@ export function CpuProfilerPage() {
               onReset={handleReset}
               loading={loading}
               progress={progress}
+              onUrlLoad={loadFromUrl}
+              urlLoading={urlLoading}
+              urlError={urlError}
+              urlProgress={urlProgress}
+              onUrlCancel={cancelUrl}
             />
           </div>
         </div>

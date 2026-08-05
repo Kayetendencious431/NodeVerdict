@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useFileUpload } from '../../shared/hooks/useFileUpload';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { parseGcLog } from '../../shared/engine';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatDuration } from '../../shared/utils';
@@ -21,28 +20,29 @@ export function GcLogPage() {
   const { t } = useI18n();
   const [gcLog, setGcLog] = useState<GCLogAnalysis | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
-    setParseError(null);
-    try {
-      const result = parseGcLog(content);
-      setGcLog(result);
-    } catch (err) {
-      const message = (err as Error).message;
-      if (message.includes('No GC events found')) {
-        setParseError(t('gcLog.noGcEvents'));
-      } else {
-        setParseError(message);
+  const upload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      setParseError(null);
+      try {
+        const result = parseGcLog(content);
+        setGcLog(result);
+      } catch (err) {
+        const message = (err as Error).message;
+        if (message.includes('No GC events found')) {
+          setParseError(t('gcLog.noGcEvents'));
+        } else {
+          setParseError(message);
+        }
+        setGcLog(null);
       }
-      setGcLog(null);
-    }
-  }, [t]), setProgress);
+    }, [t]),
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   const displayError = parseError || error;
 
   function handleReset() {
-    reset();
+    uploadReset();
     setGcLog(null);
     setParseError(null);
   }
@@ -66,9 +66,14 @@ export function GcLogPage() {
           onReset={handleReset}
           loading={loading}
           progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
         />
-        {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
-        <LoadingOverlay visible={loading} message={t('gcLog.loading')} />
+        {(error || urlError) && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
+        <LoadingOverlay visible={loading || urlLoading} message={t('gcLog.loading')} />
         <div className="mt-8">
           <EmptyState
             title={t('gcLog.noData')}
@@ -145,6 +150,11 @@ export function GcLogPage() {
               onReset={handleReset}
               loading={loading}
               progress={progress}
+              onUrlLoad={loadFromUrl}
+              urlLoading={urlLoading}
+              urlError={urlError}
+              urlProgress={urlProgress}
+              onUrlCancel={cancelUrl}
             />
           </div>
         </div>

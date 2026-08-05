@@ -367,20 +367,22 @@ Analyze V8 JIT compiler traces to find deoptimization and hidden-class problems.
 - Opt Timeline — per-function optimize/deoptimize sequences with loop detection
 - Anti-pattern detection — megamorphic ICs, deopt storms, optimize/deopt loops, hidden-class fragmentation, optimization suppression (with severity + health score)
 - Semantic code patches — rewrites object-literal and field-initialization order to unify hidden classes, verified by an AST-equivalence checker
+- End-to-end auto-fix — upload the matching source file and each finding is located to its function and rewritten directly; apply the patches and download the fixed file
 
 **Steps:**
 1. Run your app under V8 with all three trace flags: `node --trace-ic --trace-opt --trace-deopt app.js 2> trace.log`
-2. Open "JIT Insights" and upload the file (or click "Load demo trace" to try the bundled example)
+2. Open "JIT Insights" and upload the file (sample: `examples/v8-jit-trace.log`)
 3. Review the Overview for hot IC sites and findings
 4. Open the IC State Graph to see which maps flow into megamorphic sites
 5. Use the Opt Timeline to spot optimize/deopt loops in specific functions
-6. Open "Patches", paste a hot function, and generate AST-verified rewrites
+6. Open "Patches → Auto-fix from log", upload the same source file (sample: `examples/demo.js`), then apply fixes per finding and download the rewritten file
+7. Use "Manual rewrite" to experiment on any pasted snippet
 
 ---
 
 ## 5. Sample Files Quick Start
 
-18 sample files are available in the `examples/` directory:
+19 sample files are available in the `examples/` directory:
 
 | File | Best For | Description |
 |------|----------|-------------|
@@ -402,6 +404,7 @@ Analyze V8 JIT compiler traces to find deoptimization and hidden-class problems.
 | `memory-timeline.json` | Memory Timeline | 16 snapshots, RSS 65MB→250MB growth |
 | `gc-trace-gc.log` | GC Log Analyzer | 33 GC events (Scavenge + Mark-sweep) |
 | `v8-jit-trace.log` | JIT Insights | V8 trace-ic/opt/deopt output with megamorphic ICs and deopt storms |
+| `demo.js` | JIT Insights | Source matching `v8-jit-trace.log` for the end-to-end auto-fix flow |
 
 ### Recommended Learning Path
 

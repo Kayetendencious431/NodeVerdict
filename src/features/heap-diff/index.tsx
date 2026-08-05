@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { parseHeapSnapshot, diffHeapSnapshots } from '../../shared/engine';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
 import type { HeapSnapshot } from '../../shared/types';
@@ -16,71 +15,58 @@ export function HeapDiffPage() {
   const [snapshotA, setSnapshotA] = useState<HeapSnapshot | null>(null);
   const [snapshotB, setSnapshotB] = useState<HeapSnapshot | null>(null);
   const [diffResult, setDiffResult] = useState<HeapDiffResult | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileAName, setFileAName] = useState<string | null>(null);
   const [fileBName, setFileBName] = useState<string | null>(null);
-  const [progressA, setProgressA] = useState<ProgressInfo | null>(null);
-  const [progressB, setProgressB] = useState<ProgressInfo | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
-  const handleFileA = useCallback(async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setFileAName(file.name);
-    setProgressA({ loaded: 0, total: file.size, percent: 0 });
-    try {
-      const content = await readFileWithProgress(file, setProgressA, (name) => t('common.fileReadError').replace('{name}', name));
-      const snapshot = parseHeapSnapshot(content);
-      setSnapshotA(snapshot);
-      if (snapshotB) {
-        setDiffResult(diffHeapSnapshots(snapshot, snapshotB));
+  const uploadA = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      setError(null);
+      setFileAName('A');
+      try {
+        const snapshot = parseHeapSnapshot(content);
+        setSnapshotA(snapshot);
+        if (snapshotB) {
+          setDiffResult(diffHeapSnapshots(snapshot, snapshotB));
+        }
+      } catch (err) {
+        const msg = (err as Error).message;
+        setError(msg.includes('"snapshot" field') ? t('heapDiff.error') : msg);
       }
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg.includes('"snapshot" field')) {
-        setError(t('heapDiff.error'));
-      } else {
-        setError(msg);
+    }, [snapshotB, t]),
+  });
+  const uploadB = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      setError(null);
+      setFileBName('B');
+      try {
+        const snapshot = parseHeapSnapshot(content);
+        setSnapshotB(snapshot);
+        if (snapshotA) {
+          setDiffResult(diffHeapSnapshots(snapshotA, snapshot));
+        }
+      } catch (err) {
+        const msg = (err as Error).message;
+        setError(msg.includes('"snapshot" field') ? t('heapDiff.error') : msg);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [snapshotB, t]);
+    }, [snapshotA, t]),
+  });
 
-  const handleFileB = useCallback(async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setFileBName(file.name);
-    setProgressB({ loaded: 0, total: file.size, percent: 0 });
-    try {
-      const content = await readFileWithProgress(file, setProgressB, (name) => t('common.fileReadError').replace('{name}', name));
-      const snapshot = parseHeapSnapshot(content);
-      setSnapshotB(snapshot);
-      if (snapshotA) {
-        setDiffResult(diffHeapSnapshots(snapshotA, snapshot));
-      }
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg.includes('"snapshot" field')) {
-        setError(t('heapDiff.error'));
-      } else {
-        setError(msg);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [snapshotA, t]);
+  const { loading: loadingA, error: errorA, fileName: fileNameA, fileSize: fileSizeA, handleFile: handleFileA, progress: progressA, urlLoading: urlLoadingA, urlError: urlErrorA, urlProgress: urlProgressA, loadFromUrl: loadFromUrlA, cancelUrl: cancelUrlA, handleReset: resetA } = uploadA;
+  const { loading: loadingB, error: errorB, fileName: fileNameB, fileSize: fileSizeB, handleFile: handleFileB, progress: progressB, urlLoading: urlLoadingB, urlError: urlErrorB, urlProgress: urlProgressB, loadFromUrl: loadFromUrlB, cancelUrl: cancelUrlB, handleReset: resetB } = uploadB;
+
+  const loading = loadingA || loadingB;
 
   function handleReset() {
+    resetA();
+    resetB();
     setSnapshotA(null);
     setSnapshotB(null);
     setDiffResult(null);
     setError(null);
     setFileAName(null);
     setFileBName(null);
-    setProgressA(null);
-    setProgressB(null);
     setSaveMessage(null);
   }
 
@@ -120,10 +106,16 @@ export function HeapDiffPage() {
               accept=".heapsnapshot,.json"
               label={t('heapDiff.uploadBefore')}
               maxSize={3 * 1024 * 1024 * 1024}
-              fileName={fileAName}
-              onReset={() => { setSnapshotA(null); setDiffResult(null); setFileAName(null); }}
-              loading={loading}
+              fileName={fileNameA}
+              fileSize={fileSizeA}
+              onReset={resetA}
+              loading={loadingA}
               progress={progressA}
+              onUrlLoad={loadFromUrlA}
+              urlLoading={urlLoadingA}
+              urlError={urlErrorA}
+              urlProgress={urlProgressA}
+              onUrlCancel={cancelUrlA}
             />
           </div>
           <div>
@@ -133,15 +125,21 @@ export function HeapDiffPage() {
               accept=".heapsnapshot,.json"
               label={t('heapDiff.uploadAfter')}
               maxSize={3 * 1024 * 1024 * 1024}
-              fileName={fileBName}
-              onReset={() => { setSnapshotB(null); setDiffResult(null); setFileBName(null); }}
-              loading={loading}
+              fileName={fileNameB}
+              fileSize={fileSizeB}
+              onReset={resetB}
+              loading={loadingB}
               progress={progressB}
+              onUrlLoad={loadFromUrlB}
+              urlLoading={urlLoadingB}
+              urlError={urlErrorB}
+              urlProgress={urlProgressB}
+              onUrlCancel={cancelUrlB}
             />
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {(error || errorA || errorB || urlErrorA || urlErrorB) && <p className="text-sm text-red-600 dark:text-red-400">{error ?? errorA ?? errorB ?? urlErrorA ?? urlErrorB}</p>}
         <LoadingOverlay visible={loading} message={t('heapDiff.loading')} />
 
         <div className="mt-8">
@@ -324,18 +322,4 @@ export function HeapDiffPage() {
       </div>
     </div>
   );
-}
-
-function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void, onError: (fileName: string) => string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(onError(file.name)));
-    reader.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });
-      }
-    };
-    reader.readAsText(file);
-  });
 }

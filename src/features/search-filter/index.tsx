@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents } from '../../shared/engine';
 import { ChannelFilter, FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatDuration } from '../../shared/utils';
@@ -40,78 +39,11 @@ export function SearchFilterPage() {
     setTracingAnalysis(analysis);
   }, [setTracingAnalysis]);
 
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead, setProgress);
-
-  // Filtered events
-  const filteredEvents = useMemo(() => {
-    if (!tracingAnalysis) return { events: [], operations: [] };
-
-    let events = tracingAnalysis.events;
-
-    // Text search across event context
-    if (searchOptions.query) {
-      try {
-        const regex = searchOptions.useRegex
-          ? new RegExp(searchOptions.query, searchOptions.caseSensitive ? '' : 'i')
-          : new RegExp(escapeRegex(searchOptions.query), searchOptions.caseSensitive ? '' : 'i');
-
-        events = events.filter(e => {
-          const searchTarget = JSON.stringify({ channel: e.channel, context: e.context, operationId: e.operationId });
-          return regex.test(searchTarget);
-        });
-      } catch {
-        // Invalid regex, skip filtering
-      }
-    }
-
-    // Filter by status (via operations)
-    let filteredOperationIds: Set<string> | null = null;
-    if (searchOptions.status.length > 0) {
-      filteredOperationIds = new Set(
-        tracingAnalysis.operations
-          .filter(op => searchOptions.status.includes(op.status))
-          .map(op => op.operationId)
-      );
-      events = events.filter(e => !e.operationId || filteredOperationIds!.has(e.operationId));
-    }
-
-    // Filter by duration (via operations)
-    if (searchOptions.minDuration !== null || searchOptions.maxDuration !== null) {
-      const matchingOps = tracingAnalysis.operations.filter(op => {
-        if (searchOptions.minDuration !== null && op.duration < searchOptions.minDuration) return false;
-        if (searchOptions.maxDuration !== null && op.duration > searchOptions.maxDuration) return false;
-        return true;
-      });
-      const matchingIds = new Set(matchingOps.map(op => op.operationId));
-      events = events.filter(e => !e.operationId || matchingIds.has(e.operationId));
-    }
-
-    // Filter by time range
-    if (searchOptions.timeRangeStart !== null) {
-      events = events.filter(e => e.timestamp >= searchOptions.timeRangeStart!);
-    }
-    if (searchOptions.timeRangeEnd !== null) {
-      events = events.filter(e => e.timestamp <= searchOptions.timeRangeEnd!);
-    }
-
-    const operations = tracingAnalysis.operations.filter(op =>
-      events.some(e => e.operationId === op.operationId)
-    );
-
-    return { events, operations };
-  }, [tracingAnalysis, searchOptions]);
-
-  function escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
-  function updateSearch(updates: Partial<SearchOptions>) {
-    setSearchOptions(prev => ({ ...prev, ...updates }));
-  }
+  const upload = useUnifiedFileUpload({ onFile: handleFileRead });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   function handleReset() {
-    reset();
+    uploadReset();
     setTracingAnalysis(null);
     setSearchOptions({
       query: '',
@@ -125,7 +57,70 @@ export function SearchFilterPage() {
     });
   }
 
-  if (!tracingAnalysis) {
+   // Filtered events
+   const filteredEvents = useMemo(() => {
+     if (!tracingAnalysis) return { events: [], operations: [] };
+
+     let events = tracingAnalysis.events;
+     try {
+       const regex = searchOptions.useRegex
+         ? new RegExp(searchOptions.query, searchOptions.caseSensitive ? '' : 'i')
+         : new RegExp(escapeRegex(searchOptions.query), searchOptions.caseSensitive ? '' : 'i');
+
+       events = events.filter(e => {
+         const searchTarget = JSON.stringify({ channel: e.channel, context: e.context, operationId: e.operationId });
+         return regex.test(searchTarget);
+       });
+     } catch {
+       // Invalid regex, skip filtering
+     }
+
+     // Filter by status (via operations)
+     let filteredOperationIds: Set<string> | null = null;
+     if (searchOptions.status.length > 0) {
+       filteredOperationIds = new Set(
+         tracingAnalysis.operations
+           .filter(op => searchOptions.status.includes(op.status))
+           .map(op => op.operationId)
+       );
+       events = events.filter(e => !e.operationId || filteredOperationIds!.has(e.operationId));
+     }
+
+     // Filter by duration (via operations)
+     if (searchOptions.minDuration !== null || searchOptions.maxDuration !== null) {
+       const matchingOps = tracingAnalysis.operations.filter(op => {
+         if (searchOptions.minDuration !== null && op.duration < searchOptions.minDuration) return false;
+         if (searchOptions.maxDuration !== null && op.duration > searchOptions.maxDuration) return false;
+         return true;
+       });
+       const matchingIds = new Set(matchingOps.map(op => op.operationId));
+       events = events.filter(e => !e.operationId || matchingIds.has(e.operationId));
+     }
+
+     // Filter by time range
+     if (searchOptions.timeRangeStart !== null) {
+       events = events.filter(e => e.timestamp >= searchOptions.timeRangeStart!);
+     }
+     if (searchOptions.timeRangeEnd !== null) {
+       events = events.filter(e => e.timestamp <= searchOptions.timeRangeEnd!);
+     }
+
+     const operations = tracingAnalysis.operations.filter(op =>
+       events.some(e => e.operationId === op.operationId)
+     );
+
+     return { events, operations };
+   }, [tracingAnalysis, searchOptions]);
+
+  function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function updateSearch(updates: Partial<SearchOptions>) {
+    setSearchOptions(prev => ({ ...prev, ...updates }));
+   }
+
+   if (!tracingAnalysis) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
@@ -134,7 +129,7 @@ export function SearchFilterPage() {
         </div>
         <FileUpload onFile={handleFile} accept=".json" label={t('searchFilter.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message={t('searchFilter.loading')} />
+        <LoadingOverlay visible={loading || urlLoading} message={t('searchFilter.loading')} />
         <div className="mt-8">
           <EmptyState title={t('searchFilter.noData')} description={t('searchFilter.description')} />
         </div>
@@ -150,7 +145,7 @@ export function SearchFilterPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('searchFilter.eventsTotal').replace('{count}', tracingAnalysis.totalEvents.toLocaleString())}</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label={t('searchFilter.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+<FileUpload onFile={handleFile} accept=".json" label={t('searchFilter.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} onUrlLoad={loadFromUrl} urlLoading={urlLoading} urlError={urlError} urlProgress={urlProgress} onUrlCancel={cancelUrl} />
         </div>
       </div>
 

@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { analyzeTracingEvents, buildWaterfall, findBottlenecks } from '../../shared/engine';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatDuration } from '../../shared/utils';
 import type { TracingEvent, TracingAnalysis, TraceSpan } from '../../shared/types';
@@ -18,59 +17,45 @@ export function PerfComparePage() {
   const { t } = useI18n();
   const [dataA, setDataA] = useState<ComparedData | null>(null);
   const [dataB, setDataB] = useState<ComparedData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [nameA, setNameA] = useState<string>(() => t('perfCompare.before'));
   const [nameB, setNameB] = useState<string>(() => t('perfCompare.after'));
-  const [progressA, setProgressA] = useState<ProgressInfo | null>(null);
-  const [progressB, setProgressB] = useState<ProgressInfo | null>(null);
 
-  const handleFileA = useCallback(async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setProgressA({ loaded: 0, total: file.size, percent: 0 });
-    setNameA(file.name.replace(/\.[^/.]+$/, ''));
-    try {
-      const content = await readFileWithProgress(file, setProgressA, (name) => t('common.fileReadError').replace('{name}', name));
+  const uploadA = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
       const events = JSON.parse(content) as TracingEvent[];
       const analysis = analyzeTracingEvents(events);
       const spans = buildWaterfall(analysis.operations, analysis.events);
       const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
       const bottlenecks = findBottlenecks(allSpans);
-      setDataA({ name: file.name, analysis, spans, bottlenecks });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleFileB = useCallback(async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setProgressB({ loaded: 0, total: file.size, percent: 0 });
-    setNameB(file.name.replace(/\.[^/.]+$/, ''));
-    try {
-      const content = await readFileWithProgress(file, setProgressB, (name) => t('common.fileReadError').replace('{name}', name));
+      setDataA({ name: 'A', analysis, spans, bottlenecks });
+    }, []),
+  });
+  const uploadB = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
       const events = JSON.parse(content) as TracingEvent[];
       const analysis = analyzeTracingEvents(events);
       const spans = buildWaterfall(analysis.operations, analysis.events);
       const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
       const bottlenecks = findBottlenecks(allSpans);
-      setDataB({ name: file.name, analysis, spans, bottlenecks });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setDataB({ name: 'B', analysis, spans, bottlenecks });
+    }, []),
+  });
+
+  const { loading: loadingA, error: errorA, fileName: fileNameA, fileSize: fileSizeA, handleFile: handleFileA, progress: progressA, urlLoading: urlLoadingA, urlError: urlErrorA, urlProgress: urlProgressA, loadFromUrl: loadFromUrlA, cancelUrl: cancelUrlA, handleReset: resetA } = uploadA;
+  const { loading: loadingB, error: errorB, fileName: fileNameB, fileSize: fileSizeB, handleFile: handleFileB, progress: progressB, urlLoading: urlLoadingB, urlError: urlErrorB, urlProgress: urlProgressB, loadFromUrl: loadFromUrlB, cancelUrl: cancelUrlB, handleReset: resetB } = uploadB;
+
+  const loading = loadingA || loadingB;
+  const uploadError = errorA || errorB;
 
   function handleReset() {
+    resetA();
+    resetB();
     setDataA(null);
     setDataB(null);
-    setError(null);
-    setProgressA(null);
-    setProgressB(null);
+    setErrorMsg(null);
+    setNameA(t('perfCompare.before'));
+    setNameB(t('perfCompare.after'));
   }
 
   const comparison = useMemo(() => {
@@ -121,15 +106,17 @@ export function PerfComparePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('perfCompare.beforeBaseline')}</p>
-            <FileUpload onFile={handleFileA} accept=".json" label={t('perfCompare.uploadBefore')} maxSize={500 * 1024 * 1024} fileName={dataA?.name ?? null} onReset={() => { setDataA(null); }} loading={loading} progress={progressA} />
+            <FileUpload onFile={handleFileA} accept=".json" label={t('perfCompare.uploadBefore')} maxSize={500 * 1024 * 1024} fileName={fileNameA} fileSize={fileSizeA} onReset={() => { setDataA(null); }} loading={loadingA} progress={progressA} onUrlLoad={loadFromUrlA} urlLoading={urlLoadingA} urlError={urlErrorA} urlProgress={urlProgressA} onUrlCancel={cancelUrlA} />
+            {(errorA || urlErrorA) && <p className="text-sm text-red-600 dark:text-red-400">{errorA ?? urlErrorA}</p>}
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('perfCompare.afterChanged')}</p>
-            <FileUpload onFile={handleFileB} accept=".json" label={t('perfCompare.uploadAfter')} maxSize={500 * 1024 * 1024} fileName={dataB?.name ?? null} onReset={() => { setDataB(null); }} loading={loading} progress={progressB} />
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('perfCompare.uploadAfter')}</p>
+            <FileUpload onFile={handleFileB} accept=".json" label={t('perfCompare.uploadAfter')} maxSize={500 * 1024 * 1024} fileName={fileNameB} fileSize={fileSizeB} onReset={() => { setDataB(null); }} loading={loadingB} progress={progressB} onUrlLoad={loadFromUrlB} urlLoading={urlLoadingB} urlError={urlErrorB} urlProgress={urlProgressB} onUrlCancel={cancelUrlB} />
+            {(errorB || urlErrorB) && <p className="text-sm text-red-600 dark:text-red-400">{errorB ?? urlErrorB}</p>}
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {uploadError && <p className="text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
         <LoadingOverlay visible={loading} message={t('perfCompare.loading')} />
 
         <div className="mt-8">
@@ -240,18 +227,4 @@ function flattenChildren(span: { children: TraceSpan[] }): TraceSpan[] {
     result.push(...flattenChildren(child));
   }
   return result;
-}
-
-function readFileWithProgress(file: File, onProgress: (p: ProgressInfo) => void, onError: (fileName: string) => string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(onError(file.name)));
-    reader.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });
-      }
-    };
-    reader.readAsText(file);
-  });
 }

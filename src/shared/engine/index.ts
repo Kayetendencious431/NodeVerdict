@@ -23,4 +23,4 @@ export type {
 export { parseV8Trace, icSiteKey } from './jit-parser';
 export { analyzeJit, DEFAULT_JIT_OPTIONS } from './jit-analysis';
 export type { JitAnalysisOptions } from './jit-analysis';
-export { generatePatches, verifyPatchEquivalence, analyzeKeyShapes } from './jit-patch';
+export { generatePatches, verifyPatchEquivalence, analyzeKeyShapes, scanFunctions, fixSourceForFindings, applySourcePatches } from './jit-patch';

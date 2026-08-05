@@ -14,7 +14,7 @@ export interface ProgressInfo {
 }
 
 /** Reads a file; .ndv files are read as ArrayBuffer, everything else as text. */
-function readFileContent(file: File, onProgress?: (p: ProgressInfo) => void): Promise<string | ArrayBuffer> {
+export function readFileContent(file: File, onProgress?: (p: ProgressInfo) => void): Promise<string | ArrayBuffer> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     const total = file.size;

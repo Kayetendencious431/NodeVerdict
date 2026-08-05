@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { analyzeTracingEvents, loadTracingData } from '../../shared/engine';
-import { useRemoteFile, useStreamingTraceFile } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import type { TracingAnalysis } from '../../shared/types';
 import type { TraceStreamResult } from '../../shared/streaming/trace-stream-client';
 import { useI18n } from '../../shared/i18n/useI18n';
@@ -27,63 +25,35 @@ export function EventViewerPage() {
     setSelectedEventIndex,
   } = useRootStore();
 
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const [streamMeta, setStreamMeta] = useState<{ truncated: boolean; eventsSeen: number } | null>(null);
+   const [streamMeta, setStreamMeta] = useState<{ truncated: boolean; eventsSeen: number } | null>(null);
 
-  const handleAnalysis = useCallback((analysis: TracingAnalysis, meta: TraceStreamResult['meta']) => {
-    setTracingAnalysis(analysis);
-    setSelectedChannels(analysis.channels);
-    setStreamMeta({ truncated: meta.truncated, eventsSeen: meta.eventsSeen });
-  }, [setTracingAnalysis, setSelectedChannels]);
+   const handleAnalysis = useCallback((analysis: TracingAnalysis, meta: TraceStreamResult['meta']) => {
+     setTracingAnalysis(analysis);
+     setSelectedChannels(analysis.channels);
+     setStreamMeta({ truncated: meta.truncated, eventsSeen: meta.eventsSeen });
+   }, [setTracingAnalysis, setSelectedChannels]);
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useStreamingTraceFile({
-    onAnalysis: handleAnalysis,
-    onProgress: setProgress,
-  });
+   const upload = useUnifiedFileUpload({ onAnalysis: handleAnalysis });
+   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
-  // URL-sourced files still use the in-memory path.
-  const handleFileRead = useCallback(async (content: string) => {
-    const analysis = analyzeTracingEvents(loadTracingData(content));
-    handleAnalysis(analysis, {
-      truncated: false,
-      eventsSeen: analysis.totalEvents,
-      invalid: 0,
-      wallTimeMs: 0,
-    });
-  }, [handleAnalysis]);
+   function handleReset() {
+     uploadReset();
+     setTracingAnalysis(null);
+     setSelectedChannels([]);
+     setSelectedEventIndex(null);
+     setStreamMeta(null);
+   }
 
-  const {
-    loading: urlLoading,
-    error: urlError,
-    progress: urlProgress,
-    loadFromUrl,
-    cancel: cancelUrl,
-    reset: resetUrl,
-  } = useRemoteFile({
-    onFile: handleFileRead,
-    onProgress: (p) => setProgress({ loaded: p.loaded, total: p.total, percent: p.total > 0 ? Math.round((p.loaded / p.total) * 100) : 0 }),
-  });
+   const filteredEvents = useMemo(() => {
+     if (!tracingAnalysis) return [];
+     if (selectedChannels.length === 0) return tracingAnalysis.events;
+     return tracingAnalysis.events.filter(e => selectedChannels.includes(e.channel));
+   }, [tracingAnalysis, selectedChannels]);
 
-  const filteredEvents = useMemo(() => {
-    if (!tracingAnalysis) return [];
-    // When no channels are selected, show all events (select-all default)
-    if (selectedChannels.length === 0) return tracingAnalysis.events;
-    return tracingAnalysis.events.filter(e => selectedChannels.includes(e.channel));
-  }, [tracingAnalysis, selectedChannels]);
-
-  const selectedEvent = useMemo(() => {
-    if (selectedEventIndex === null || !tracingAnalysis) return null;
-    return tracingAnalysis.events[selectedEventIndex] ?? null;
-  }, [selectedEventIndex, tracingAnalysis]);
-
-  function handleReset() {
-    reset();
-    resetUrl();
-    setTracingAnalysis(null);
-    setSelectedChannels([]);
-    setSelectedEventIndex(null);
-    setStreamMeta(null);
-  }
+   const selectedEvent = useMemo(() => {
+     if (selectedEventIndex === null || !tracingAnalysis) return null;
+     return tracingAnalysis.events[selectedEventIndex] ?? null;
+   }, [selectedEventIndex, tracingAnalysis]);
 
   if (!tracingAnalysis) {
     return (
@@ -217,7 +187,7 @@ export function EventViewerPage() {
         </div>
       </div>
 
-      <LoadingOverlay visible={loading} message={t('eventViewer.parsingEvents')} />
+      <LoadingOverlay visible={loading || urlLoading} message={t('eventViewer.parsingEvents')} />
     </div>
   );
 }

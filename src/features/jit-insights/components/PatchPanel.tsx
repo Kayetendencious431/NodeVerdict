@@ -17,11 +17,9 @@ function makeUser(id, name) {
 }
 `;
 
-const STRATEGY_LABEL: Record<JitPatch['strategy'], string> = {
-  'object-literal-key-order': 'Object literal key order',
-  'field-initialization-order': 'Object init order',
-  'shape-dispatch-split': 'Shape dispatch split',
-};
+function strategyLabel(strategy: JitPatch['strategy'], t: (k: string) => string): string {
+  return t(`jitFix.strategy.${strategy}`);
+}
 
 /** Apply `count` adjacent moves to a key board. */
 function applyMoves(keys: string[], moves: JitPatch['moves'], count: number): string[] {
@@ -308,11 +306,11 @@ export function PatchPanel() {
                   <div className="px-3 py-2 flex items-center justify-between gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => setSelectedId(p.id)}>
                     <div className="min-w-0">
                       <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{p.title}</h4>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{STRATEGY_LABEL[p.strategy]} · {p.location}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{strategyLabel(p.strategy, t)} · {p.location}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${p.equivalence.passed ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
-                        {p.equivalence.passed ? 'equivalent ✓' : 'not equivalent ✗'}
+                        {p.equivalence.passed ? t('jitFix.equivalent') : t('jitFix.notEquivalent')}
                       </span>
                       <button
                         onClick={e => { e.stopPropagation(); applyPatch(p); }}
@@ -329,11 +327,11 @@ export function PatchPanel() {
                       <StepPlayer key={`step-${runId}`} patch={p} onDone={u => setUnifiedKeys(cur => (u ? { ...cur, [p.id]: '1' } : cur))} />
                       <div className="grid grid-cols-2 gap-px bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
                         <div>
-                          <div className="px-2 py-1 text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-900">before</div>
+                          <div className="px-2 py-1 text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-900">{t('jitPatches.before')}</div>
                           <pre className="px-2 pb-2 pt-1 font-mono text-[10px] text-gray-700 dark:text-gray-200 overflow-x-auto whitespace-pre-wrap">{p.before}</pre>
                         </div>
                         <div>
-                          <div className="px-2 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase bg-gray-50 dark:bg-gray-900">after</div>
+                          <div className="px-2 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase bg-gray-50 dark:bg-gray-900">{t('jitPatches.after')}</div>
                           <pre className="px-2 pb-2 pt-1 font-mono text-[10px] text-emerald-800 dark:text-emerald-200 overflow-x-auto whitespace-pre-wrap">{p.after}</pre>
                         </div>
                       </div>

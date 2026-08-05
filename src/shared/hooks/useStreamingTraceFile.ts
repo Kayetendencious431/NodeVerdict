@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFileUpload } from './useFileUpload';
+import { useFileUpload, readFileContent } from './useFileUpload';
 import type { ProgressInfo } from './useFileUpload';
 import { analyzeTracingEvents, loadTracingData, loadNdvBuffer } from '../engine';
 import { createTraceStreamClient } from '../streaming';
@@ -90,7 +90,32 @@ export function useStreamingTraceFile(options: StreamingFileOptions) {
 
   const handleFile = useCallback(async (file: File) => {
     if (file.size < fastPathThreshold) {
-      await fastPath.handleFile(file);
+      setState({ loading: true, error: null, fileName: file.name, fileSize: file.size });
+      try {
+        const content = await readFileContent(file, onProgress);
+        if (typeof content === 'string') {
+          const events = loadTracingData(content);
+          const analysis = analyzeTracingEvents(events);
+          onAnalysisRef.current(analysis, {
+            truncated: false,
+            eventsSeen: analysis.totalEvents,
+            invalid: 0,
+            wallTimeMs: 0,
+          });
+        } else {
+          const events = loadNdvBuffer(content);
+          const analysis = analyzeTracingEvents(events);
+          onAnalysisRef.current(analysis, {
+            truncated: false,
+            eventsSeen: analysis.totalEvents,
+            invalid: 0,
+            wallTimeMs: 0,
+          });
+        }
+        setState(prev => ({ ...prev, loading: false }));
+      } catch (err) {
+        setState({ loading: false, error: (err as Error).message, fileName: null, fileSize: null });
+      }
       return;
     }
 
@@ -113,7 +138,7 @@ export function useStreamingTraceFile(options: StreamingFileOptions) {
       if (session !== sessionRef.current) return;
       setState({ loading: false, error: (err as Error).message, fileName: null, fileSize: null });
     }
-  }, [fastPathThreshold, maxEvents, maxOperations, fastPath.handleFile, onProgress]);
+  }, [fastPathThreshold, maxEvents, maxOperations, onProgress]);
 
   const reset = useCallback(() => {
     sessionRef.current++;

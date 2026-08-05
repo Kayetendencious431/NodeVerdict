@@ -243,3 +243,29 @@ export interface JitAnalysis {
   /** 0..1 overall health (1 = fully JIT-friendly). */
   healthScore: number;
 }
+
+/** A function located in source by name and line span. */
+export interface SourceFunction {
+  name: string;
+  start: number;
+  end: number;
+  startLine: number;
+  endLine: number;
+}
+
+/** Outcome of scoping a JIT finding to a source file + function for rewriting. */
+export interface JitFix {
+  findingId: string;
+  rule: JitFinding['rule'];
+  target: string;
+  /** Resolved source filename, or null if no source matched. */
+  filename: string | null;
+  /** Function the fix is scoped to, if resolvable. */
+  functionName: string | null;
+  /** 'function' = scoped to one function, 'file' = whole upload, 'none' = unresolved. */
+  scope: 'function' | 'file' | 'none';
+  /** Patches scoped to this finding, tagged with this finding id. */
+  patches: JitPatch[];
+  /** True when no uploaded source file matched the finding's location. */
+  missingSource: boolean;
+}

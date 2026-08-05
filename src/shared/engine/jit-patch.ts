@@ -1,5 +1,5 @@
 import { parse } from '@babel/parser';
-import type { JitPatch, JitFinding, PatchStrategy, EquivalenceResult, PatchMove, KeyShape } from '../types/jit';
+import type { JitPatch, JitFinding, PatchStrategy, EquivalenceResult, PatchMove, KeyShape, SourceFunction, JitFix } from '../types/jit';
 
 /**
  * Generate semantically-equivalent optimization patches from detected JIT
@@ -443,4 +443,155 @@ function walkStmtRuns(ast: NodeLike, emit: (run: NodeLike[]) => void): void {
   } else {
     handle((ast as { body?: unknown[] }).body ?? []);
   }
+}
+
+// ---------------------------------------------------------------------------
+// End-to-end: locate the source a finding refers to, scope patches to it, and
+// apply them back into the file. The trace log only carries runtime positions
+// (function names and "file:line:col"), so we need the corresponding SOURCE
+// file to actually rewrite anything — the user uploads it in the UI.
+// ---------------------------------------------------------------------------
+
+const FUNCTION_TYPES = new Set([
+  'FunctionDeclaration',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
+  'ObjectMethod',
+  'ClassMethod',
+  'MethodDefinition',
+]);
+
+function functionNameOf(node: NodeLike): string | null {
+  const id = node.id as unknown as { name?: string } | undefined;
+  if (id && typeof id.name === 'string') return id.name;
+  const key = (node as unknown as { key?: unknown }).key;
+  if (isNodeLike(key) && key.type === 'Identifier') return String((key as unknown as { name?: string }).name);
+  if (isNodeLike(key) && key.type === 'StringLiteral') return String((key as unknown as { value?: string }).value);
+  return null;
+}
+
+/** All named functions in a source string, with offsets + line spans. */
+export function scanFunctions(source: string): SourceFunction[] {
+  const ast = parseSnippet(source);
+  if (!ast) return [];
+  const out: SourceFunction[] = [];
+  const walk = (node: unknown) => {
+    if (Array.isArray(node)) { for (const c of node) walk(c); return; }
+    if (!isNodeLike(node)) return;
+    if (FUNCTION_TYPES.has(node.type)) {
+      const name = functionNameOf(node);
+      const st = (node as unknown as { loc?: { start?: { line?: number }; end?: { line?: number } } }).loc;
+      if (name && typeof node.start === 'number' && typeof node.end === 'number') {
+        out.push({
+          name,
+          start: node.start as number,
+          end: node.end as number,
+          startLine: st?.start?.line ?? 0,
+          endLine: st?.end?.line ?? 0,
+        });
+      }
+    }
+    for (const key of Object.keys(node)) {
+      if (SKIP_KEYS.has(key)) continue;
+      walk((node as Record<string, unknown>)[key]);
+    }
+  };
+  walk(ast);
+  return out;
+}
+
+function basename(path: string): string {
+  const pos = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  return pos >= 0 ? path.slice(pos + 1) : path;
+}
+
+function patchLine(loc: string): number | null {
+  const m = /line\s+(\d+)/.exec(loc);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function inRange(value: number, start: number, end: number): boolean {
+  return value >= start && value <= end;
+}
+
+function matchSourceFile(files: { name: string; code: string }[], fileName: string | null, target: string): { name: string; code: string } | null {
+  if (fileName) {
+    const byName = files.find(f => basename(f.name).toLowerCase() === basename(fileName).toLowerCase());
+    if (byName) return byName;
+  }
+  // Fall back to the first file containing a function with this name.
+  const byFn = files.find(f => scanFunctions(f.code).some(fn => fn.name === target));
+  return byFn ?? null;
+}
+
+/**
+ * Scope each JIT finding to a function in the uploaded source and produce the
+ * patches that would fix it. If no source file matches the finding's location,
+ * `missingSource` is set and no patches are produced.
+ */
+export function fixSourceForFindings(
+  files: { name: string; code: string }[],
+  findings: JitFinding[],
+): JitFix[] {
+  return findings.map(finding => {
+    const target = finding.target ?? '';
+    const locMatch = /^([^:]+)(?::(\d+))?/.exec(target);
+    const fileName = locMatch?.[1] ?? null;
+    const line = locMatch?.[2] != null ? parseInt(locMatch[2], 10) : null;
+
+    const file = matchSourceFile(files, fileName, target);
+    if (!file) {
+      return {
+        findingId: finding.id,
+        rule: finding.rule,
+        target,
+        filename: null,
+        functionName: null,
+        scope: 'none',
+        patches: [],
+        missingSource: true,
+      };
+    }
+
+    const fns = scanFunctions(file.code);
+    let fn: SourceFunction | null = null;
+    if (line != null) {
+      const contained = fns.filter(f => inRange(line, f.startLine, f.endLine));
+      contained.sort((a, b) => (b.endLine - b.startLine) - (a.endLine - a.startLine));
+      fn = contained.length ? contained[0] : null;
+    } else {
+      fn = fns.find(f => f.name === target) ?? null;
+    }
+
+    const all = generatePatches(file.code);
+    let scoped = all;
+    let scope: JitFix['scope'] = 'file';
+    if (fn) {
+      scoped = all.filter(p => {
+        const l = patchLine(p.location);
+        return l != null && inRange(l, fn!.startLine, fn!.endLine);
+      });
+      scope = 'function';
+    }
+    return {
+      findingId: finding.id,
+      rule: finding.rule,
+      target,
+      filename: file.name,
+      functionName: fn?.name ?? null,
+      scope,
+      patches: scoped.map(p => ({ ...p, findingId: finding.id })),
+      missingSource: false,
+    };
+  });
+}
+
+/** Apply a set of non-overlapping patches to a source string. */
+export function applySourcePatches(code: string, patches: JitPatch[]): string {
+  let out = code;
+  for (const p of patches) {
+    const idx = out.indexOf(p.before);
+    if (idx >= 0) out = out.slice(0, idx) + p.after + out.slice(idx + p.before.length);
+  }
+  return out;
 }

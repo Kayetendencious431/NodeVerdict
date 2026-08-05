@@ -9,7 +9,7 @@ import { HeapDiffPage } from '../features/heap-diff';
 import { SearchFilterPage } from '../features/search-filter';
 import { TimeSeriesPage } from '../features/time-series';
 import { PerfComparePage } from '../features/perf-compare';
-import { useUIStore } from '../stores';
+import { useUIStore, type Page } from '../stores';
 import { TutorialPage } from '../features/tutorial';
 import { MemoryTimelinePage } from '../features/memory-timeline';
 import { GcLogPage } from '../features/gc-log';
@@ -27,6 +27,29 @@ function HomePage() {
   const { navigate } = useUIStore();
   const { t } = useI18n();
 
+  const features: { page: Page; icon: string }[] = [
+    { page: 'event-viewer', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+    { page: 'trace-viewer', icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
+    { page: 'cpu-profiler', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+    { page: 'heap-analyzer', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
+    { page: 'heap-diff', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+    { page: 'snapshot-history', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { page: 'time-series', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+    { page: 'perf-compare', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
+    { page: 'validator', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { page: 'search-filter', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+    { page: 'memory-timeline', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+    { page: 'gc-log', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { page: 'jit-insights', icon: 'M11 3h8v8h-8V3zM5 5h3v14H5V5zm12 10h3v4h-3v-4zm-6 0h3v4h-3v-4z' },
+    { page: 'live-monitor', icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
+    { page: 'alert-rules', icon: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+    { page: 'report', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    { page: 'topology', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+    { page: 'ai-rca', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+    { page: 'differential-debug', icon: 'M12 8v-1m0 12v-1m4.95-10.95l-.707.707m-8.486 8.486l-.707.707M21 12h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+    { page: 'tutorial', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+  ];
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="text-center py-12">
@@ -39,128 +62,16 @@ function HomePage() {
         <p className="text-gray-500 dark:text-gray-400 mb-8">{t('app.description')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FeatureCard
-          title={t('feature.event-viewer')}
-          description={t('feature.event-viewer.desc')}
-          icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          onClick={() => navigate('event-viewer')}
-        />
-        <FeatureCard
-          title={t('feature.trace-viewer')}
-          description={t('feature.trace-viewer.desc')}
-          icon="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-          onClick={() => navigate('trace-viewer')}
-        />
-        <FeatureCard
-          title={t('feature.cpu-profiler')}
-          description={t('feature.cpu-profiler.desc')}
-          icon="M13 10V3L4 14h7v7l9-11h-7z"
-          onClick={() => navigate('cpu-profiler')}
-        />
-        <FeatureCard
-          title={t('feature.heap-analyzer')}
-          description={t('feature.heap-analyzer.desc')}
-          icon="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-          onClick={() => navigate('heap-analyzer')}
-        />
-        <FeatureCard
-          title={t('feature.heap-diff')}
-          description={t('feature.heap-diff.desc')}
-          icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          onClick={() => navigate('heap-diff')}
-        />
-        <FeatureCard
-          title={t('feature.time-series')}
-          description={t('feature.time-series.desc')}
-          icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          onClick={() => navigate('time-series')}
-        />
-        <FeatureCard
-          title={t('feature.perf-compare')}
-          description={t('feature.perf-compare.desc')}
-          icon="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-          onClick={() => navigate('perf-compare')}
-        />
-        <FeatureCard
-          title={t('feature.validator')}
-          description={t('feature.validator.desc')}
-          icon="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-          onClick={() => navigate('validator')}
-        />
-        <FeatureCard
-          title={t('feature.search-filter')}
-          description={t('feature.search-filter.desc')}
-          icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          onClick={() => navigate('search-filter')}
-        />
-        <FeatureCard
-          title={t('feature.memory-timeline')}
-          description={t('feature.memory-timeline.desc')}
-          icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          onClick={() => navigate('memory-timeline')}
-        />
-        <FeatureCard
-          title={t('feature.gc-log')}
-          description={t('feature.gc-log.desc')}
-          icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          onClick={() => navigate('gc-log')}
-        />
-        <FeatureCard
-          title={t('feature.jit-insights')}
-          description={t('feature.jit-insights.desc')}
-          icon="M11 3h8v8h-8V3zM5 5h3v14H5V5zm12 10h3v4h-3v-4zm-6 0h3v4h-3v-4z"
-          onClick={() => navigate('jit-insights')}
-        />
-        <FeatureCard
-          title={t('feature.live-monitor')}
-          description={t('feature.live-monitor.desc')}
-          icon="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-          onClick={() => navigate('live-monitor')}
-        />
-        <FeatureCard
-          title={t('feature.report')}
-          description={t('feature.report.desc')}
-          icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          onClick={() => navigate('report')}
-          className="md:col-span-2"
-        />
-      </div>
-
-      <div className="mt-6">
-        <FeatureCard
-          title={t('feature.topology')}
-          description={t('feature.topology.desc')}
-          icon="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          onClick={() => navigate('topology')}
-        />
-      </div>
-
-      <div className="mt-6">
-        <FeatureCard
-          title={t('feature.ai-rca')}
-          description={t('feature.ai-rca.desc')}
-          icon="M13 10V3L4 14h7v7l9-11h-7z"
-          onClick={() => navigate('ai-rca')}
-        />
-      </div>
-
-      <div className="mt-6">
-        <FeatureCard
-          title={t('feature.differential-debug')}
-          description={t('feature.differential-debug.desc')}
-          icon="M12 8v-1m0 12v-1m4.95-10.95l-.707.707m-8.486 8.486l-.707.707M21 12h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          onClick={() => navigate('differential-debug')}
-        />
-      </div>
-
-      <div className="mt-6">
-        <FeatureCard
-          title={t('feature.tutorial')}
-          description={t('feature.tutorial.desc')}
-          icon="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-          onClick={() => navigate('tutorial')}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
+        {features.map(f => (
+          <FeatureCard
+            key={f.page}
+            title={t(`feature.${f.page}`)}
+            description={t(`feature.${f.page}.desc`)}
+            icon={f.icon}
+            onClick={() => navigate(f.page)}
+          />
+        ))}
       </div>
     </div>
   );
@@ -170,14 +81,14 @@ function FeatureCard({ title, description, icon, onClick, className = '' }: {
   title: string; description: string; icon: string; onClick: () => void; className?: string;
 }) {
   return (
-    <button onClick={onClick} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 transition-all group ${className}`}>
-      <div className="flex items-start gap-4">
+    <button onClick={onClick} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 transition-all group h-full flex flex-col ${className}`}>
+      <div className="flex items-start gap-4 flex-1">
         <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
           <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
           </svg>
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">{title}</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{description}</p>
         </div>

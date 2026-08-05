@@ -301,7 +301,21 @@ Compare a *normal* and a *fault* execution trace of the same code path to locali
 
 ![Differential Debug](./introduction/DifferentialDebug.png)
 
-- **JIT Insights** — Parse combined V8 `--trace-ic` / `--trace-opt` / `--trace-deopt` output into inline-cache sites, hidden-class (map) flow, and optimize/deoptimize timelines; visualize IC polymorphism as a force-directed graph; detect JIT anti-patterns (megamorphic ICs, deopt storms, optimize/deopt loops, hidden-class fragmentation, optimization suppression) scored by severity with an overall health score; and generate object-literal / field-initialization reorder patches that are verified by an `@babel/parser`-based AST-equivalence checker. Demo trace: `examples/v8-jit-trace.log`.
+- **JIT Insights** — Parse combined V8 `--trace-ic` / `--trace-opt` / `--trace-deopt` output into inline-cache sites, hidden-class (map) flow, and optimize/deoptimize timelines; visualize IC polymorphism as a force-directed graph; detect JIT anti-patterns (megamorphic ICs, deopt storms, optimize/deopt loops, hidden-class fragmentation, optimization suppression) scored by severity with an overall health score. A semantic patch engine rewrites object-literal / field-initialization order to unify hidden classes, each verified by an `@babel/parser`-based AST-equivalence checker, and a fully end-to-end flow maps each finding back to the function in your uploaded source, applies the AST-verified fixes, and lets you download the rewritten file. Sample trace/source: `examples/v8-jit-trace.log` + `examples/demo.js`.
+
+![JIT Insights](./introduction/JITInsights.png)
+
+### 23. Snapshot History (NEW)
+
+Track heap snapshot comparison results over time to identify memory trends. Every comparison you save in the Heap Diff view is recorded here as a history entry, letting you watch retained size, node counts, and growth rates across successive snapshots.
+
+- **Trend chart** — A d3 line chart of retained-size deltas over each recorded comparison, with red growth / green improvement points and a dashed zero line
+- **Leak pattern detection** — Flags monotonic-growth runs as a **memory leak**, shrinking runs as healthy, with an auto-generated description of the detected pattern
+- **Summary stats** — Total comparisons, average growth rate, total new nodes, and the number of flagged (leaking) records
+- **Full history table** — ID, timestamp, label, before/after sizes, retained Δ, and growth rate per recorded comparison
+- **Import / clear** — Import a history file (e.g. `examples/snapshot-history.json`) to load prior runs, or clear all records
+
+![Snapshot History](./introduction/SnapshotHistory.png)
 
 ---
 

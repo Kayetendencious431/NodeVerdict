@@ -1,2 +1,2 @@
 export { useRootStore } from './root-store';
-export { useUIStore } from './ui-store';
+export { useUIStore, type Page } from './ui-store';

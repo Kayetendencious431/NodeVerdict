@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload, useRemoteFile } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks, loadTracingData, loadNdvBuffer, encodeNdv } from '../../shared/engine';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { WaterfallChart } from './components/WaterfallChart';
@@ -32,34 +31,18 @@ function downloadNdv(events: TracingEvent[]) {
 export function TraceViewerPage() {
   const { t } = useI18n();
   const { traceData, setTraceData } = useRootStore();
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
-    useCallback(async (content: string) => {
-      handleTraceContent(content, setTraceData);
-    }, [setTraceData]),
-    setProgress,
-    useCallback(async (buffer: ArrayBuffer) => {
-      handleTraceContent(buffer, setTraceData);
-    }, [setTraceData]),
-  );
-
-  const {
-    loading: urlLoading,
-    error: urlError,
-    progress: urlProgress,
-    loadFromUrl,
-    cancel: cancelUrl,
-    reset: resetUrl,
-  } = useRemoteFile({
+  const upload = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
       handleTraceContent(content, setTraceData);
     }, [setTraceData]),
-    onProgress: setProgress,
+    onBinaryFile: useCallback(async (buffer: ArrayBuffer) => {
+      handleTraceContent(buffer, setTraceData);
+    }, [setTraceData]),
   });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   function handleReset() {
-    reset();
-    resetUrl();
+    uploadReset();
     setTraceData(null);
   }
 

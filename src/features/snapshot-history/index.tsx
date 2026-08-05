@@ -1,10 +1,29 @@
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { useRootStore } from '../../stores/root-store';
-import { StatCard, EmptyState } from '../../shared/components';
-import { formatBytes } from '../../shared/utils/format';
+import { FileUpload, StatCard, EmptyState } from '../../shared/components';
+import { useUnifiedFileUpload } from '../../shared/hooks';
+import { formatBytes } from '../../shared/utils';
 import { detectLeakPattern, getGrowthTrend } from '../../shared/engine/snapshot-history';
 import { useI18n } from '../../shared/i18n/useI18n';
+import type { SnapshotDiffRecord } from '../../shared/types';
 import * as d3 from 'd3';
+
+function isSnapshotRecord(value: unknown): value is SnapshotDiffRecord {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as Record<string, unknown>;
+  return (
+    typeof r.id === 'string' &&
+    typeof r.timestamp === 'number' &&
+    typeof r.label === 'string' &&
+    typeof r.beforeSize === 'number' &&
+    typeof r.afterSize === 'number' &&
+    typeof r.newNodeCount === 'number' &&
+    typeof r.removedNodeCount === 'number' &&
+    typeof r.retainedSizeDelta === 'number' &&
+    (typeof r.growthRate === 'number' || r.growthRate === null) &&
+    typeof r.flagged === 'boolean'
+  );
+}
 
 function TrendChart({ records }: { records: ReturnType<typeof getGrowthTrend> }) {
   const { t } = useI18n();
@@ -151,45 +170,120 @@ function TrendChart({ records }: { records: ReturnType<typeof getGrowthTrend> })
 }
 
 export function SnapshotHistoryPage() {
-  const { snapshotHistory, clearSnapshotHistory } = useRootStore();
-  const { t } = useI18n();
+  const { snapshotHistory, clearSnapshotHistory, setSnapshotHistory } = useRootStore();
+   const { t } = useI18n();
 
-  const leakPattern = useMemo(() => detectLeakPattern(snapshotHistory), [snapshotHistory]);
-  const trendData = useMemo(() => getGrowthTrend(snapshotHistory), [snapshotHistory]);
+   const applyRecords = useCallback(async (content: string) => {
+     let parsed: unknown;
+     try {
+       parsed = JSON.parse(content);
+     } catch {
+       throw new Error(t('snapshot.importError'));
+     }
+     if (!Array.isArray(parsed) || !parsed.every(isSnapshotRecord)) {
+       throw new Error(t('snapshot.importError'));
+     }
+     setSnapshotHistory(parsed);
+   }, [setSnapshotHistory, t]);
 
-  if (snapshotHistory.length === 0) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('snapshot.title')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('snapshot.description')}
-          </p>
-        </div>
-        <EmptyState
-          title={t('snapshot.empty')}
-          description={t('snapshot.empty.desc')}
-        />
-      </div>
-    );
+   const upload = useUnifiedFileUpload({ onFile: applyRecords });
+   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
+
+   const leakPattern = useMemo(() => detectLeakPattern(snapshotHistory), [snapshotHistory]);
+   const trendData = useMemo(() => getGrowthTrend(snapshotHistory), [snapshotHistory]);
+
+   function handleReset() {
+     uploadReset();
+     clearSnapshotHistory();
+   }
+
+  function exportHistory() {
+    const blob = new Blob([JSON.stringify(snapshotHistory, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'snapshot-history.json';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('snapshot.title')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(snapshotHistory.length === 1 ? 'snapshot.record' : 'snapshot.records').replace('{count}', String(snapshotHistory.length))}
-          </p>
+    <div className="p-6">
+      {snapshotHistory.length === 0 ? (
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('snapshot.title')}</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('snapshot.description')}</p>
+          </div>
+          <FileUpload
+            onFile={handleFile}
+            accept=".json"
+            label={t('snapshot.uploadLabel')}
+            fileName={fileName}
+            fileSize={fileSize}
+            onReset={handleReset}
+            loading={loading}
+            progress={progress}
+            onUrlLoad={loadFromUrl}
+            urlLoading={urlLoading}
+            urlError={urlError}
+            urlProgress={urlProgress}
+            onUrlCancel={cancelUrl}
+          />
+          {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <div className="mt-8">
+            <EmptyState
+              title={t('snapshot.empty')}
+              description={t('snapshot.empty.desc')}
+            />
+          </div>
         </div>
-        <button
-          onClick={clearSnapshotHistory}
-          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          {t('snapshot.clear')}
-        </button>
-      </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('snapshot.title')}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('snapshot.description')}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {t(snapshotHistory.length === 1 ? 'snapshot.record' : 'snapshot.records').replace('{count}', String(snapshotHistory.length))}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={exportHistory}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {t('snapshot.export')}
+              </button>
+              <button
+                onClick={clearSnapshotHistory}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                {t('snapshot.clear')}
+              </button>
+              <div className="w-72">
+                <FileUpload
+                  onFile={handleFile}
+                  accept=".json"
+                  label={t('snapshot.uploadLabel')}
+                  fileName={fileName}
+                  fileSize={fileSize}
+                  onReset={handleReset}
+                  loading={loading}
+                  progress={progress}
+                  onUrlLoad={loadFromUrl}
+                  urlLoading={urlLoading}
+                  urlError={urlError}
+                  urlProgress={urlProgress}
+                  onUrlCancel={cancelUrl}
+                />
+              </div>
+              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            </div>
+          </div>
 
       {/* Leak Pattern Alert */}
       <div className={`p-4 rounded-lg border ${
@@ -316,6 +410,8 @@ export function SnapshotHistoryPage() {
           </table>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }

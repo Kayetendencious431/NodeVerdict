@@ -10,4 +10,5 @@ export type {
   IcState, IcKind, IcEvent, MapTransition, OptEvent, DeoptEvent, V8Trace,
   IcSiteSummary, FunctionSummary, IcGraphNode, IcGraphEdge, IcStateGraph,
   FindingSeverity, JitFinding, PatchStrategy, EquivalenceResult, JitPatch, JitAnalysis,
+  PatchMove, KeyShape, SourceFunction, JitFix,
 } from './jit';

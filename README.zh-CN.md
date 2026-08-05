@@ -287,6 +287,22 @@ graph LR
 
 ![Differential Debug](./introduction/DifferentialDebug.png)
 
+- **JIT Insights** — 解析合并的 V8 `--trace-ic` / `--trace-opt` / `--trace-deopt` 输出为内联缓存站点、隐藏类（map）流转与优化/反优化时间线；以力导向图可视化 IC 多态；检测 JIT 反模式（超态 IC、反优化风暴、优化/反优化循环、隐藏类碎片化、优化被抑制），按严重度打分并给出整体健康度。语义补丁引擎重排对象字面量 / 字段初始化顺序以统一隐藏类，每个补丁均由基于 `@babel/parser` 的 AST 等价性校验确认；并提供完整的端到端流程，将每条反模式映射回你上传源码中对应的函数，应用经 AST 校验的修复并下载重写后的文件。示例日志/源码：`examples/v8-jit-trace.log` + `examples/demo.js`。
+
+![JIT Insights](./introduction/JITInsights.png)
+
+### 23. 快照历史（新增）
+
+追踪堆快照对比结果随时间的变化趋势，识别内存增长模式。在 Heap Diff 视图中保存的每次对比都会被记录为一条历史记录，让你可以观察多次快照之间保留大小、节点数与增长率的演变。
+
+- **趋势折线图** — d3 绘制的保留大小增量趋势图，红色为增长点、绿色为改善点，并带虚线零线
+- **泄漏模式检测** — 单调增长的记录被标记为**内存泄漏**，缩小的记录标记为健康，并自动生成模式描述
+- **汇总统计** — 总对比次数、平均增长率、新增节点总数与标记为泄漏的记录数
+- **完整历史表格** — 每条记录的 ID、时间戳、标签、对比前后大小、保留 Δ 与增长率
+- **导入 / 清除** — 导入历史记录文件（例如 `examples/snapshot-history.json`）以载入既往运行数据，或清除全部记录
+
+![Snapshot History](./introduction/SnapshotHistory.png)
+
 ---
 
 ## 快速开始

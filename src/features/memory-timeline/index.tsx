@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { parseMemoryTimeline, calculateGrowthRate } from '../../shared/engine';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes, formatDuration } from '../../shared/utils';
@@ -165,16 +164,15 @@ export function MemoryTimelinePage() {
   const { t } = useI18n();
   const [memoryTimeline, setMemoryTimeline] = useState<MemoryTimeline | null>(null);
   const [growthRate, setGrowthRate] = useState<MemoryGrowthRate | null>(null);
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
-    useCallback(async (content: string) => {
+  const upload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
       const timeline = parseMemoryTimeline(content);
       const rate = calculateGrowthRate(timeline);
       setMemoryTimeline(timeline);
       setGrowthRate(rate);
     }, []),
-    setProgress,
-  );
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   // Wrap the error with a more helpful message
   const displayError = error?.includes('JSON')
@@ -182,7 +180,7 @@ export function MemoryTimelinePage() {
     : error;
 
   function handleReset() {
-    reset();
+    uploadReset();
     setMemoryTimeline(null);
     setGrowthRate(null);
   }
@@ -206,9 +204,14 @@ export function MemoryTimelinePage() {
           onReset={handleReset}
           loading={loading}
           progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
         />
-        {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
-        <LoadingOverlay visible={loading} message={t('memoryTimeline.loading')} />
+        {(error || urlError) && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
+        <LoadingOverlay visible={loading || urlLoading} message={t('memoryTimeline.loading')} />
         <div className="mt-8">
           <EmptyState
             title={t('memoryTimeline.noData')}
@@ -286,6 +289,11 @@ export function MemoryTimelinePage() {
               onReset={handleReset}
               loading={loading}
               progress={progress}
+              onUrlLoad={loadFromUrl}
+              urlLoading={urlLoading}
+              urlError={urlError}
+              urlProgress={urlProgress}
+              onUrlCancel={cancelUrl}
             />
           </div>
         </div>

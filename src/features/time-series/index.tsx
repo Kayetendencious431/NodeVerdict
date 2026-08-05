@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents } from '../../shared/engine';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import type { TracingEvent, TracingAnalysis } from '../../shared/types';
@@ -248,18 +247,21 @@ function LatencyDistribution({ analysis }: { analysis: TracingAnalysis }) {
 
 export function TimeSeriesPage() {
   const { t } = useI18n();
-  const { tracingAnalysis, setTracingAnalysis } = useRootStore();
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
-    const events = JSON.parse(content) as TracingEvent[];
-    const analysis = analyzeTracingEvents(events);
-    setTracingAnalysis(analysis);
-  }, [setTracingAnalysis]), setProgress);
+   const { tracingAnalysis, setTracingAnalysis } = useRootStore();
 
-  function handleReset() {
-    reset();
-    setTracingAnalysis(null);
-  }
+   const upload = useUnifiedFileUpload({
+     onFile: useCallback(async (content: string) => {
+       const events = JSON.parse(content) as TracingEvent[];
+       const analysis = analyzeTracingEvents(events);
+       setTracingAnalysis(analysis);
+     }, [setTracingAnalysis]),
+   });
+   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
+
+   function handleReset() {
+     uploadReset();
+     setTracingAnalysis(null);
+   }
 
   if (!tracingAnalysis) {
     return (
@@ -270,7 +272,7 @@ export function TimeSeriesPage() {
         </div>
         <FileUpload onFile={handleFile} accept=".json" label={t('timeSeries.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <LoadingOverlay visible={loading} message={t('timeSeries.loading')} />
+        <LoadingOverlay visible={loading || urlLoading} message={t('timeSeries.loading')} />
         <div className="mt-8">
           <EmptyState title={t('timeSeries.noData')} description={t('timeSeries.description')} />
         </div>
@@ -290,7 +292,7 @@ export function TimeSeriesPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('timeSeries.eventsCount').replace('{events}', tracingAnalysis.totalEvents.toLocaleString()).replace('{operations}', tracingAnalysis.totalOperations.toLocaleString())}</p>
         </div>
         <div className="w-72">
-          <FileUpload onFile={handleFile} accept=".json" label={t('timeSeries.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} />
+<FileUpload onFile={handleFile} accept=".json" label={t('timeSeries.uploadHint')} maxSize={500 * 1024 * 1024} fileName={fileName} fileSize={fileSize} onReset={handleReset} loading={loading} progress={progress} onUrlLoad={loadFromUrl} urlLoading={urlLoading} urlError={urlError} urlProgress={urlProgress} onUrlCancel={cancelUrl} />
         </div>
       </div>
 

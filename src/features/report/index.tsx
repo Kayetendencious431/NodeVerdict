@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents, generateReport, decompressReport } from '../../shared/engine';
 import { encodeReportToHash, decodeReportFromHash } from '../../shared/utils';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
@@ -25,13 +24,8 @@ export function ReportPage() {
     setReportData(report);
   }, [setReportData]);
 
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(handleFileRead, setProgress);
-
-  function handleReset() {
-    reset();
-    setReportData(null);
-  }
+  const upload = useUnifiedFileUpload({ onFile: handleFileRead });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset } = upload;
 
   // Check URL hash for shared reports
   useMemo(() => {

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generatePatches, verifyPatchEquivalence, analyzeKeyShapes } from '../src/shared/engine/jit-patch';
+import {
+  generatePatches, verifyPatchEquivalence, analyzeKeyShapes,
+  scanFunctions, fixSourceForFindings, applySourcePatches,
+} from '../src/shared/engine/jit-patch';
+import type { JitFinding } from '../src/shared/types/jit';
 
 describe('object-literal-key-order patches', () => {
   const src = `function makeUser(id, name) {
@@ -135,5 +139,116 @@ const other = { x: 1, y: 2 };`;
     expect(user).toBeDefined();
     expect(user!.sites).toBe(3);
     expect(user!.orders.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('scanFunctions', () => {
+  it('finds named functions with line spans', () => {
+    const src = `function buildUser(id) { return { id }; }
+const make = function makeThing() { return 1; };
+const obj = { method() { return 2; } };
+class C { go() { return 3; } }
+const anon = () => 4;`;
+    const fns = scanFunctions(src);
+    const names = fns.map(f => f.name).sort();
+    // anon arrow has no id -> skipped
+    expect(names).toContain('buildUser');
+    expect(names).toContain('makeThing');
+    expect(names).toContain('method');
+    expect(names).toContain('go');
+    expect(names).not.toContain('anon');
+    const bu = fns.find(f => f.name === 'buildUser')!;
+    expect(bu.startLine).toBe(1);
+  });
+});
+
+describe('fixSourceForFindings (end-to-end)', () => {
+  const finding = (over: Partial<JitFinding> & { target: string; id: string }): JitFinding => ({
+    rule: 'hidden-class-fragmentation',
+    severity: 'warning',
+    score: 0.4,
+    title: 't',
+    detail: 'd',
+    evidence: [],
+    ...over,
+  });
+
+  it('locates a function by name and scopes patches to it', () => {
+    const src = `function makeUser(id, name) {
+  const a = { id, name, age: 0 };
+  const b = { name, age: 0, id };
+  return a.id + b.name;
+}
+function buildUser(id, name) {
+  const c = { name, id };
+  const d = {};
+  d.age = id;
+  d.b = name;
+  return c.value + d.b;
+}`;
+    const files = [{ name: 'demo.js', code: src }];
+    const fix = fixSourceForFindings(files, [finding({ id: 'frag-1', target: 'buildUser' })])[0];
+    expect(fix.scope).toBe('function');
+    expect(fix.functionName).toBe('buildUser');
+    expect(fix.filename).toBe('demo.js');
+    expect(fix.patches.length).toBeGreaterThan(0);
+    for (const p of fix.patches) expect(p.findingId).toBe('frag-1');
+    // all patch locations must be within buildUser's lines (4-11)
+    const fn = scanFunctions(src).find(f => f.name === 'buildUser')!;
+    for (const p of fix.patches) {
+      const line = Number(/line\s+(\d+)/.exec(p.location)?.[1]);
+      expect(line).toBeGreaterThanOrEqual(fn.startLine);
+      expect(line).toBeLessThanOrEqual(fn.endLine);
+    }
+  });
+
+  it('locates by file:line and falls back to file scope when a function is ambiguous', () => {
+    const src = `const a = { id, name, age: 0 };
+const b = { name, age: 0, id };
+const c = { age, name, id };
+module.exports = a;`;
+    // no function wraps these lines, so top-level -> file scope
+    const files = [{ name: 'demo.js', code: src }];
+    const fix = fixSourceForFindings(files, [finding({ id: 'frag-2', target: 'demo.js:1' })])[0];
+    expect(fix.filename).toBe('demo.js');
+    expect(fix.scope).toBe('file');
+    expect(fix.patches.length).toBeGreaterThan(0);
+  });
+
+  it('reports missingSource when no file matches', () => {
+    const files = [{ name: 'other.js', code: 'function makeUser(id){ return {id}; }' }];
+    const fix = fixSourceForFindings(files, [finding({ id: 'meg-1', target: 'demo.js:8:25' })])[0];
+    expect(fix.missingSource).toBe(true);
+    expect(fix.patches).toHaveLength(0);
+    expect(fix.scope).toBe('none');
+  });
+});
+
+describe('applySourcePatches', () => {
+  it('rewrites changed regions and leaves the rest intact', () => {
+    const src = `const a = { id, name, age: 0 };
+const b = { name, age: 0, id };
+module.exports = [a, b];`;
+    const patches = generatePatches(src);
+    expect(patches.length).toBeGreaterThan(0);
+    const out = applySourcePatches(src, patches);
+    // canonical key order age -> id -> name must be respected
+    expect(out).not.toBe(src);
+    const agePos = out.indexOf('age: 0');
+    const idPos = out.indexOf('id');
+    const namePos = out.indexOf('name');
+    expect(agePos).toBeLessThan(idPos);
+    expect(idPos).toBeLessThan(namePos);
+    // count of keys preserved
+    expect((out.match(/\bid\b/g) || []).length).toBe((src.match(/\bid\b/g) || []).length);
+  });
+
+  it('is idempotent for already-applied patches', () => {
+    const src = `const a = { id, name };
+const b = { name, id };`;
+    const patches = generatePatches(src);
+    const once = applySourcePatches(src, patches);
+    const twice = applySourcePatches(once, patches);
+    expect(twice).toBe(once);
   });
 });

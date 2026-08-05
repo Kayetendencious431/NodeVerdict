@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
 import { parseHeapSnapshot, analyzeHeap, analyzeStrings, analyzeExternalMemory, calculateGrowthRate } from '../../shared/engine';
-import { useFileUpload, useRemoteFile } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import type { StringAnalysis, MemoryGrowthRate } from '../../shared/types';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
@@ -22,27 +21,9 @@ function severityColor(severity: string) {
 export function HeapAnalyzerPage() {
   const { t } = useI18n();
   const { heapAnalysis, setHeapAnalysis } = useRootStore();
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [stringAnalysis, setStringAnalysis] = useState<StringAnalysis | null>(null);
   const [externalMemory, setExternalMemory] = useState<{totalExternal: number; totalArrayBuffers: number; externalStrings: number; externalPercent: number} | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
-    const snapshot = parseHeapSnapshot(content);
-    const analysis = analyzeHeap(snapshot);
-    setHeapAnalysis(analysis);
-    const stringResult = analyzeStrings(snapshot);
-    const externalResult = analyzeExternalMemory(snapshot);
-    setStringAnalysis(stringResult);
-    setExternalMemory(externalResult);
-  }, [setHeapAnalysis, setStringAnalysis, setExternalMemory]), setProgress);
-
-  const {
-    loading: urlLoading,
-    error: urlError,
-    progress: urlProgress,
-    loadFromUrl,
-    cancel: cancelUrl,
-    reset: resetUrl,
-  } = useRemoteFile({
+  const upload = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
       const snapshot = parseHeapSnapshot(content);
       const analysis = analyzeHeap(snapshot);
@@ -52,12 +33,11 @@ export function HeapAnalyzerPage() {
       setStringAnalysis(stringResult);
       setExternalMemory(externalResult);
     }, [setHeapAnalysis, setStringAnalysis, setExternalMemory]),
-    onProgress: setProgress,
   });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   function handleReset() {
-    reset();
-    resetUrl();
+    uploadReset();
     setHeapAnalysis(null);
     setStringAnalysis(null);
     setExternalMemory(null);

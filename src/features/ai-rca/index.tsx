@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents, buildWaterfall, loadTracingData, loadNdvBuffer } from '../../shared/engine';
 import { analyzeTraceWithLLM, analyzeTraceLocally, loadRcaConfig, saveRcaConfig, clearRcaConfig, isRcaConfigured } from '../../shared/ai';
 import type { RcaConfig } from '../../shared/ai';
@@ -86,7 +85,6 @@ function RcaConfigModal({ open, onClose, onSave }: {
 
 export function AiRcaPage() {
   const { t, lang } = useI18n();
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [analysis, setAnalysis] = useState<TracingAnalysis | null>(null);
   const [spans, setSpans] = useState<TraceSpan[]>([]);
   const [report, setReport] = useState<string>('');
@@ -96,16 +94,16 @@ export function AiRcaPage() {
   const [modalSession, setModalSession] = useState(0);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
-    useCallback(async (content: string) => {
+  const upload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
       const events = loadTracingData(content);
       applyTrace(events);
     }, []),
-    setProgress,
-    useCallback(async (buffer: ArrayBuffer) => {
+    onBinaryFile: useCallback(async (buffer: ArrayBuffer) => {
       applyTrace(loadNdvBuffer(buffer));
     }, []),
-  );
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
   function applyTrace(events: ReturnType<typeof analyzeTracingEvents>['events']) {
     const a = analyzeTracingEvents(events);
@@ -117,7 +115,7 @@ export function AiRcaPage() {
   }
 
   function handleReset() {
-    reset();
+    uploadReset();
     setAnalysis(null);
     setSpans([]);
     setReport('');
@@ -182,17 +180,23 @@ export function AiRcaPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('aiRca.subtitle')}</p>
         </div>
         <div className="w-72">
-          <FileUpload
-            onFile={handleFile}
-            accept=".json,.ndv"
-            label={t('aiRca.uploadLabel')}
-            maxSize={500 * 1024 * 1024}
-            fileName={fileName}
-            fileSize={fileSize}
-            onReset={handleReset}
-            loading={loading}
-            progress={progress}
-          />
+        <FileUpload
+          onFile={handleFile}
+          accept=".json,.ndv"
+          label={t('aiRca.uploadLabel')}
+          maxSize={500 * 1024 * 1024}
+          fileName={fileName}
+          fileSize={fileSize}
+          onReset={handleReset}
+          loading={loading}
+          progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
+        />
+        {(error || urlError) && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
         </div>
       </div>
 

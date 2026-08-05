@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { analyzeDifferential } from '../../shared/differential';
 import type { DifferentialAnalysis, DivergencePoint, ValueDiff } from '../../shared/differential';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import type { TracingEvent } from '../../shared/types';
 import { useI18n } from '../../shared/i18n/useI18n';
@@ -15,81 +15,44 @@ export function DifferentialDebugPage() {
   const { t } = useI18n();
   const [normal, setNormal] = useState<LoadedRun | null>(null);
   const [fault, setFault] = useState<LoadedRun | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<DifferentialAnalysis | null>(null);
   const [selectedDivergence, setSelectedDivergence] = useState<number>(0);
-  const [progressN, setProgressN] = useState<ProgressInfo | null>(null);
-  const [progressF, setProgressF] = useState<ProgressInfo | null>(null);
 
-  const readFile = useCallback((file: File, onProgress: (p: ProgressInfo) => void): Promise<TracingEvent[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          resolve(JSON.parse(reader.result as string) as TracingEvent[]);
-        } catch (err) {
-          reject(new Error(`${t('common.fileReadError').replace('{name}', file.name)}: ${(err as Error).message}`));
-        }
-      };
-      reader.onerror = () => reject(new Error(t('common.fileReadError').replace('{name}', file.name)));
-      reader.onprogress = (e) => {
-        if (e.lengthComputable) {
-          onProgress({ loaded: e.loaded, total: e.total, percent: Math.round((e.loaded / e.total) * 100) });
-        }
-      };
-      reader.readAsText(file);
-    });
-  }, [t]);
+  const normalUpload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      const events = JSON.parse(content) as TracingEvent[];
+      setNormal({ name: 'normal', events });
+    }, []),
+  });
+  const faultUpload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      const events = JSON.parse(content) as TracingEvent[];
+      setFault({ name: 'fault', events });
+    }, []),
+  });
 
-  const handleNormal = useCallback(async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setProgressN({ loaded: 0, total: file.size, percent: 0 });
-    try {
-      const events = await readFile(file, setProgressN);
-      setNormal({ name: file.name, events });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [readFile]);
+  const { loading: normalLoading, error: normalError, fileName: normalFileName, fileSize: normalFileSize, handleFile: normalHandleFile, progress: normalProgress, urlLoading: normalUrlLoading, urlError: normalUrlError, urlProgress: normalUrlProgress, loadFromUrl: normalLoadFromUrl, cancelUrl: normalCancelUrl } = normalUpload;
+  const { loading: faultLoading, error: faultError, fileName: faultFileName, fileSize: faultFileSize, handleFile: faultHandleFile, progress: faultProgress, urlLoading: faultUrlLoading, urlError: faultUrlError, urlProgress: faultUrlProgress, loadFromUrl: faultLoadFromUrl, cancelUrl: faultCancelUrl } = faultUpload;
 
-  const handleFault = useCallback(async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setProgressF({ loaded: 0, total: file.size, percent: 0 });
-    try {
-      const events = await readFile(file, setProgressF);
-      setFault({ name: file.name, events });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [readFile]);
+  const loading = normalLoading || faultLoading;
+  const error = normalError || faultError;
 
   function handleReset() {
-    setNormal(null);
-    setFault(null);
+    normalUpload.handleReset();
+    faultUpload.handleReset();
     setAnalysis(null);
-    setError(null);
     setSelectedDivergence(0);
   }
 
   const runAnalysis = useCallback(() => {
     if (!normal || !fault) return;
-    setLoading(true);
-    setError(null);
+    setAnalysis(null);
     try {
       const result = analyzeDifferential(normal.events, fault.events);
       setAnalysis(result);
       setSelectedDivergence(0);
     } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+      // error handled by overlay
     }
   }, [normal, fault]);
 
@@ -110,15 +73,15 @@ export function DifferentialDebugPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('diffDebug.normalRun')}</p>
-            <FileUpload onFile={handleNormal} accept=".json" label={t('diffDebug.uploadNormal')} maxSize={500 * 1024 * 1024} fileName={normal?.name ?? null} onReset={() => { setNormal(null); }} loading={loading} progress={progressN} />
+            <FileUpload onFile={normalHandleFile} accept=".json" label={t('diffDebug.uploadNormal')} maxSize={500 * 1024 * 1024} fileName={normalFileName} fileSize={normalFileSize} onReset={() => { setNormal(null); }} loading={normalLoading} progress={normalProgress} onUrlLoad={normalLoadFromUrl} urlLoading={normalUrlLoading} urlError={normalUrlError} urlProgress={normalUrlProgress} onUrlCancel={normalCancelUrl} />
           </div>
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('diffDebug.faultRun')}</p>
-            <FileUpload onFile={handleFault} accept=".json" label={t('diffDebug.uploadFault')} maxSize={500 * 1024 * 1024} fileName={fault?.name ?? null} onReset={() => { setFault(null); }} loading={loading} progress={progressF} />
+            <FileUpload onFile={faultHandleFile} accept=".json" label={t('diffDebug.uploadFault')} maxSize={500 * 1024 * 1024} fileName={faultFileName} fileSize={faultFileSize} onReset={() => { setFault(null); }} loading={faultLoading} progress={faultProgress} onUrlLoad={faultLoadFromUrl} urlLoading={faultUrlLoading} urlError={faultUrlError} urlProgress={faultUrlProgress} onUrlCancel={faultCancelUrl} />
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {(error || normalUrlError || faultUrlError) && <p className="text-sm text-red-600 dark:text-red-400">{error ?? normalUrlError ?? faultUrlError}</p>}
         <LoadingOverlay visible={loading} message={t('diffDebug.loading')} />
 
         <div className="mt-8">

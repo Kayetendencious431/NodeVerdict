@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRootStore } from '../../stores';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { validateEvents } from '../../shared/engine';
 import { FileUpload, EmptyState, LoadingOverlay, StatCard } from '../../shared/components';
 import type { TracingEvent } from '../../shared/types';
@@ -19,17 +18,14 @@ function severityBadge(severity: string) {
 export function ValidatorPage() {
   const { t } = useI18n();
   const { validationResults, setValidationResults } = useRootStore();
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(useCallback(async (content: string) => {
-    const events = JSON.parse(content) as TracingEvent[];
-    const results = validateEvents(events);
-    setValidationResults(results);
-  }, [setValidationResults]), setProgress);
-
-  function handleReset() {
-    reset();
-    setValidationResults(null);
-  }
+  const upload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
+      const events = JSON.parse(content) as TracingEvent[];
+      const results = validateEvents(events);
+      setValidationResults(results);
+    }, [setValidationResults]),
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset } = upload;
 
   const stats = useMemo(() => {
     if (!validationResults) return null;

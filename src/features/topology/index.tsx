@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useFileUpload } from '../../shared/hooks';
-import type { ProgressInfo } from '../../shared/hooks/useFileUpload';
+import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents, loadTracingData, loadNdvBuffer } from '../../shared/engine';
 import { analyzeDistributed } from '../../shared/distributed';
 import type { TopologyGraph, RootCauseReport, ServiceNode, ServiceHealth } from '../../shared/distributed';
@@ -26,39 +25,39 @@ export function TopologyPage() {
   const setTraceData = useRootStore(s => s.setTraceData);
   const navigate = useUIStore(s => s.navigate);
 
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [graph, setGraph] = useState<TopologyGraph | null>(null);
   const [report, setReport] = useState<RootCauseReport | null>(null);
   const [events, setEvents] = useState<TracingEvent[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<PanelTab>('service');
 
-  const { loading, error, fileName, fileSize, handleFile, reset } = useFileUpload(
-    useCallback(async (content: string) => {
+  const upload = useUnifiedFileUpload({
+    onFile: useCallback(async (content: string) => {
       applyEvents(loadTracingData(content));
     }, []),
-    setProgress,
-    useCallback(async (buffer: ArrayBuffer) => {
+    onBinaryFile: useCallback(async (buffer: ArrayBuffer) => {
       applyEvents(loadNdvBuffer(buffer));
     }, []),
-  );
+  });
+  const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
-  function applyEvents(evts: TracingEvent[]) {
-    const result = analyzeDistributed(evts);
-    setGraph(result.graph);
-    setReport(result.report);
-    setEvents(evts);
-    setSelected(result.report.rootCause.service);
-    setTab('service');
-  }
+   function applyEvents(evts: TracingEvent[]) {
+     const analysis = analyzeTracingEvents(evts);
+     const result = analyzeDistributed(evts);
+     setGraph(result.graph);
+     setReport(result.report);
+     setEvents(evts);
+     setSelected(null);
+     setTraceData(analysis);
+   }
 
-  function handleReset() {
-    reset();
-    setGraph(null);
-    setReport(null);
-    setEvents([]);
-    setSelected(null);
-  }
+   function handleReset() {
+     uploadReset();
+     setGraph(null);
+     setReport(null);
+     setEvents([]);
+     setSelected(null);
+   }
 
   function openTraceViewer() {
     if (events.length === 0) return;
@@ -90,12 +89,17 @@ export function TopologyPage() {
           onReset={handleReset}
           loading={loading}
           progress={progress}
+          onUrlLoad={loadFromUrl}
+          urlLoading={urlLoading}
+          urlError={urlError}
+          urlProgress={urlProgress}
+          onUrlCancel={cancelUrl}
         />
-        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {(error || urlError) && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
         <div className="mt-8">
           <EmptyState title={t('topology.noData')} description={t('topology.noDataDesc')} />
         </div>
-        <LoadingOverlay visible={loading} />
+        <LoadingOverlay visible={loading || urlLoading} />
       </div>
     );
   }
@@ -110,21 +114,26 @@ export function TopologyPage() {
           </p>
         </div>
         <div className="w-72 shrink-0">
-          <FileUpload
-            onFile={handleFile}
-            accept=".json,.ndv"
-            label={t('topology.uploadTitle')}
-            maxSize={500 * 1024 * 1024}
-            fileName={fileName}
-            fileSize={fileSize}
-            onReset={handleReset}
-            loading={loading}
-            progress={progress}
-          />
+            <FileUpload
+              onFile={handleFile}
+              accept=".json,.ndv"
+              label={t('topology.uploadTitle')}
+              maxSize={500 * 1024 * 1024}
+              fileName={fileName}
+              fileSize={fileSize}
+              onReset={handleReset}
+              loading={loading}
+              progress={progress}
+              onUrlLoad={loadFromUrl}
+              urlLoading={urlLoading}
+              urlError={urlError}
+              urlProgress={urlProgress}
+              onUrlCancel={cancelUrl}
+            />
+          </div>
         </div>
-      </div>
 
-      {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {(error || urlError) && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>}
 
       <div className="grid grid-cols-4 gap-3 mb-4">
         <StatCard title={t('topology.services')} value={String(graph.services)} />

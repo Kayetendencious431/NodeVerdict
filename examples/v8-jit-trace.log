@@ -1,0 +1,58 @@
+# NodeVerdict JIT Insights demo trace
+# Captured with: node --trace-ic --trace-maps --trace-opt --trace-deopt demo.js
+# Simulates a real Express-style codebase with several V8 JIT anti-patterns.
+
+[marking 0x02c800000001 <SharedFunctionInfo buildUser> for optimized recompilation, reason: SmallFunction]
+[compiling method 0x02c800000001 <SharedFunctionInfo buildUser> using TurboFan]
+[optimizing 0x02c800000001 <SharedFunctionInfo buildUser> - took 0.012 ms]
+LoadIC[0] (0x1f000000) at demo.js:20:14 offset 9: [key: total] map 0x02d8000000a1
+LoadIC[0] (0x1f000000) at demo.js:20:14 offset 9: [key: total] map 0x02d8000000a1
+LoadIC[0] (0x1f000000) at demo.js:20:14 offset 9: [key: total] map 0x02d8000000a1
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: id] map 0x02d800000038
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: name] map 0x02d800000041
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: id] map 0x02d80000004a
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: age] map 0x02d800000053
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: name] map 0x02d80000005c
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: id] map 0x02d800000038
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: name] map 0x02d800000041
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: age] map 0x02d800000053
+StoreIC (0x1d000000) at demo.js:6:13 offset 42: [key: name] map 0x02d80000005c
+Map transition from 0x02d800000038 to 0x02d800000041 for "name" at demo.js:6:13
+Map transition from 0x02d800000041 to 0x02d80000004a for "id" at demo.js:6:13
+Map transition from 0x02d80000004a to 0x02d800000053 for "age" at demo.js:6:13
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d800000001
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d80000000a
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d800000013
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d80000001c
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d800000025
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d80000002e
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d800000037
+LoadIC[0] (0x1c000000) at demo.js:8:25 offset 17: [key: name] map 0x02d800000040
+Map transition from 0x02d800000001 to 0x02d80000000a for "name" at demo.js:8:25
+CallIC (0x1e000000) at demo.js:9:31 offset 66: [key: getUser] map 0x02d800000001 0x02d80000000a
+CallIC (0x1e000000) at demo.js:9:31 offset 66: [key: getUser] map 0x02d800000013
+KeyedLoadIC[2] (0x20000000) at demo.js:25:20 offset 30: [key: 0] map 0x02d8000000b1
+[deoptimizing (DEOPT eager): begin 0x02c800000001 <buildUser> at demo.js:6:13]
+[bailout (kind: deopt-eager, reason: Map check)]
+[deoptimizing (DEOPT eager): end 0x02c800000001 <buildUser>]
+[deoptimizing (DEOPT eager): begin 0x02c800000001 <buildUser> at demo.js:6:13]
+[deoptimizing (DEOPT eager): end 0x02c800000001 <buildUser>]
+[deoptimizing (DEOPT eager): begin 0x02c800000001 <buildUser> at demo.js:6:13]
+[bailout (kind: deopt-eager, reason: Smi)]
+[deoptimizing (DEOPT eager): end 0x02c800000001 <buildUser>]
+[deoptimizing (DEOPT eager): begin 0x02c800000001 <buildUser> at demo.js:6:13]
+[deoptimizing (DEOPT eager): end 0x02c800000001 <buildUser>]
+[marking 0x02c800000002 <SharedFunctionInfo renderUser> for optimized recompilation, reason: SmallFunction]
+[compiling method 0x02c800000002 <SharedFunctionInfo renderUser> using TurboFan] OSR
+[optimizing 0x02c800000002 <SharedFunctionInfo renderUser> - took 0.023 ms]
+[disabled optimization for 0x02c800000003 <SharedFunctionInfo legacyWrap>, reason: NeverOptimize]
+[optimizing 0x02c800000004 <SharedFunctionInfo aggregate> - took 0.008 ms]
+[deoptimizing (DEOPT eager): begin 0x02c800000004 <aggregate> at demo.js:12:7]
+[deoptimizing (DEOPT eager): end 0x02c800000004 <aggregate>]
+[optimizing 0x02c800000004 <SharedFunctionInfo aggregate> - took 0.009 ms]
+[deoptimizing (DEOPT eager): begin 0x02c800000004 <aggregate> at demo.js:12:7]
+[bailout (kind: deopt-lazy, reason: Megamorphic)]
+[deoptimizing (DEOPT eager): end 0x02c800000004 <aggregate>]
+[marking 0x02c800000005 <SharedFunctionInfo parseRow> for optimized recompilation, reason: SmallFunction]
+[compiling method 0x02c800000005 <SharedFunctionInfo parseRow> using TurboFan]
+[optimizing 0x02c800000005 <SharedFunctionInfo parseRow> - took 0.011 ms]

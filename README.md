@@ -317,6 +317,52 @@ Track heap snapshot comparison results over time to identify memory trends. Ever
 
 ![Snapshot History](./introduction/SSnapshotDiffHistory.png)
 
+### 24. Streaming Causal Graph Reconstruction (NEW)
+
+Turn a flat, possibly-broken stream of TracingChannel events into a **causal DAG** — *why* things happen, not just *when*.
+
+- **Streaming / incremental** — `CausalGraphBuilder.ingest()` accepts events one at a time (Live agent, streaming worker); `build()` can be called repeatedly as the trace arrives, so a partially-usable graph is always available
+- **Causality, not just time** — edges come from explicit parent ids (`parentOperationId`/`parentSpanId`), `asyncId`→`triggerAsyncId` matching, or interval containment; out-of-order arrivals are re-paired instead of rejected
+- **Confidence + gap healing** — every edge carries `high`/`medium`/`low` confidence; missing ancestors are back-filled as *virtual* nodes so the topology stays connected without inventing real operations
+- **Loop detection** — a valid causal DAG is acyclic; DFS finds back edges, flags the involved nodes, and reports the cycle
+- **Orphan semantics** — a node is an orphan only when a *declared* relationship is broken (missing parent / end-without-start); a genuine root is not an orphan
+
+### 25. Real-time Streaming RCA (NEW)
+
+Root-cause inference that runs on a *partial* trace — verdicts arrive while data is still streaming in, with uncertainty made explicit.
+
+- **Incremental blame** — a fixed-point influence pass over the partial DAG (child→parent) seeded by per-node anomaly; recomputes in O(edges) per snapshot
+- **Temporal sliding window** — each sample carries an end timestamp; only `[now − windowMs, now]` counts as "recent", so a latency/error spike is measured against an all-time baseline
+- **Signals** — `latency-spike` (own duration vs 25th-percentile baseline), `error-rate-spike` (window vs all-time error fraction), `high-error-count`, `incomplete-open-span`
+- **Uncertainty labeling** — open (unclosed) spans carry a penalized confidence; overall confidence scales with how much closed evidence has accumulated
+- **Early warnings** — coarse channel-level alerts (`critical`/`warning`) generated independently of the graph, before a precise verdict is possible
+
+### 26. Trace-to-Code Reverse Mapping (NEW)
+
+Link every stack frame back to the *authored* source — no manual `node_modules/...:234:5` archaeology.
+
+- **Source Map V3 resolver** — dependency-free base64-VLQ decoder (`src/shared/source/source-map-resolver.ts`) with forward (generated→original) and reverse (original→generated) lookups
+- **V8 stack parser** — handles both `at fn (file:line:col)` and bare `at file:line:col` forms
+- **Node.js C++ / built-in filtering** — `node::...`, `* internalBinding *`, `node:internal/...`, `[eval]` frames are surfaced (not hidden) as filtered, while `node_modules` stays app code
+- **File System Access bridge** — pick a project root once, read `.map` files on demand; degrades to a no-op stub on unsupported contexts
+
+### 27. Elastic Alignment & Noise Suppression (NEW)
+
+Two runs of identical code still diverge by GC pauses, DNS/TCP setup and timer jitter. This layer separates *jitter* from *regression* before anything gets reported.
+
+- **Noise model** — `src/shared/differential/noise-model.ts` detects and masks GC pauses, timer jitter, DNS/TCP setup, and wide idle inter-event gaps, independently per trace
+- **Semantic differ** — drops masked divergences and trivial value-only churn; keeps error-introduced / stack-change / inserted / missing / channel-sequence (path-changing) differences
+- **Regression scoring** — `severity = confidence × impact`: confidence is the share of structural changes, impact blends mean significance with channel breadth; `minDeltaMs` adds a second anti-noise floor
+- **Backward compatible** — the full pipeline runs when you pass `{ regression: {} }` to `analyzeDifferential`; without it, behaviour is unchanged
+
+### 28. Viewport-Culled Virtual-Scroll Waterfall (NEW)
+
+The waterfall is no longer a `N × 3`-node SVG that freezes on 100k spans.
+
+- **Viewport culling** — only the rows inside `[scrollTop, scrollTop + viewportHeight]` (plus an overscan buffer) are rendered; DOM count is O(visible), independent of total span count
+- **Zero-visual-change** — still D3 SVG, same look; a small footer shows `Showing {shown} of {total} spans (viewport)`
+- **Deliberately scoped** — row virtualization only; no WebGL/Canvas rewrite, no LOD down-sampling (a waterfall's bottleneck is row count, not horizontal density)
+
 ---
 
 ## Getting Started
@@ -491,7 +537,19 @@ src/
 │   │   ├── memory-analyzer.ts       # String/external memory/GC log analysis
 │   │   ├── cpu-profile-parser.ts    # CPU profile parsing & flame tree building
 │   │   ├── validator.ts             # Event format validator
-│   │   └── report-generator.ts      # Report generation & compression
+│   │   ├── report-generator.ts      # Report generation & compression
+│   │   ├── causal-rebuilder.ts      # Streaming causal DAG builder (Feature 24)
+│   │   └── jit-analysis.ts          # V8 IC / deopt / hidden-class analysis
+│   ├── streaming/                   # Live / incremental analysis
+│   │   └── streaming-rca.ts         # Partial-DAG streaming RCA (Feature 25)
+│   ├── source/                      # Source & code mapping
+│   │   ├── source-map-resolver.ts   # Dependency-free V3 source-map decoder
+│   │   ├── code-linker.ts           # V8 stack → source-frame linker
+│   │   └── fs-access-bridge.ts      # File System Access API bridge (Feature 26)
+│   ├── differential/                # A/B regression analysis
+│   │   ├── noise-model.ts           # GC/timer/DNS noise masking (Feature 27)
+│   │   ├── semantic-differ.ts       # Semantic divergence filtering
+│   │   └── regression-scoring.ts    # Confidence × impact regression scoring
 │   ├── ai/                          # AI root-cause engine
 │   │   ├── tracePrompt.ts           # Trace-to-prompt converter
 │   │   ├── rcaEngine.ts             # LLM client + local heuristic analyzer

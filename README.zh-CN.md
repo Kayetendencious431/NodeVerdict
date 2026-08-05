@@ -303,6 +303,52 @@ graph LR
 
 ![Snapshot History](./introduction/SnapshotDiffHistory.png)
 
+### 24. 流式因果图重建（新增）
+
+把一条可能是扁平、断裂的 TracingChannel 事件流，重建为**因果 DAG** —— 关注"为什么发生"，而不仅是"何时发生"。
+
+- **流式 / 增量** — `CausalGraphBuilder.ingest()` 逐条接收事件（Live agent、流式 worker）；`build()` 可在 trace 到达过程中反复调用，因此随时都能得到一份部分可用的图
+- **因果关系，而非时间顺序** — 边来自显式父 id（`parentOperationId`/`parentSpanId`）、`asyncId`→`triggerAsyncId` 匹配，或区间包含；乱序到达会被重新配对而非拒绝
+- **置信度 + 缺口修复** — 每条边带 `high`/`medium`/`low` 置信度；缺失的祖先被回填为*虚拟*节点，拓扑保持连通而不虚构真实操作
+- **环检测** — 合法的因果 DAG 无环；DFS 找回边，标记相关节点并报告环
+- **孤儿语义** — 仅当*声明的*关系被破坏（缺少父节点 / 有始无终）时才视为孤儿；真正的根节点不是孤儿
+
+### 25. 实时流式 RCA（新增）
+
+在*部分*数据上进行的根因推断 —— 数据仍在流入时结论就已到达，且不确定性被显式呈现。
+
+- **增量定责** — 在部分 DAG 上做定点影响传播（child→parent），由各节点异常评分引导；每个快照重算 O(边数)
+- **时间滑动窗口** — 每个样本带结束时间戳；只有 `[now − windowMs, now]` 计入"近期"，因此延迟/错误尖峰以全时基线为对照
+- **信号** — `latency-spike`（自身时长 vs 25 分位基线）、`error-rate-spike`（窗口 vs 全时错误占比）、`high-error-count`、`incomplete-open-span`
+- **不确定性标注** — 未闭合 span 携带降权置信度；整体置信度随已闭合证据累积而升高
+- **早期预警** — 在图形成前，先发出粗粒度 通道级 `critical`/`warning` 告警
+
+### 26. Trace 到代码反向映射（新增）
+
+把每个堆栈帧映射回*原始*源码 —— 不再需要手动翻 `node_modules/...:234:5`。
+
+- **Source Map V3 解析器** — 无依赖 base64-VLQ 解码器（`src/shared/source/source-map-resolver.ts`），支持正向（generated→original）与反向（original→generated）查询
+- **V8 堆栈解析** — 同时处理 `at fn (file:line:col)` 与裸 `at file:line:col` 两种形式
+- **Node.js C++ / 内置过滤** — `node::...`、`* internalBinding *`、`node:internal/...`、`[eval]` 帧被*突出*而非隐藏，`node_modules` 视作应用代码
+- **文件系统访问桥** — 选一次项目根目录，按需读取 `.map` 文件；在不支持的环境下退化为 no-op 桩
+
+### 27. 弹性对齐与噪声抑制（新增）
+
+同样的代码跑两次仍会因 GC 暂停、DNS/TCP 建立、定时器抖动而不同。本层在产出任何结论*之前*把"抖动"与"回归"分开。
+
+- **噪声模型** — `src/shared/differential/noise-model.ts` 每条 trace 独立检测并屏蔽 GC 暂停、定时器抖动、DNS/TCP 建立与大段空闲事件间隙
+- **语义差异器** — 丢弃被屏蔽的差异与琐碎的纯数值变更；保留错误引入 / 栈变更 / 新增 / 缺失 / 通道序列（路径改变）差异
+- **回归评分** — `severity = confidence × impact`：置信度是结构性变更的占比，影响融合平均显著性与通道广度；`minDeltaMs` 提供第二道抗噪下限
+- **向后兼容** — 传 `{ regression: {} }` 给 `analyzeDifferential` 时启用完整管线；不传则行为不变
+
+### 28. 视口剔除虚拟滚动瀑布图（新增）
+
+瀑布图不再是一张会在 10 万 span 时卡死的 `N × 节点数` SVG。
+
+- **视口剔除** — 只渲染 `[scrollTop, scrollTop + viewportHeight]` 内的行（外加 overscan 缓冲）；DOM 数 O(可见)，与总 span 数无关
+- **零视觉变化** — 仍是 D3 SVG，观感不变；底部小字显示 `显示 {shown} / {total} 个 span（视口）`
+- **刻意收窄** — 只做行虚拟化；不做 WebGL/Canvas 重写、不做 LOD 降采样（瀑布图的瓶颈是行数，不是横向密度）
+
 ---
 
 ## 快速开始
@@ -465,7 +511,19 @@ src/
 │   │   ├── memory-analyzer.ts       # 字符串/外部内存/GC 日志分析
 │   │   ├── cpu-profile-parser.ts    # CPU 性能分析解析及火焰树构建
 │   │   ├── validator.ts             # 事件格式验证器
-│   │   └── report-generator.ts      # 报告生成与压缩
+│   │   ├── report-generator.ts      # 报告生成与压缩
+│   │   ├── causal-rebuilder.ts      # 流式因果 DAG 构建器（功能 24）
+│   │   └── jit-analysis.ts          # V8 IC / deopt / 隐藏类分析
+│   ├── streaming/                   # 实时 / 增量分析
+│   │   └── streaming-rca.ts         # 部分 DAG 流式 RCA（功能 25）
+│   ├── source/                      # 源码与代码映射
+│   │   ├── source-map-resolver.ts   # 无依赖 V3 source-map 解码器
+│   │   ├── code-linker.ts           # V8 堆栈 → 源码帧链接器
+│   │   └── fs-access-bridge.ts      # File System Access API 桥（功能 26）
+│   ├── differential/                # A/B 回归分析
+│   │   ├── noise-model.ts           # GC/定时器/DNS 噪声抑制（功能 27）
+│   │   ├── semantic-differ.ts       # 语义差异过滤
+│   │   └── regression-scoring.ts    # 置信度 × 影响 回归评分
 │   ├── ai/                          # AI 根因引擎
 │   │   ├── tracePrompt.ts           # 追踪转提示词转换器
 │   │   ├── rcaEngine.ts             # LLM 客户端 + 本地启发式分析器

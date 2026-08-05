@@ -301,7 +301,7 @@ graph LR
 - **完整历史表格** — 每条记录的 ID、时间戳、标签、对比前后大小、保留 Δ 与增长率
 - **导入 / 清除** — 导入历史记录文件（例如 `examples/snapshot-history.json`）以载入既往运行数据，或清除全部记录
 
-![Snapshot History](./introduction/SnapshotHistory.png)
+![Snapshot History](./introduction/SnapshotDiffHistory.png)
 
 ---
 

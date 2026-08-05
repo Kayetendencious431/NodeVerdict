@@ -10,7 +10,7 @@ import { IcStateGraph } from './components/IcStateGraph';
 import { OptTimeline } from './components/OptTimeline';
 import { FindingsList } from './components/FindingsList';
 import { PatchPanel } from './components/PatchPanel';
-import demoV8Trace from '../../../examples/v8-jit-trace.log?raw';
+import { demoV8Trace } from './demoTrace';
 
 type Tab = 'overview' | 'graph' | 'timeline' | 'findings' | 'patches';
 

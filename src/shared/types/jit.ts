@@ -188,6 +188,26 @@ export interface EquivalenceResult {
   confidence: number;
 }
 
+/** One insertion step in an order-based rewrite. */
+export interface PatchMove {
+  /** Property key being moved. */
+  key: string;
+  /** Index it originally sits at. */
+  fromIdx: number;
+  /** Index it lands at after this step. */
+  toIdx: number;
+}
+
+/** A distinct object shape (key set + insertion order) found in source. */
+export interface KeyShape {
+  /** Canonical (sorted) key set. */
+  keys: string[];
+  /** Every distinct insertion order that builds this key set. */
+  orders: string[][];
+  /** How many object constructions share this key set. */
+  sites: number;
+}
+
 /** A generated, semantically-verified optimization patch. */
 export interface JitPatch {
   id: string;
@@ -204,6 +224,12 @@ export interface JitPatch {
   equivalence: EquivalenceResult;
   /** Path/context label, e.g. "demo.js:9". */
   location: string;
+  /** Original insertion order of the rewritten keys. */
+  keys: string[];
+  /** Canonical (sorted) order those keys are rewritten to. */
+  canonicalKeys: string[];
+  /** Insertion steps, keyed by positions in the current board. */
+  moves: PatchMove[];
 }
 
 /** Full analysis result. */

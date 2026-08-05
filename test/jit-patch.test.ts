@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generatePatches, verifyPatchEquivalence } from '../src/shared/engine/jit-patch';
+import { generatePatches, verifyPatchEquivalence, analyzeKeyShapes } from '../src/shared/engine/jit-patch';
 
 describe('object-literal-key-order patches', () => {
   const src = `function makeUser(id, name) {
@@ -103,5 +103,37 @@ describe('generatePatches robustness', () => {
 
   it('returns an empty list for clean code', () => {
     expect(generatePatches('function f() { return 42; }')).toHaveLength(0);
+  });
+});
+
+describe('patch metadata for visualization', () => {
+  it('exposes keys, canonicalKeys and insertion moves', () => {
+    const src = `const a = { b: 1, a: 2, c: 3 };
+const b = { a: 2, c: 3, b: 1 };`;
+    const p = generatePatches(src).find(x => x.strategy === 'object-literal-key-order');
+    expect(p).toBeDefined();
+    expect(p!.keys).toEqual(['b', 'a', 'c']);
+    expect(p!.canonicalKeys).toEqual(['a', 'b', 'c']);
+    expect(p!.moves.length).toBeGreaterThan(0);
+    // applying the moves to keys must reproduce the canonical order
+    const board = [...p!.keys];
+    for (const m of p!.moves) {
+      const tmp = board[m.toIdx];
+      board[m.toIdx] = board[m.fromIdx];
+      board[m.fromIdx] = tmp;
+    }
+    expect(board).toEqual(p!.canonicalKeys);
+  });
+
+  it('analyzeKeyShapes groups identical key sets across insertion orders', () => {
+    const src = `const a = { id, name, age: 0 };
+const b = { name, age: 0, id };
+const c = { age: 0, name, id };
+const other = { x: 1, y: 2 };`;
+    const shapes = analyzeKeyShapes(src);
+    const user = shapes.find(s => s.keys.join('|') === 'age|id|name');
+    expect(user).toBeDefined();
+    expect(user!.sites).toBe(3);
+    expect(user!.orders.length).toBeGreaterThanOrEqual(2);
   });
 });

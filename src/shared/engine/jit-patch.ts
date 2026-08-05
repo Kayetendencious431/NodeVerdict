@@ -1,5 +1,5 @@
 import { parse } from '@babel/parser';
-import type { JitPatch, JitFinding, PatchStrategy, EquivalenceResult } from '../types/jit';
+import type { JitPatch, JitFinding, PatchStrategy, EquivalenceResult, PatchMove, KeyShape } from '../types/jit';
 
 /**
  * Generate semantically-equivalent optimization patches from detected JIT
@@ -50,6 +50,48 @@ function isReorderableObjectProp(p: NodeLike): boolean {
   // ObjectProperty nodes in object literals are always plain data ("init")
   // properties; ObjectMethod covers getters/setters/methods.
   return p.type === 'ObjectProperty' && p.computed !== true;
+}
+
+/** Break the difference between an array and its sorted form into adjacent-swap steps. */
+function insertionMoves(keys: string[]): PatchMove[] {
+  const arr = [...keys];
+  const moves: PatchMove[] = [];
+  for (let i = 1; i < arr.length; i++) {
+    let j = i;
+    while (j > 0 && arr[j] < arr[j - 1]) {
+      moves.push({ key: arr[j], fromIdx: j, toIdx: j - 1 });
+      [arr[j - 1], arr[j]] = [arr[j], arr[j - 1]];
+      j--;
+    }
+  }
+  return moves;
+}
+
+/** Distinct object shapes (key set + insertion order) in a block of source. */
+export function analyzeKeyShapes(source: string): KeyShape[] {
+  const ast = parseSnippet(source);
+  if (!ast) return [];
+  const ordersBySet = new Map<string, { keys: string[]; orders: string[][]; sites: number }>();
+  const record = (order: string[]) => {
+    const keys = [...new Set(order)].sort();
+    const setKey = keys.join('|');
+    const entry = ordersBySet.get(setKey) ?? { keys, orders: [], sites: 0 };
+    if (!ordersBySet.has(setKey)) ordersBySet.set(setKey, entry);
+    entry.sites += 1;
+    if (!entry.orders.some(o => o.join('|') === order.join('|'))) entry.orders.push(order);
+  };
+  walkAst(ast, n => {
+    if (n.type === 'ObjectExpression') {
+      const props = (n as unknown as { properties?: unknown[] }).properties ?? [];
+      const keys = props.map(p => propKeyName(p as NodeLike)).filter(k => k !== '');
+      if (keys.length >= 2) record(keys);
+    }
+  });
+  walkStmtRuns(ast, run => {
+    const keys = run.slice(1).map(assignKeyName).filter(k => k !== '');
+    if (keys.length >= 2) record(keys);
+  });
+  return [...ordersBySet.values()].sort((a, b) => b.sites - a.sites);
 }
 
 /** Canonicalize object property order inside every ObjectExpression node. */
@@ -264,6 +306,9 @@ function keyOrderPatch(source: string, node: NodeLike): JitPatch | null {
     after,
     equivalence: eq,
     location: loc,
+    keys,
+    canonicalKeys,
+    moves: insertionMoves(keys),
   };
 }
 
@@ -306,6 +351,9 @@ function initOrderPatch(source: string, run: NodeLike[]): JitPatch | null {
     after,
     equivalence: eq,
     location: loc,
+    keys,
+    canonicalKeys,
+    moves: insertionMoves(keys),
   };
 }
 

@@ -658,6 +658,7 @@ const en: Record<string, string> = {
   'traceViewer.uploadTitle': 'Upload tracing events JSON',
   'traceViewer.exportNdv': 'Export .ndv (binary)',
   'traceViewer.waterfallChart': 'Waterfall Chart',
+  'traceViewer.trackVirtual': 'Showing {shown} of {total} spans (viewport)',
 
   // Alert Rules
   'alert.title': 'Alert Rules',

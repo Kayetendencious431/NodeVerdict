@@ -63,14 +63,19 @@ function HomePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
-        {features.map(f => (
-          <FeatureCard
+        {features.map((f, i) => (
+          <div
             key={f.page}
-            title={t(`feature.${f.page}`)}
-            description={t(`feature.${f.page}.desc`)}
-            icon={f.icon}
-            onClick={() => navigate(f.page)}
-          />
+            className="animate-fade-up"
+            style={{ animationDelay: `${80 + i * 40}ms` }}
+          >
+            <FeatureCard
+              title={t(`feature.${f.page}`)}
+              description={t(`feature.${f.page}.desc`)}
+              icon={f.icon}
+              onClick={() => navigate(f.page)}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -81,7 +86,7 @@ function FeatureCard({ title, description, icon, onClick, className = '' }: {
   title: string; description: string; icon: string; onClick: () => void; className?: string;
 }) {
   return (
-    <button onClick={onClick} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 transition-all group h-full flex flex-col ${className}`}>
+    <button onClick={onClick} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-600 hover:-translate-y-0.5 transition-all group h-full flex flex-col ${className}`}>
       <div className="flex items-start gap-4 flex-1">
         <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
           <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,29 +115,41 @@ export function App() {
     }
   }, [darkMode]);
 
+  const pages: { id: Page; node: React.ReactNode }[] = [
+    { id: 'home', node: <HomePage /> },
+    { id: 'event-viewer', node: <EventViewerPage /> },
+    { id: 'trace-viewer', node: <TraceViewerPage /> },
+    { id: 'validator', node: <ValidatorPage /> },
+    { id: 'heap-analyzer', node: <HeapAnalyzerPage /> },
+    { id: 'heap-diff', node: <HeapDiffPage /> },
+    { id: 'report', node: <ReportPage /> },
+    { id: 'cpu-profiler', node: <CpuProfilerPage /> },
+    { id: 'search-filter', node: <SearchFilterPage /> },
+    { id: 'time-series', node: <TimeSeriesPage /> },
+    { id: 'perf-compare', node: <PerfComparePage /> },
+    { id: 'tutorial', node: <TutorialPage /> },
+    { id: 'memory-timeline', node: <MemoryTimelinePage /> },
+    { id: 'gc-log', node: <GcLogPage /> },
+    { id: 'live-monitor', node: <LiveMonitorPage /> },
+    { id: 'alert-rules', node: <AlertRulesPage /> },
+    { id: 'snapshot-history', node: <SnapshotHistoryPage /> },
+    { id: 'ai-rca', node: <AiRcaPage /> },
+    { id: 'topology', node: <TopologyPage /> },
+    { id: 'differential-debug', node: <DifferentialDebugPage /> },
+    { id: 'jit-insights', node: <JitInsightsPage /> },
+  ];
+
   return (
     <AppShell>
-      <div style={{ display: currentPage === 'home' ? 'block' : 'none' }}><HomePage /></div>
-      <div style={{ display: currentPage === 'event-viewer' ? 'block' : 'none' }}><EventViewerPage /></div>
-      <div style={{ display: currentPage === 'trace-viewer' ? 'block' : 'none' }}><TraceViewerPage /></div>
-      <div style={{ display: currentPage === 'validator' ? 'block' : 'none' }}><ValidatorPage /></div>
-      <div style={{ display: currentPage === 'heap-analyzer' ? 'block' : 'none' }}><HeapAnalyzerPage /></div>
-      <div style={{ display: currentPage === 'heap-diff' ? 'block' : 'none' }}><HeapDiffPage /></div>
-      <div style={{ display: currentPage === 'report' ? 'block' : 'none' }}><ReportPage /></div>
-      <div style={{ display: currentPage === 'cpu-profiler' ? 'block' : 'none' }}><CpuProfilerPage /></div>
-      <div style={{ display: currentPage === 'search-filter' ? 'block' : 'none' }}><SearchFilterPage /></div>
-      <div style={{ display: currentPage === 'time-series' ? 'block' : 'none' }}><TimeSeriesPage /></div>
-      <div style={{ display: currentPage === 'perf-compare' ? 'block' : 'none' }}><PerfComparePage /></div>
-      <div style={{ display: currentPage === 'tutorial' ? 'block' : 'none' }}><TutorialPage /></div>
-      <div style={{ display: currentPage === 'memory-timeline' ? 'block' : 'none' }}><MemoryTimelinePage /></div>
-      <div style={{ display: currentPage === 'gc-log' ? 'block' : 'none' }}><GcLogPage /></div>
-      <div style={{ display: currentPage === 'live-monitor' ? 'block' : 'none' }}><LiveMonitorPage /></div>
-      <div style={{ display: currentPage === 'alert-rules' ? 'block' : 'none' }}><AlertRulesPage /></div>
-      <div style={{ display: currentPage === 'snapshot-history' ? 'block' : 'none' }}><SnapshotHistoryPage /></div>
-      <div style={{ display: currentPage === 'ai-rca' ? 'block' : 'none' }}><AiRcaPage /></div>
-      <div style={{ display: currentPage === 'topology' ? 'block' : 'none' }}><TopologyPage /></div>
-      <div style={{ display: currentPage === 'differential-debug' ? 'block' : 'none' }}><DifferentialDebugPage /></div>
-      <div style={{ display: currentPage === 'jit-insights' ? 'block' : 'none' }}><JitInsightsPage /></div>
+      {pages.map(page => (
+        <div
+          key={page.id}
+          className={page.id === 'home' ? 'animate-fade-in' : 'animate-fade-up'}
+          style={{ display: currentPage === page.id ? 'block' : 'none' }}
+        >
+          {page.node}
+        </div>
+      ))}
     </AppShell>
   );
 }

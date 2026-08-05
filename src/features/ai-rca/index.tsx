@@ -200,7 +200,7 @@ export function AiRcaPage() {
   }, [analysis]);
 
   return (
-    <div className="p-6">
+    <div className={!analysis ? "p-6 max-w-3xl mx-auto" : "p-6"}>
       <RcaConfigModal
         key={modalSession}
         open={modalOpen}
@@ -213,7 +213,7 @@ export function AiRcaPage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('aiRca.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('aiRca.subtitle')}</p>
         </div>
-        <div className="w-72">
+        <div className="w-full max-w-2xl">
         <FileUpload
           onFile={handleFile}
           accept=".json,.ndv"

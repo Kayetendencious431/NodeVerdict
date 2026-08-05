@@ -642,6 +642,7 @@ const zh: Record<string, string> = {
   'traceViewer.uploadTitle': '上传追踪数据',
   'traceViewer.exportNdv': '导出 .ndv（二进制）',
   'traceViewer.waterfallChart': '瀑布图',
+  'traceViewer.trackVirtual': '视口内显示 {shown} / 共 {total} 个跨度',
 
   // Alert Rules
   'alert.title': '告警规则',

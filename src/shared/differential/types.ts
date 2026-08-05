@@ -8,6 +8,7 @@
  */
 
 import type { TracingEvent } from '../types';
+import type { RegressionOptions, RegressionScore } from './regression-types';
 
 /** One element of the alignment: a matched pair or an unpaired event. */
 export interface AlignedPair {
@@ -115,6 +116,8 @@ export interface DifferentialOptions {
   ignoreKeys?: string[];
   /** Minimum significance for a divergence to be reported. */
   minSignificance?: number;
+  /** Enable the noise model + semantic filter + regression scorer. */
+  regression?: RegressionOptions;
 }
 
 /** Full differential analysis output. */
@@ -122,6 +125,8 @@ export interface DifferentialAnalysis {
   alignment: Alignment;
   divergences: DivergencePoint[];
   report: DifferentialReport;
+  /** Present when `regression` was requested — the regression scorecard. */
+  regression?: RegressionScore;
   meta: {
     normalEvents: number;
     faultEvents: number;

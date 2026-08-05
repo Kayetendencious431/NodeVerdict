@@ -279,15 +279,15 @@ Turn cross-service OTel traces into a live dependency map and a ranked root-caus
 
 Never `JSON.parse` a multi-GB file again. Large trace files are parsed incrementally in a dedicated Web Worker so the UI thread is never blocked and memory stays bounded.
 
-- **True streaming** — Reads via `file.stream().pipeThrough(new TextDecoderStream())` instead of `FileReader.readAsText()`, so a 3GB file never exists as a single in-memory string
+- **True streaming** — Reads via `file.stream().pipeThrough(new TextDecoderStream())` instead of `FileReader.readAsText()`, so a 200MB file never exists as a single in-memory string
 - **Incremental JSON tokenizer** — `IncrementalJsonParser` is a resumable state machine that emits each complete top-level `{...}` the moment its closing brace arrives, no matter where chunk boundaries fall (mid-string, mid-escape, mid-number, or split multi-byte UTF-8). Memory is bounded by the *largest single event*, not the file size
 - **Incremental analyzer** — `StreamingTraceAnalyzer` mirrors the `Normalize → Pair → Stats` pipeline but consumes events one at a time: pairing is done with a streaming `startMap`, channel stats accumulate into per-channel duration arrays, and aggregates cover the *entire* file
 - **Worker + zero main-thread blocking** — parsing runs in a module worker; progress (`%`, events seen) is relayed back every ~100ms and the UI stays at 60fps
 - **Bounded retention** — Full `events[]` / `operations[]` arrays are capped (250k each by default) so peak memory stays under control; channel stats, error rate, and time range are always computed over 100% of events, and a notice appears when the view is truncated
-- **Auto-routing** — `useStreamingTraceFile` is a drop-in for `useFileUpload`: files under 64MB use the existing in-memory path (identical behavior, OTel/ndv support), larger files stream through the worker
+- **Auto-routing** — `useStreamingTraceFile` is a drop-in for `useFileUpload`: files under 10MB use the existing in-memory path (identical behavior, OTel/ndv support), larger files stream through the worker
 - **Verification** — `test/streaming-bench.perf.test.ts` runs a streaming-vs-in-memory parity + timing benchmark (`BENCH_STREAM=1 npx vitest run test/streaming-bench.perf.test.ts`); on a 21MB / 200k-event file the streaming pipeline completes in ~0.5s wall time with identical aggregates
 
-> **Roadmap** — the same interface is designed so the tokenizer/analyzer core can later be swapped for a Rust + WASM implementation (`wasm-bindgen` + `serde`) to push raw throughput toward the 3GB/5s target; streaming, worker, retention, and progress plumbing stay unchanged.
+> **Roadmap** — the same interface is designed so the tokenizer/analyzer core can later be swapped for a Rust + WASM implementation (`wasm-bindgen` + `serde`) to push raw throughput toward the 200MB/5s target; streaming, worker, retention, and progress plumbing stay unchanged.
 
 ### 22. Differential Debug (NEW)
 
@@ -594,7 +594,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 | `examples/gc-memory-leak.log` | 60s of GC with a progressive heap leak: 11 major GCs at escalating frequency, growing pauses (avg ~59ms), +315MB growth | GC Log Analyzer |
 | `examples/otel-distributed-trace.json` | 7-service OTel export (api → auth → users-db, order → inventory → inventory-db, payment-gateway) with injected clock skew and a connection-pool-exhausted failure on payment-gateway | Service Topology |
 | `examples/otel-cascade-failure.json` | 12-service OTel export (2 checkout traces) with a cascading failure: payment-gateway 502 error + slow recommendation/cart-db/inventory-db → api 500 | Service Topology |
-| `examples/tracing-large.json` | ~427k events / 64MB trace file — large enough to route through the Streaming Large-File Import worker (files ≥64MB) | Streaming Import, Event Viewer |
+| `examples/tracing-large.json` | ~427k events / 64MB trace file — large enough to route through the Streaming Large-File Import worker (files ≥10MB) | Streaming Import, Event Viewer |
 | `examples/differential-normal.json` | Healthy run: 5 GET /api/users requests, all 200, 1024-byte socket reads | Differential Debug |
 | `examples/differential-fault.json` | Same code path with an injected DB connection-lost bug: request req-004 reads 512 bytes, throws `mysql2:query error`, returns 500 | Differential Debug |
 | `examples/differential-timeout-normal.json` | Healthy run: 5 GET /api/orders requests; upstream calls complete in ~50ms, all 200 | Differential Debug |
@@ -671,7 +671,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 A: No. All analysis runs entirely in your browser. No data is uploaded to any server. The Live Monitor feature connects to a local agent via WebSocket, but data stays within your local network.
 
 **Q: What file formats are supported?**  
-A: JSON files for TracingChannel events (up to 3GB, streamed via Web Worker), standard OpenTelemetry OTLP/JSON trace exports, the compact `.ndv` binary format, `.heapsnapshot` files for heap analysis (up to 3GB), `.cpuprofile` files for CPU profiling (up to 3GB), `process.memoryUsage()` JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
+A: JSON files for TracingChannel events (up to 200MB, streamed via Web Worker), standard OpenTelemetry OTLP/JSON trace exports, the compact `.ndv` binary format, `.heapsnapshot` files for heap analysis (up to 200MB), `.cpuprofile` files for CPU profiling (up to 200MB), `process.memoryUsage()` JSON arrays for Memory Timeline, and `--trace-gc` log files for GC analysis.
 
 **Q: Can I use this for production monitoring?**  
 A: The Live Monitor feature provides real-time diagnostics via WebSocket without restarting your process — useful for on-demand debugging in staging or production. For persistent production monitoring, consider dedicated APM tools.

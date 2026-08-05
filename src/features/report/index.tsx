@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRootStore } from '../../stores';
 import { useUnifiedFileUpload } from '../../shared/hooks';
 import { analyzeTracingEvents, generateReport, decompressReport } from '../../shared/engine';
@@ -28,7 +28,7 @@ export function ReportPage() {
   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset } = upload;
 
   // Check URL hash for shared reports
-  useMemo(() => {
+  useEffect(() => {
     if (!reportData && window.location.hash) {
       const decoded = decodeReportFromHash(window.location.hash);
       if (decoded) setReportData(decoded);
@@ -199,31 +199,31 @@ function exportHtmlReport(reportData: ReportData, t: (key: string) => string): v
   const heap = reportData.heapAnalysis;
 
   const rows = channels.map(cs => `
-    <tr key="${cs.channel}">
-      <td className="px-4 py-2 font-medium">${escapeHtml(cs.channel)}</td>
+    <tr>
+      <td style="padding:4px 8px;font-size:13px;text-align:left;font-weight:500">${escapeHtml(cs.channel)}</td>
       <td style="padding:4px 8px;font-size:13px;text-align:right">${cs.totalOperations}</td>
       <td style="padding:4px 8px;font-size:13px;text-align:right">${cs.avgDuration.toFixed(1)}ms</td>
-      <td style="padding:4px 8px;font-size:13px;text-align:right;color:${cs.p95Duration > 100 ? 'text-red-600' : 'text-gray-600'}">${cs.p95Duration.toFixed(1)}ms</td>
-      <td style="padding:4px 8px;font-size:13px;text-align:right;color:${cs.errorCount > 0 ? 'text-red-600' : 'text-gray-600'}">${cs.errorCount}</td>
+      <td style="padding:4px 8px;font-size:13px;text-align:right;color:${cs.p95Duration > 100 ? '#dc2626' : '#6b7280'}">${cs.p95Duration.toFixed(1)}ms</td>
+      <td style="padding:4px 8px;font-size:13px;text-align:right;color:${cs.errorCount > 0 ? '#dc2626' : '#6b7280'}">${cs.errorCount}</td>
     </tr>
   `).join('');
-  const findingsHtml = findings.map(f => `<li className="mb-2 text-sm text-gray-600 dark:text-gray-300">${escapeHtml(f)}</li>`).join('');
+  const findingsHtml = findings.map(f => `<li style="margin-bottom:8px;font-size:14px;color:#4b5563">${escapeHtml(f)}</li>`).join('');
 
   const heapHtml = heap ? `
     <div style="margin-top:16px">
-      <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">${t('report.exportHeapAnalysis')}</h2>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-uppercase tracking-wider">${t('report.exportTotalSize')}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">${(heap.totalSize / 1024 / 1024).toFixed(1)}MB</p>
+      <h2 style="font-size:18px;font-weight:600;color:#374151;margin-bottom:16px">${t('report.exportHeapAnalysis')}</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+        <div style="background:#f9fafb;padding:16px;border-radius:8px">
+          <p style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">${t('report.exportTotalSize')}</p>
+          <p style="font-size:24px;font-weight:bold;color:#1f2937;margin-top:8px">${(heap.totalSize / 1024 / 1024).toFixed(1)}MB</p>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <p className="text-xs text-gray-500 text-uppercase tracking-wider">${t('report.exportTopObjects')}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">${heap.topObjects.length}</p>
+        <div style="background:#f9fafb;padding:16px;border-radius:8px">
+          <p style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">${t('report.exportTopObjects')}</p>
+          <p style="font-size:24px;font-weight:bold;color:#1f2937;margin-top:8px">${heap.topObjects.length}</p>
         </div>
-        <div className="bg-fef2f2 dark:bg-gray-800 rounded-lg p-4">
-          <p className="text-xs text-gray-500 text-uppercase tracking-wider">${t('report.exportLeakSuspects')}</p>
-          <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">${heap.leakCount}</p>
+        <div style="background:#fef2f2;padding:16px;border-radius:8px">
+          <p style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">${t('report.exportLeakSuspects')}</p>
+          <p style="font-size:24px;font-weight:bold;color:#dc2626;margin-top:8px">${heap.leakCount}</p>
         </div>  
       </div>
     </div>
@@ -241,32 +241,36 @@ function exportHtmlReport(reportData: ReportData, t: (key: string) => string): v
     h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px 0; }
     .subtitle { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
     table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    th { background: #f9fafb; text-align: left; padding: 8px; font-size: 12px; font-weight: 500; color: #6b72
+    th { background: #f9fafb; text-align: left; padding: 8px; font-size: 12px; font-weight: 500; color: #6b7280; }
+    .header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .logo { width: 32px; height: 32px; background: #059669; color: #fff; text-align: center; font-weight: bold; font-size: 18px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .findings { margin-bottom: 24px; }
+    .footer { text-align: center; font-size: 14px; color: #6b7280; margin-top: 16px; }
 </head>
 <body>
   <div class="container">
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-8 h-8 bg-emerald-600 text-white text-center font-bold text-lg rounded-md flex items-center justify-center">N</div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">${t('report.exportTitle')}</h1>
+    <div class="header-row">
+      <div class="logo">N</div>
+      <h1>${t('report.exportTitle')}</h1>
     </div>
-    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">${t('report.exportGenerated')
+    <p class="subtitle">${t('report.exportGenerated')
       .replace('{date}', new Date(reportData.generatedAt).toLocaleString())
       .replace('{events}', String(reportData.eventSummary?.totalEvents ?? 0))
       .replace('{operations}', String(reportData.eventSummary?.totalOperations ?? 0))}</p>
 
     <div class="findings">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">${t('report.exportKeyFindings')}</h2>
-      <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300">${findingsHtml}</ul>
+      <h2 style="font-size:18px;font-weight:600;color:#1f2937;margin-bottom:8px">${t('report.exportKeyFindings')}</h2>
+      <ul style="list-style:disc;padding-left:20px;color:#4b5563">${findingsHtml}</ul>
     </div>
 
     <table>
       <thead>
         <tr>
-          <th className="px-4 py-2 font-medium text-left text-gray-500 dark:text-gray-400">${t('report.exportChannel')}</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportOps')}</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportAvg')}</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportP95')}</th>
-          <th className="px-4 py-2 font-medium text-right text-gray-500 dark:text-gray-400">${t('report.exportErrors')}</th>
+          <th style="padding:8px 16px;font-weight:500;text-align:left;color:#6b7280">${t('report.exportChannel')}</th>
+          <th style="padding:8px 16px;font-weight:500;text-align:right;color:#6b7280">${t('report.exportOps')}</th>
+          <th style="padding:8px 16px;font-weight:500;text-align:right;color:#6b7280">${t('report.exportAvg')}</th>
+          <th style="padding:8px 16px;font-weight:500;text-align:right;color:#6b7280">${t('report.exportP95')}</th>
+          <th style="padding:8px 16px;font-weight:500;text-align:right;color:#6b7280">${t('report.exportErrors')}</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -274,8 +278,8 @@ function exportHtmlReport(reportData: ReportData, t: (key: string) => string): v
 
     ${heapHtml}
 
-    <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-      <p className="text-center">${t('report.exportFooter').replace('{time}', new Date().toISOString())}</p>
+    <div class="footer">
+      <p>${t('report.exportFooter').replace('{time}', new Date().toISOString())}</p>
     </div>
   </div>
 </body>

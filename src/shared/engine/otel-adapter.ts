@@ -78,7 +78,8 @@ function spanToEvents(span: OtlpSpan, serviceName?: string): TracingEvent[] {
   let start = timeToMs(span.startTimeUnixNano);
   let end = timeToMs(span.endTimeUnixNano);
   let duration = end > start ? end - start : 0;
-  if (span.duration !== undefined && span.duration > 0) {
+  // Use Jaeger fields only when OTLP fields are not available
+  if (!span.startTimeUnixNano && !span.endTimeUnixNano && span.duration !== undefined && span.duration > 0) {
     const jaegerStart = timeToMs(span.startTime);
     duration = span.duration / 1e3;
     start = jaegerStart;

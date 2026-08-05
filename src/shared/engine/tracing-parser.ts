@@ -30,7 +30,7 @@ function pairOperations(events: TracingEvent[]): PairedOperation[] {
           status: event.eventType === 'error' ? 'error' : 'success',
         });
       } else {
-        // orphan end/error — still record it
+        // orphan end/error — still record it, but use a null start
         operations.push({
           channel: event.channel,
           operationId: key,

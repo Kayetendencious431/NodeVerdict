@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { TracingEvent } from '../../../shared/types';
 import { formatTimestamp, channelColor, eventTypeColor, truncate } from '../../../shared/utils';
 import { useI18n } from '../../../shared/i18n/useI18n';

@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useRootStore } from '../../stores';
-import { parseHeapSnapshot, analyzeHeap, analyzeStrings, analyzeExternalMemory, calculateGrowthRate } from '../../shared/engine';
+import { analyzeStrings, analyzeExternalMemory, calculateGrowthRate } from '../../shared/engine';
 import { useUnifiedFileUpload } from '../../shared/hooks';
-import type { StringAnalysis, MemoryGrowthRate } from '../../shared/types';
+import { createWorkerClient } from '../../shared/workers/worker-factory';
+import type { StringAnalysis, MemoryGrowthRate, HeapAnalysis } from '../../shared/types';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
 import { ExportButton } from '../report/ExportButton';
@@ -23,15 +24,36 @@ export function HeapAnalyzerPage() {
   const { heapAnalysis, setHeapAnalysis } = useRootStore();
   const [stringAnalysis, setStringAnalysis] = useState<StringAnalysis | null>(null);
   const [externalMemory, setExternalMemory] = useState<{totalExternal: number; totalArrayBuffers: number; externalStrings: number; externalPercent: number} | null>(null);
+
+  // Persistent heap worker for parsing
+  const heapWorkerRef = useRef<ReturnType<typeof createWorkerClient<string, HeapAnalysis>> | null>(null);
+  const [heapLoading, setHeapLoading] = useState(false);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('../../shared/workers/heap-handler.ts', import.meta.url), { type: 'module' });
+    heapWorkerRef.current = createWorkerClient<string, HeapAnalysis>(worker);
+    return () => {
+      heapWorkerRef.current?.terminate();
+      heapWorkerRef.current = null;
+    };
+  }, []);
+
   const upload = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
-      const snapshot = parseHeapSnapshot(content);
-      const analysis = analyzeHeap(snapshot);
-      setHeapAnalysis(analysis);
-      const stringResult = analyzeStrings(snapshot);
-      const externalResult = analyzeExternalMemory(snapshot);
-      setStringAnalysis(stringResult);
-      setExternalMemory(externalResult);
+      setHeapLoading(true);
+      try {
+        const worker = heapWorkerRef.current;
+        if (!worker) throw new Error('Heap worker not initialized');
+        const analysis = await worker.execute(content);
+        setHeapAnalysis(analysis);
+        // These are lightweight and can run on the main thread
+        const stringResult = analyzeStrings(analysis.snapshot);
+        const externalResult = analyzeExternalMemory(analysis.snapshot);
+        setStringAnalysis(stringResult);
+        setExternalMemory(externalResult);
+      } finally {
+        setHeapLoading(false);
+      }
     }, [setHeapAnalysis, setStringAnalysis, setExternalMemory]),
   });
   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
@@ -73,7 +95,7 @@ export function HeapAnalyzerPage() {
         />
         {displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{displayError}</p>}
         {(error || urlError) && !displayError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{urlError}</p>}
-        <LoadingOverlay visible={loading || urlLoading} message={t('heapAnalyzer.loading')} />
+        <LoadingOverlay visible={loading || urlLoading || heapLoading} message={t('heapAnalyzer.loading')} />
         <div className="mt-8">
           <EmptyState
             title={t('heapAnalyzer.noData')}
@@ -321,7 +343,7 @@ export function HeapAnalyzerPage() {
         </div>
       </div>
 
-      <LoadingOverlay visible={loading} />
+      <LoadingOverlay visible={loading || heapLoading} />
     </div>
   );
 }

@@ -1,12 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useUnifiedFileUpload } from '../../shared/hooks';
-import { analyzeTracingEvents, buildWaterfall, loadTracingData, loadNdvBuffer } from '../../shared/engine';
 import { analyzeTraceWithLLM, analyzeTraceLocally, loadRcaConfig, saveRcaConfig, clearRcaConfig, isRcaConfigured } from '../../shared/ai';
 import type { RcaConfig } from '../../shared/ai';
+import { createWorkerClient } from '../../shared/workers/worker-factory';
+import type { TracingWorkerInput, TracingWorkerOutput } from '../../shared/workers/tracing-handler';
 import { FileUpload, EmptyState, StatCard } from '../../shared/components';
-import type { TracingAnalysis, TraceSpan } from '../../shared/types';
+import type { TraceViewerData, TraceSpan } from '../../shared/types';
 import { useI18n } from '../../shared/i18n/useI18n';
 
 function RcaConfigModal({ open, onClose, onSave }: {
@@ -15,10 +16,17 @@ function RcaConfigModal({ open, onClose, onSave }: {
   onSave: (config: RcaConfig) => void;
 }) {
   const { t } = useI18n();
-  const existing = useMemo(() => loadRcaConfig(), [open]);
-  const [apiKey, setApiKey] = useState(existing?.apiKey ?? '');
-  const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? 'https://api.openai.com/v1');
-  const [model, setModel] = useState(existing?.model ?? 'gpt-4o-mini');
+  const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1');
+  const [model, setModel] = useState('gpt-4o-mini');
+  useEffect(() => {
+    const config = loadRcaConfig();
+    if (config) {
+      setApiKey(config.apiKey ?? '');
+      setBaseUrl(config.baseUrl ?? 'https://api.openai.com/v1');
+      setModel(config.model ?? 'gpt-4o-mini');
+    }
+  }, [open]);
   const [showKey, setShowKey] = useState(false);
 
   if (!open) return null;
@@ -85,7 +93,7 @@ function RcaConfigModal({ open, onClose, onSave }: {
 
 export function AiRcaPage() {
   const { t, lang } = useI18n();
-  const [analysis, setAnalysis] = useState<TracingAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<TraceViewerData | null>(null);
   const [spans, setSpans] = useState<TraceSpan[]>([]);
   const [report, setReport] = useState<string>('');
   const [reportError, setReportError] = useState<string | null>(null);
@@ -94,20 +102,46 @@ export function AiRcaPage() {
   const [modalSession, setModalSession] = useState(0);
   const reportRef = useRef<HTMLDivElement>(null);
 
+  const workerRef = useRef<ReturnType<typeof createWorkerClient<TracingWorkerInput, TracingWorkerOutput>> | null>(null);
+  const [rcaLoading, setRcaLoading] = useState(false);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('../../shared/workers/tracing-handler.ts', import.meta.url), { type: 'module' });
+    workerRef.current = createWorkerClient<TracingWorkerInput, TracingWorkerOutput>(worker);
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
   const upload = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
-      const events = loadTracingData(content);
-      applyTrace(events);
+      const w = workerRef.current;
+      if (!w) return;
+      setRcaLoading(true);
+      try {
+        const a = await w.execute({ content, format: 'json' });
+        applyTrace(a);
+      } finally {
+        setRcaLoading(false);
+      }
     }, []),
     onBinaryFile: useCallback(async (buffer: ArrayBuffer) => {
-      applyTrace(loadNdvBuffer(buffer));
+      const w = workerRef.current;
+      if (!w) return;
+      setRcaLoading(true);
+      try {
+        const a = await w.execute({ content: '', format: 'ndv', ndvBuffer: buffer });
+        applyTrace(a);
+      } finally {
+        setRcaLoading(false);
+      }
     }, []),
   });
   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
-  function applyTrace(events: ReturnType<typeof analyzeTracingEvents>['events']) {
-    const a = analyzeTracingEvents(events);
-    const s = buildWaterfall(a.operations, a.events);
+  function applyTrace(a: TraceViewerData) {
+    const s = a.spans;
     setAnalysis(a);
     setSpans(s);
     setReport('');

@@ -52,7 +52,7 @@ export function DifferentialDebugPage() {
       setAnalysis(result);
       setSelectedDivergence(0);
     } catch (err) {
-      // error handled by overlay
+      console.error('Differential analysis failed:', err);
     }
   }, [normal, fault]);
 

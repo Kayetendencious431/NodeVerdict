@@ -1,38 +1,71 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createWorkerClient } from '../workers';
+import { createWorkerClient } from '../workers/worker-factory';
+import type { WorkerHandler } from '../workers/worker-factory';
+
+interface UseWorkerOptions {
+  /** Whether to keep the worker alive between calls (default: true) */
+  persistent?: boolean;
+}
+
+interface UseWorkerState<TInput, TOutput> {
+  loading: boolean;
+  error: string | null;
+  result: TOutput | null;
+}
 
 /**
- * Generic hook for calling a Web Worker.
- * Provides execute function, loading state, and error handling.
+ * Creates a Web Worker from a constructor URL and exposes a callable
+ * `execute` function that runs work off the main thread.
  */
-export function useWorker<TInput, TOutput>(workerFactory: () => Worker) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+export function useWorker<TInput, TOutput>(
+  workerUrl: string,
+  options: UseWorkerOptions = {},
+) {
+  const { persistent = true } = options;
   const clientRef = useRef<ReturnType<typeof createWorkerClient<TInput, TOutput>> | null>(null);
+  const [state, setState] = useState<UseWorkerState<TInput, TOutput>>({
+    loading: false,
+    error: null,
+    result: null,
+  });
 
+  // Cleanup on unmount
   useEffect(() => {
-    const worker = workerFactory();
-    clientRef.current = createWorkerClient<TInput, TOutput>(worker);
     return () => {
       clientRef.current?.terminate();
       clientRef.current = null;
     };
-  }, [workerFactory]);
-
-  const execute = useCallback(async (input: TInput): Promise<TOutput> => {
-    if (!clientRef.current) throw new Error('Worker not initialized');
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await clientRef.current.execute(input);
-      return result;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
   }, []);
 
-  return { execute, loading, error };
+  const getClient = useCallback(() => {
+    if (!clientRef.current) {
+      const worker = new Worker(new URL(workerUrl, import.meta.url), { type: 'module' });
+      clientRef.current = createWorkerClient<TInput, TOutput>(worker);
+    }
+    return clientRef.current;
+  }, [workerUrl]);
+
+  const execute = useCallback(async (input: TInput): Promise<TOutput> => {
+    setState({ loading: true, error: null, result: null });
+    try {
+      const client = getClient();
+      const result = await client.execute(input);
+      setState({ loading: false, error: null, result });
+      return result;
+    } catch (err) {
+      const msg = (err as Error).message;
+      setState({ loading: false, error: msg, result: null });
+      throw err;
+    }
+  }, [getClient]);
+
+  const terminate = useCallback(() => {
+    clientRef.current?.terminate();
+    clientRef.current = null;
+    setState({ loading: false, error: null, result: null });
+  }, []);
+
+  return { ...state, execute, terminate };
 }
+
+export type { UseWorkerState };

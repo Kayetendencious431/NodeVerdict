@@ -39,7 +39,7 @@ export function createWorkerHandler<TInput, TOutput>(
 /**
  * Client-side wrapper that creates a Worker and returns a callable interface.
  */
-export function createWorkerClient<TInput, TOutput>(worker: Worker) {
+export function createWorkerClient<TInput, TOutput>(worker: Worker, timeoutMs = 60_000) {
   const pending = new Map<string, { resolve: (v: TOutput) => void; reject: (e: Error) => void }>();
 
   worker.onmessage = (event: MessageEvent<WorkerResponse<TOutput>>) => {
@@ -54,13 +54,29 @@ export function createWorkerClient<TInput, TOutput>(worker: Worker) {
     }
   };
 
+  worker.onerror = (event) => {
+    // Worker-level error — reject all pending
+    const err = new Error(`Worker error: ${event.message}`);
+    for (const [id, { reject }] of pending) {
+      reject(err);
+    }
+    pending.clear();
+  };
+
   let nextId = 0;
 
   return {
     execute(input: TInput): Promise<TOutput> {
       return new Promise((resolve, reject) => {
         const id = `worker_${nextId++}_${Date.now()}`;
-        pending.set(id, { resolve, reject });
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error(`Worker execution timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+        pending.set(id, {
+          resolve: (v) => { clearTimeout(timer); resolve(v); },
+          reject: (e) => { clearTimeout(timer); reject(e); },
+        });
         const request: WorkerRequest<TInput> = { id, payload: input };
         worker.postMessage(request);
       });

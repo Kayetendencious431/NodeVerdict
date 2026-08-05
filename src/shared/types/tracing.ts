@@ -53,6 +53,24 @@ export interface TracingAnalysis {
   channels: string[];
 }
 
+/**
+ * Lightweight trace data for the trace-viewer.
+ * All heavy computation (waterfall, dependencies, bottlenecks)
+ * is done inside the Worker so the main thread never receives
+ * the raw events/operations arrays over postMessage.
+ */
+export interface TraceViewerData {
+  channelStats: ChannelStats[];
+  totalEvents: number;
+  totalOperations: number;
+  errorRate: number;
+  timeRange: { start: number; end: number };
+  channels: string[];
+  spans: TraceSpan[];
+  dependencies: DependencyLink[];
+  bottlenecks: TraceSpan[];
+}
+
 /** Trace span for waterfall visualization */
 export interface TraceSpan {
   id: string;

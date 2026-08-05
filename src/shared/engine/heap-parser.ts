@@ -88,13 +88,15 @@ export function parseHeapSnapshot(raw: string): HeapSnapshot {
     for (let j = 0; j < (count as number); j++) {
       if (edgeIdx + 2 >= edgesRaw.length) break;
       const edgeTypeName = edgeTypes[edgesRaw[edgeIdx + edgeTypeIdx] as number] as string | undefined;
+      const toNodeIdx = Math.floor((edgesRaw[edgeIdx + edgeToNodeIdx] as number) / nodeStride);
+      const toNodeId = nodes[toNodeIdx]?.id ?? 0;
       const edge: HeapEdge = {
         type: (edgeTypeName as HeapEdge['type']) ?? 'property',
         name: strings[edgesRaw[edgeIdx + edgeNameIdx] as number] ?? '',
         fromNode: node.id,
-        toNode: Math.floor((edgesRaw[edgeIdx + edgeToNodeIdx] as number) / nodeStride),
+        toNode: toNodeId,
       };
-      node.children.push(edge.toNode);
+      node.children.push(toNodeIdx);
       edges.push(edge);
       edgeIdx += edgeStride;
     }
@@ -117,6 +119,11 @@ function buildFieldIndex(fields: string[]): Map<string, number> {
 
 function computeRetainedSizes(nodes: HeapNode[]): void {
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  // Build index → id lookup for child traversal
+  const indexToId = new Map<number, number>();
+  for (let i = 0; i < nodes.length; i++) {
+    indexToId.set(i, nodes[i].id);
+  }
   if (nodeMap.size === 0) return;
 
   for (const node of nodes) {
@@ -131,8 +138,9 @@ function computeRetainedSizes(nodes: HeapNode[]): void {
       const n = nodeMap.get(id);
       if (!n) continue;
       retained += n.selfSize;
-      for (const childId of n.children) {
-        if (!visited.has(childId)) stack.push(childId);
+      for (const childIdx of n.children) {
+        const childId = indexToId.get(childIdx);
+        if (childId !== undefined && !visited.has(childId)) stack.push(childId);
       }
     }
 

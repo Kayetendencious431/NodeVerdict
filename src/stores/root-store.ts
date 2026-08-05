@@ -1,8 +1,7 @@
 import { create } from 'zustand';
-import type { TracingAnalysis, HeapAnalysis, ReportData, SnapshotDiffRecord, AlertRule, FiredAlert } from '../shared/types';
+import type { TraceViewerData, TracingAnalysis, HeapAnalysis, ReportData, SnapshotDiffRecord, AlertRule, FiredAlert } from '../shared/types';
 import type { ValidationResult } from '../shared/engine';
 import { defaultAlertRules } from '../shared/engine';
-import { generateId } from '../shared/utils';
 
 /**
  * Root store using Zustand with slice pattern.
@@ -18,8 +17,8 @@ interface RootState {
   setSelectedEventIndex: (idx: number | null) => void;
 
   // Trace Viewer slice
-  traceData: TracingAnalysis | null;
-  setTraceData: (data: TracingAnalysis | null) => void;
+  traceData: TraceViewerData | null;
+  setTraceData: (data: TraceViewerData | null) => void;
 
   // Validator slice
   validationResults: ValidationResult[] | null;

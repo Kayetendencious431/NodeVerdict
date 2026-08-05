@@ -72,7 +72,7 @@ function checkNaming(event: TracingEvent): ValidationIssue | null {
 function checkRequiredFields(event: TracingEvent): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  if (!event.timestamp) {
+  if (event.timestamp == null) {
     issues.push({
       severity: 'error',
       category: 'required-field',

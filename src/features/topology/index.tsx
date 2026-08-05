@@ -1,15 +1,17 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useUnifiedFileUpload } from '../../shared/hooks';
-import { analyzeTracingEvents, loadTracingData, loadNdvBuffer } from '../../shared/engine';
+import { analyzeTracingEvents, buildWaterfall, buildDependencies, findBottlenecks, loadTracingData, loadNdvBuffer } from '../../shared/engine';
 import { analyzeDistributed } from '../../shared/distributed';
 import type { TopologyGraph, RootCauseReport, ServiceNode, ServiceHealth } from '../../shared/distributed';
-import type { TracingEvent } from '../../shared/types';
+import type { TracingEvent, TraceViewerData, TraceSpan } from '../../shared/types';
 import { useRootStore, useUIStore } from '../../stores';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { TopologyGraphCanvas } from './components/TopologyGraphCanvas';
 import { RootCausePanel } from './components/RootCausePanel';
 import { ServiceDetail } from './components/ServiceDetail';
+import { createWorkerClient } from '../../shared/workers/worker-factory';
+import type { TracingWorkerInput, TracingWorkerOutput } from '../../shared/workers/tracing-handler';
 
 type PanelTab = 'service' | 'rootcause';
 
@@ -18,6 +20,15 @@ const HEALTH_DOT: Record<ServiceHealth, string> = {
   warning: 'bg-amber-500',
   faulty: 'bg-red-500',
 };
+
+function flattenChildren(span: TraceSpan): TraceSpan[] {
+  const result: TraceSpan[] = [];
+  for (const child of span.children) {
+    result.push(child);
+    result.push(...flattenChildren(child));
+  }
+  return result;
+}
 
 export function TopologyPage() {
   const { t } = useI18n();
@@ -31,37 +42,85 @@ export function TopologyPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<PanelTab>('service');
 
+  const workerRef = useRef<ReturnType<typeof createWorkerClient<TracingWorkerInput, TracingWorkerOutput>> | null>(null);
+  const [topologyLoading, setTopologyLoading] = useState(false);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('../../shared/workers/tracing-handler.ts', import.meta.url), { type: 'module' });
+    workerRef.current = createWorkerClient<TracingWorkerInput, TracingWorkerOutput>(worker);
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
   const upload = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
-      applyEvents(loadTracingData(content));
+      const w = workerRef.current;
+      if (!w) return;
+      setTopologyLoading(true);
+      try {
+        const data = await w.execute({ content, format: 'json' });
+        // Parse raw events on main thread for distributed analysis
+        const evts = loadTracingData(content);
+        applyEvents(evts, data);
+      } finally {
+        setTopologyLoading(false);
+      }
     }, []),
     onBinaryFile: useCallback(async (buffer: ArrayBuffer) => {
-      applyEvents(loadNdvBuffer(buffer));
+      const w = workerRef.current;
+      if (!w) return;
+      setTopologyLoading(true);
+      try {
+        const data = await w.execute({ content: '', format: 'ndv', ndvBuffer: buffer });
+        const evts = loadNdvBuffer(buffer);
+        applyEvents(evts, data);
+      } finally {
+        setTopologyLoading(false);
+      }
     }, []),
   });
   const { loading, error, fileName, fileSize, handleFile, progress, urlLoading, urlError, urlProgress, loadFromUrl, cancelUrl, handleReset: uploadReset } = upload;
 
-   function applyEvents(evts: TracingEvent[]) {
-     const analysis = analyzeTracingEvents(evts);
-     const result = analyzeDistributed(evts);
-     setGraph(result.graph);
-     setReport(result.report);
-     setEvents(evts);
-     setSelected(null);
-     setTraceData(analysis);
-   }
+   function applyEvents(evts: TracingEvent[], viewerData: TraceViewerData) {
+    const analysis = analyzeTracingEvents(evts);
+    const result = analyzeDistributed(evts);
+    setGraph(result.graph);
+    setReport(result.report);
+    setEvents(evts);
+    setSelected(null);
+    setTraceData(viewerData);
+  }
 
-   function handleReset() {
-     uploadReset();
-     setGraph(null);
-     setReport(null);
-     setEvents([]);
-     setSelected(null);
-   }
+  function handleReset() {
+    uploadReset();
+    setGraph(null);
+    setReport(null);
+    setEvents([]);
+    setSelected(null);
+  }
 
   function openTraceViewer() {
     if (events.length === 0) return;
-    setTraceData(analyzeTracingEvents(events));
+    // Re-parse through the Worker for the viewer page
+    // For now, compute on main thread (events are already loaded)
+    const analysis = analyzeTracingEvents(events);
+    const spans = buildWaterfall(analysis.operations, analysis.events);
+    const dependencies = buildDependencies(analysis.operations);
+    const allSpans = spans.flatMap(s => [s, ...flattenChildren(s)]);
+    const bottlenecks = findBottlenecks(allSpans);
+    setTraceData({
+      channelStats: analysis.channelStats,
+      totalEvents: analysis.totalEvents,
+      totalOperations: analysis.totalOperations,
+      errorRate: analysis.errorRate,
+      timeRange: analysis.timeRange,
+      channels: analysis.channels,
+      spans,
+      dependencies,
+      bottlenecks,
+    });
     navigate('trace-viewer');
   }
 
@@ -99,7 +158,7 @@ export function TopologyPage() {
         <div className="mt-8">
           <EmptyState title={t('topology.noData')} description={t('topology.noDataDesc')} />
         </div>
-        <LoadingOverlay visible={loading || urlLoading} />
+        <LoadingOverlay visible={loading || urlLoading || topologyLoading} />
       </div>
     );
   }

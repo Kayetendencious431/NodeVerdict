@@ -32,7 +32,7 @@ export interface StreamingFileOptions {
 }
 
 export function useStreamingTraceFile(options: StreamingFileOptions) {
-  const { onAnalysis, onProgress, fastPathThreshold = 64 * 1024 * 1024, maxEvents, maxOperations } = options;
+  const { onAnalysis, onProgress, fastPathThreshold = 16 * 1024 * 1024, maxEvents, maxOperations } = options;
   const onAnalysisRef = useRef(onAnalysis);
   onAnalysisRef.current = onAnalysis;
 

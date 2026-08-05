@@ -1,4 +1,4 @@
-import type { TracingAnalysis, TraceSpan } from '../types';
+import type { TraceViewerData, TraceSpan } from '../types';
 import { buildTracePrompt, buildUserPrompt, buildSystemPrompt, type TracePrompt } from './tracePrompt';
 
 /**
@@ -17,7 +17,7 @@ export interface RcaConfig {
 
 export interface RcaOptions {
   config: RcaConfig;
-  analysis: TracingAnalysis;
+  analysis: TraceViewerData;
   spans: TraceSpan[];
   lang: 'en' | 'zh';
   signal?: AbortSignal;
@@ -54,7 +54,7 @@ export function isRcaConfigured(): boolean {
   return loadRcaConfig() !== null;
 }
 
-export function buildRcaPrompt(analysis: TracingAnalysis, spans: TraceSpan[], lang: 'en' | 'zh'): TracePrompt {
+export function buildRcaPrompt(analysis: TraceViewerData, spans: TraceSpan[], lang: 'en' | 'zh'): TracePrompt {
   return buildTracePrompt(analysis, spans);
 }
 
@@ -129,7 +129,7 @@ export async function analyzeTraceWithLLM(opts: RcaOptions): Promise<string> {
 }
 
 /** Heuristic fallback analysis used when no API key is configured. */
-export function analyzeTraceLocally(analysis: TracingAnalysis, spans: TraceSpan[], lang: 'en' | 'zh'): string {
+export function analyzeTraceLocally(analysis: TraceViewerData, spans: TraceSpan[], lang: 'en' | 'zh'): string {
   const lines: string[] = [];
   lines.push(lang === 'zh' ? '## 根因分析（本地启发式）' : '## Root Cause Analysis (local heuristic)');
 

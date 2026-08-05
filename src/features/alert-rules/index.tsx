@@ -133,13 +133,11 @@ export function AlertRulesPage() {
   }
 
   // Determine which rules are currently firing
-  const firingRuleIds = new Set<string>();
   const recentFired = firedAlerts.slice(0, 10);
   const firingMap = new Map<string, { value: number; message: string }>();
   for (const fa of recentFired) {
     if (!firingMap.has(fa.ruleId)) {
       firingMap.set(fa.ruleId, { value: fa.value, message: fa.message });
-      firingRuleIds.add(fa.ruleId);
     }
   }
 

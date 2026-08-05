@@ -282,7 +282,8 @@ export function TimeSeriesPage() {
 
   const durations = tracingAnalysis.operations.filter(op => op.duration > 0).map(op => op.duration);
   const avgDuration = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
-  const p95 = durations.length ? durations.sort((a, b) => a - b)[Math.ceil(durations.length * 0.95) - 1] : 0;
+  const sorted = [...durations].sort((a, b) => a - b);
+  const p95 = durations.length ? sorted[Math.ceil(durations.length * 0.95) - 1] : 0;
 
   return (
     <div className="p-6">

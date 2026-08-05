@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import type { TraceSpan } from '../../../shared/types';
 import { channelColor } from '../../../shared/utils';
@@ -11,13 +11,27 @@ interface WaterfallChartProps {
 export function WaterfallChart({ spans }: WaterfallChartProps) {
   const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(600);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!svgRef.current || spans.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     const margin = { top: 20, right: 20, bottom: 20, left: 200 };
-    const width = 800 - margin.left - margin.right;
+    const width = Math.max(200, containerWidth - margin.left - margin.right);
     const heightPerSpan = 30;
     const totalHeight = Math.max(100, (spans.length + 1) * heightPerSpan);
 
@@ -89,14 +103,14 @@ export function WaterfallChart({ spans }: WaterfallChartProps) {
           .text('!');
       }
     });
-  }, [spans]);
+  }, [spans, containerWidth]);
 
   if (spans.length === 0) {
     return <div className="text-sm text-gray-400 text-center py-8">{t('traceViewer.noDataToDisplay')}</div>;
   }
 
   return (
-    <div className="overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-2">
+    <div ref={containerRef} className="overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-2">
       <svg ref={svgRef} className="w-full text-gray-700 dark:text-gray-300" style={{ minHeight: '200px' }} />
     </div>
   );

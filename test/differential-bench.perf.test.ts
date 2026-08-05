@@ -26,7 +26,7 @@ function genTrace(count: number, fault: boolean): TracingEvent[] {
       ctx.error = 'timeout';
     }
     out.push({ channel: ch, eventType: 'start', timestamp: i * 10, operationId: op, context: ctx });
-    out.push({ channel: ch, eventType: i % 7 === 0 && fault && i === Math.floor(count * 0.5) ? 'error' : 'end', timestamp: i * 10 + (i % 50), operationId: op, context: ctx });
+    out.push({ channel: ch, eventType: fault && i === Math.floor(count * 0.5) ? 'error' : 'end', timestamp: i * 10 + (i % 50), operationId: op, context: ctx });
   }
   return out;
 }

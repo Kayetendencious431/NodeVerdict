@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
-import { parseHeapSnapshot, diffHeapSnapshots } from '../../shared/engine';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { diffHeapSnapshots } from '../../shared/engine';
 import { useUnifiedFileUpload } from '../../shared/hooks';
+import { createWorkerClient } from '../../shared/workers/worker-factory';
 import { FileUpload, EmptyState, StatCard, LoadingOverlay } from '../../shared/components';
 import { formatBytes } from '../../shared/utils';
-import type { HeapSnapshot } from '../../shared/types';
+import type { HeapSnapshot, HeapAnalysis } from '../../shared/types';
 import type { HeapDiffResult } from '../../shared/engine';
 import { useRootStore } from '../../stores/root-store';
 import { ExportButton } from '../report/ExportButton';
@@ -20,12 +21,33 @@ export function HeapDiffPage() {
   const [fileBName, setFileBName] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
+  // Persistent heap worker for parsing
+  const heapWorkerRef = useRef<ReturnType<typeof createWorkerClient<string, HeapAnalysis>> | null>(null);
+  const [heapLoading, setHeapLoading] = useState(false);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('../../shared/workers/heap-handler.ts', import.meta.url), { type: 'module' });
+    heapWorkerRef.current = createWorkerClient<string, HeapAnalysis>(worker);
+    return () => {
+      heapWorkerRef.current?.terminate();
+      heapWorkerRef.current = null;
+    };
+  }, []);
+
+  const parseInWorker = useCallback(async (content: string): Promise<HeapSnapshot> => {
+    const worker = heapWorkerRef.current;
+    if (!worker) throw new Error('Heap worker not initialized');
+    const analysis = await worker.execute(content);
+    return analysis.snapshot;
+  }, []);
+
   const uploadA = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
       setError(null);
       setFileAName('A');
+      setHeapLoading(true);
       try {
-        const snapshot = parseHeapSnapshot(content);
+        const snapshot = await parseInWorker(content);
         setSnapshotA(snapshot);
         if (snapshotB) {
           setDiffResult(diffHeapSnapshots(snapshot, snapshotB));
@@ -33,15 +55,18 @@ export function HeapDiffPage() {
       } catch (err) {
         const msg = (err as Error).message;
         setError(msg.includes('"snapshot" field') ? t('heapDiff.error') : msg);
+      } finally {
+        setHeapLoading(false);
       }
-    }, [snapshotB, t]),
+    }, [snapshotB, t, parseInWorker]),
   });
   const uploadB = useUnifiedFileUpload({
     onFile: useCallback(async (content: string) => {
       setError(null);
       setFileBName('B');
+      setHeapLoading(true);
       try {
-        const snapshot = parseHeapSnapshot(content);
+        const snapshot = await parseInWorker(content);
         setSnapshotB(snapshot);
         if (snapshotA) {
           setDiffResult(diffHeapSnapshots(snapshotA, snapshot));
@@ -49,14 +74,16 @@ export function HeapDiffPage() {
       } catch (err) {
         const msg = (err as Error).message;
         setError(msg.includes('"snapshot" field') ? t('heapDiff.error') : msg);
+      } finally {
+        setHeapLoading(false);
       }
-    }, [snapshotA, t]),
+    }, [snapshotA, t, parseInWorker]),
   });
 
   const { loading: loadingA, error: errorA, fileName: fileNameA, fileSize: fileSizeA, handleFile: handleFileA, progress: progressA, urlLoading: urlLoadingA, urlError: urlErrorA, urlProgress: urlProgressA, loadFromUrl: loadFromUrlA, cancelUrl: cancelUrlA, handleReset: resetA } = uploadA;
   const { loading: loadingB, error: errorB, fileName: fileNameB, fileSize: fileSizeB, handleFile: handleFileB, progress: progressB, urlLoading: urlLoadingB, urlError: urlErrorB, urlProgress: urlProgressB, loadFromUrl: loadFromUrlB, cancelUrl: cancelUrlB, handleReset: resetB } = uploadB;
 
-  const loading = loadingA || loadingB;
+  const loading = loadingA || loadingB || heapLoading;
 
   function handleReset() {
     resetA();

@@ -208,7 +208,9 @@ export function encodeNdv(events: TracingEvent[]): Uint8Array {
 /** Decodes .ndv binary data (ArrayBuffer | Uint8Array | DataView) into TracingEvent[]. */
 export function decodeNdv(input: ArrayBuffer | Uint8Array | DataView): TracingEvent[] {
   const view = input instanceof DataView ? input : new DataView(
-    input instanceof ArrayBuffer ? input : input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength),
+    input instanceof ArrayBuffer ? input : input.buffer,
+    input instanceof ArrayBuffer ? 0 : input.byteOffset,
+    input instanceof ArrayBuffer ? input.byteLength : input.byteLength,
   );
   const bytes = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
 

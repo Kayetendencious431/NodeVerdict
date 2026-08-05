@@ -182,20 +182,28 @@ function highlightSql(sql: string): string {
     'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'EXISTS', 'UNION', 'CASE',
     'WHEN', 'THEN', 'ELSE', 'END', 'NULL', 'IS', 'TRUE', 'FALSE'];
 
+  // Use a placeholder to avoid matching inside already-replaced HTML spans
+  const PLACEHOLDER = '\x00HL\x00';
   let highlighted = escapeHtml(sql);
+
+  // Highlight keywords
   for (const kw of keywords) {
     const regex = new RegExp(`\\b${kw}\\b`, 'gi');
-    highlighted = highlighted.replace(regex, match => `<span class="text-purple-700 font-semibold">${match}</span>`);
+    highlighted = highlighted.replace(regex, match => `${PLACEHOLDER}K${match}${PLACEHOLDER}`);
   }
-  // Highlight strings
-  highlighted = highlighted.replace(/'[^']*'/g, match => `<span class="text-green-600">${match}</span>`);
-  // Highlight numbers
-  highlighted = highlighted.replace(/\b(\d+)\b/g, (match) => {
-    // Only highlight numbers that aren't already inside a span tag
-    return `<span class="text-yellow-600">${match}</span>`;
-  });
+  // Highlight strings (single-quoted)
+  highlighted = highlighted.replace(/'[^']*'/g, match => `${PLACEHOLDER}S${match}${PLACEHOLDER}`);
   // Highlight comments
-  highlighted = highlighted.replace(/--.*$/gm, (match) => `<span class="text-gray-500 italic">${match}</span>`);
+  highlighted = highlighted.replace(/--.*$/gm, match => `${PLACEHOLDER}C${match}${PLACEHOLDER}`);
+  // Highlight numbers (only those not inside placeholders)
+  highlighted = highlighted.replace(/\b(\d+)\b/g, (match) => `${PLACEHOLDER}N${match}${PLACEHOLDER}`);
+
+  // Now replace placeholders with actual HTML spans
+  highlighted = highlighted
+    .replace(/\x00HLK(.+?)\x00HL/g, '<span class="text-purple-700 font-semibold">$1</span>')
+    .replace(/\x00HLS(.+?)\x00HL/g, '<span class="text-green-600">$1</span>')
+    .replace(/\x00HLC(.+?)\x00HL/g, '<span class="text-gray-500 italic">$1</span>')
+    .replace(/\x00HLN(.+?)\x00HL/g, '<span class="text-yellow-600">$1</span>');
 
   return highlighted;
 }

@@ -15275,7 +15275,7 @@ function spanToEvents(span, serviceName) {
   let start = timeToMs(span.startTimeUnixNano);
   let end = timeToMs(span.endTimeUnixNano);
   let duration = end > start ? end - start : 0;
-  if (span.duration !== void 0 && span.duration > 0) {
+  if (!span.startTimeUnixNano && !span.endTimeUnixNano && span.duration !== void 0 && span.duration > 0) {
     const jaegerStart = timeToMs(span.startTime);
     duration = span.duration / 1e3;
     start = jaegerStart;
@@ -15393,7 +15393,9 @@ var encoder = new TextEncoder();
 var decoder = new TextDecoder();
 function decodeNdv(input) {
   const view = input instanceof DataView ? input : new DataView(
-    input instanceof ArrayBuffer ? input : input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength)
+    input instanceof ArrayBuffer ? input : input.buffer,
+    input instanceof ArrayBuffer ? 0 : input.byteOffset,
+    input instanceof ArrayBuffer ? input.byteLength : input.byteLength
   );
   const bytes = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
   if (view.byteLength < HEADER_SIZE) throw new NdvError("Truncated .ndv header");
@@ -15488,11 +15490,12 @@ function isEventArray(value) {
   return !!first && typeof first === "object" && typeof first.channel === "string" && typeof first.eventType === "string" && typeof first.timestamp === "number";
 }
 function loadTracingData(content) {
-  const format = detectTraceFormat(content);
+  const cleaned = stripBom(content);
+  const format = detectTraceFormat(cleaned);
   if (format === "ndv") {
-    throw new Error("This looks like a .ndv binary file. Please use the .ndv importer.");
+    throw new Error("This file uses the .ndv format which requires binary decoding. Please use the .ndv file upload option.");
   }
-  const parsed = JSON.parse(stripBom(content));
+  const parsed = JSON.parse(cleaned);
   if (format === "otel") {
     return convertOtelToTracingEvents(parsed);
   }

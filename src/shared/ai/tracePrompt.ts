@@ -1,4 +1,4 @@
-import type { TracingAnalysis, TraceSpan, ChannelStats } from '../types';
+import type { TraceViewerData, TraceSpan, ChannelStats } from '../types';
 import { buildKnowledgeSection } from './knowledge';
 
 /**
@@ -52,17 +52,27 @@ function toSummaryNode(span: TraceSpan, parentDuration: number, depth: number): 
   };
 }
 
-export function buildTracePrompt(analysis: TracingAnalysis, spans: TraceSpan[]): TracePrompt {
+function extractErrors(spans: TraceSpan[]): TracePrompt['errorList'] {
+  const result: TracePrompt['errorList'] = [];
+  const walk = (s: TraceSpan) => {
+    if (s.status === 'error') {
+      const errMeta = s.metadata?.error as Record<string, unknown> | undefined;
+      result.push({
+        operationId: s.operationId,
+        channel: s.channel,
+        message: (errMeta?.message as string) ?? '',
+        duration: s.duration,
+      });
+    }
+    s.children.forEach(walk);
+  };
+  spans.forEach(walk);
+  return result.filter(e => e.message);
+}
+
+export function buildTracePrompt(analysis: TraceViewerData, spans: TraceSpan[]): TracePrompt {
   const spanTree = spans.map(s => toSummaryNode(s, analysis.timeRange.end - analysis.timeRange.start, 0));
-  const errorList = analysis.operations
-    .filter(op => op.status === 'error' && op.error)
-    .map(op => ({
-      operationId: op.operationId,
-      channel: op.channel,
-      message: op.error?.error?.message ?? op.error?.error?.name ?? '',
-      duration: op.duration,
-    }))
-    .filter(e => e.message);
+  const errorList = extractErrors(spans);
 
   return {
     overview: {

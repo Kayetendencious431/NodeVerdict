@@ -172,16 +172,16 @@ export function extractHotFunctions(profile: CpuProfile): HotFunction[] {
   const functions: HotFunction[] = [];
   for (const node of profile.nodes) {
     const selfTime = selfTimeMap.get(node.id) ?? 0;
-    const totalTime = totalTimeMap.get(node.id) ?? 0;
+    const nodeTotalTime = totalTimeMap.get(node.id) ?? 0;
 
-    if (selfTime > 0 || totalTime > 0) {
+    if (selfTime > 0 || nodeTotalTime > 0) {
       functions.push({
         functionName: node.callFrame.functionName || '(anonymous)',
         url: node.callFrame.url || '',
         selfTime,
-        totalTime,
-        selfPercent: totalTime > 0 ? (selfTime / totalTime) * 100 : 0,
-        totalPercent: totalTime > 0 ? (totalTime / totalTime) * 100 : 0,
+        totalTime: nodeTotalTime,
+        selfPercent: nodeTotalTime > 0 ? (selfTime / nodeTotalTime) * 100 : 0,
+        totalPercent: totalTime > 0 ? (nodeTotalTime / totalTime) * 100 : 0,
         hitCount: sampleCount.get(node.id) ?? 0,
         line: node.callFrame.lineNumber,
       });

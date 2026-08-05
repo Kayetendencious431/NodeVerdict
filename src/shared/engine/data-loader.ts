@@ -43,13 +43,14 @@ function isEventArray(value: unknown): value is TracingEvent[] {
 
 /** Parses trace content into TracingEvent[] regardless of source format. */
 export function loadTracingData(content: string): TracingEvent[] {
-  const format = detectTraceFormat(content);
+  const cleaned = stripBom(content);
+  const format = detectTraceFormat(cleaned);
 
   if (format === 'ndv') {
-    throw new Error('This looks like a .ndv binary file. Please use the .ndv importer.');
+    throw new Error('This file uses the .ndv format which requires binary decoding. Please use the .ndv file upload option.');
   }
 
-  const parsed = JSON.parse(stripBom(content)) as unknown;
+  const parsed = JSON.parse(cleaned) as unknown;
 
   if (format === 'otel') {
     return convertOtelToTracingEvents(parsed as Record<string, unknown>);
@@ -70,7 +71,7 @@ export function loadNdvBuffer(buffer: ArrayBuffer): TracingEvent[] {
 export async function loadAndAnalyzeTrace(
   content: string,
 ): Promise<{ events: TracingEvent[]; format: TraceFormat }> {
-  const format = detectTraceFormat(content);
   const events = loadTracingData(content);
+  const format = events.length > 0 && isOtelExport(JSON.parse(stripBom(content))) ? 'otel' : 'nodeverdict';
   return { events, format };
 }

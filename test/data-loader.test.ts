@@ -55,7 +55,7 @@ describe('data-loader', () => {
   });
 
   it('rejects .ndv JSON input with a pointer to the binary importer', () => {
-    expect(() => loadTracingData('{"format":"ndv"}')).toThrow(/\.ndv importer/);
+    expect(() => loadTracingData('{"format":"ndv"}')).toThrow(/\.ndv format/);
   });
 
   it('rejects malformed arrays', () => {

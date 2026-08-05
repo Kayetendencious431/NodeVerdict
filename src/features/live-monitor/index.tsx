@@ -423,8 +423,6 @@ export function LiveMonitorPage() {
   }, []);
 
   // Track memory history
-  const historyRef = useRef(memoryHistory);
-  historyRef.current = memoryHistory;
   useEffect(() => {
     if (!memoryData) return;
     const now = Date.now();
@@ -484,7 +482,7 @@ export function LiveMonitorPage() {
       fired.forEach(f => addFiredAlert(f));
       fired.forEach(f => addLog(t('liveMonitor.log.alert').replace('{level}', f.level).replace('{message}', f.message), f.level === 'critical' ? 'error' : 'info'));
     }
-  }, [memoryData, alertRules]);
+  }, [memoryData, alertRules, tracingEvents, memoryHistory]);
 
   const statusDot = connectionStatus === 'connected'
     ? 'bg-green-500'

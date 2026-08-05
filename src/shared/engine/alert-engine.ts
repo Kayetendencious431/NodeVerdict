@@ -11,7 +11,7 @@ export function evaluateAlerts(rules: AlertRule[], snapshot: MetricSnapshot, now
 
   for (const rule of rules) {
     if (!rule.enabled) continue;
-    const value = snapshot[rule.metric];
+    const value = snapshot[rule.metric] ?? 0;
     const didFire = compareRule(rule, value);
     if (didFire) {
       fired.push({
@@ -40,8 +40,8 @@ function compareRule(rule: AlertRule, value: number): boolean {
 }
 
 function buildMessage(rule: AlertRule, value: number): string {
-  const metricLabel = metricLabelMap[rule.metric];
-  const opLabel = operatorLabelMap[rule.operator];
+  const metricLabel = metricLabelMap[rule.metric] ?? rule.metric;
+  const opLabel = operatorLabelMap[rule.operator] ?? rule.operator;
   return `${metricLabel} ${opLabel} ${formatThreshold(rule.threshold, rule.metric)}. Current: ${formatThreshold(value, rule.metric)}`;
 }
 

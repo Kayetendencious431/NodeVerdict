@@ -30,7 +30,7 @@ export function generateReport(
       keyFindings.push(`"${cs.channel}" avg ${cs.avgDuration.toFixed(0)}ms, P95 ${cs.p95Duration.toFixed(0)}ms`);
     }
     if (cs.errorCount > 0) {
-      keyFindings.push(`"${cs.channel}" has ${cs.errorCount} errors (${(cs.errorCount / cs.totalOperations * 100).toFixed(1)}%)`);
+      keyFindings.push(`"${cs.channel}" has ${cs.errorCount} errors (${cs.totalOperations > 0 ? (cs.errorCount / cs.totalOperations * 100).toFixed(1) : '0.0'}%)`);
     }
   }
 

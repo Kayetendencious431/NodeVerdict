@@ -70,22 +70,50 @@ function renderAlert(alert: { level: 'info' | 'warning' | 'error'; message: stri
  */
 export function toHtml(markdown: string): string {
   // Simple Markdown to HTML conversion (basic, no external deps)
-  const html = markdown
+  let html = markdown
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-    .replace(/\| (.+) \|/g, (match) => {
-      // Simple table handling
-      return match;
-    })
     .replace(/\n\n/g, '</p><p>')
     .replace(/^(.+)$/gm, (match) => {
       if (match.startsWith('<')) return match;
       return match;
     });
+
+  // Convert Markdown tables to HTML tables
+  html = html.replace(/(\|[^\n]+\|\n?)+/g, (tableBlock) => {
+    const lines = tableBlock.trim().split('\n');
+    if (lines.length < 2) return tableBlock;
+
+    // Check if second line is a separator (contains only |, -, :)
+    const isSeparator = /^[\s|:-]+$/.test(lines[1]);
+    if (!isSeparator) return tableBlock;
+
+    const headerRow = lines[0];
+    const dataRows = lines.slice(2);
+
+    const cells = headerRow.split('|').filter(c => c.trim().length > 0);
+    let result = '<table>\n<thead>\n<tr>\n';
+    for (const cell of cells) {
+      result += `<th>${cell.trim()}</th>\n`;
+    }
+    result += '</tr>\n</thead>\n<tbody>\n';
+
+    for (const row of dataRows) {
+      const rowCells = row.split('|').filter(c => c.trim().length > 0);
+      if (rowCells.length === 0) continue;
+      result += '<tr>\n';
+      for (const cell of rowCells) {
+        result += `<td>${cell.trim()}</td>\n`;
+      }
+      result += '</tr>\n';
+    }
+    result += '</tbody>\n</table>\n';
+    return result;
+  });
 
   return `<!DOCTYPE html>
 <html lang="en">

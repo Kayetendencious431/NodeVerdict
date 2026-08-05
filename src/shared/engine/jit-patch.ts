@@ -333,7 +333,7 @@ function initOrderPatch(source: string, run: NodeLike[]): JitPatch | null {
   const indent = getIndent(source as string, start);
   const declSrc = (source as string).slice(start, (decl as NodeLike).end as number);
   const sortedAssigns = assigns
-    .map(a => ({ s: (source as string).slice(a.start as number, a.end as number), k: keys[assigns.indexOf(a)] }))
+    .map((a, idx) => ({ s: (source as string).slice(a.start as number, a.end as number), k: keys[idx] }))
     .sort((x, y) => (x.k < y.k ? -1 : x.k > y.k ? 1 : 0))
     .map(x => `${indent}${x.s.trim()}`);
   const after = [declSrc.trim(), ...sortedAssigns].join('\n');

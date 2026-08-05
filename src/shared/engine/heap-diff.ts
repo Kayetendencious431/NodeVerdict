@@ -86,7 +86,7 @@ export function diffHeapSnapshots(
     totalCountAfter,
     totalCountDelta: totalCountAfter - totalCountBefore,
     newNodes: nodes.filter(n => n.beforeCount === 0 && n.afterCount > 0),
-    growingNodes: nodes.filter(n => n.countDelta > 0).sort((a, b) => b.sizeDelta - a.sizeDelta),
+    growingNodes: nodes.filter(n => n.countDelta > 0 && n.beforeCount > 0).sort((a, b) => b.sizeDelta - a.sizeDelta),
     removedNodes: nodes.filter(n => n.afterCount === 0 && n.beforeCount > 0),
   };
 }

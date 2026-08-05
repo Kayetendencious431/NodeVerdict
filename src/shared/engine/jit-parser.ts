@@ -171,9 +171,10 @@ export function parseV8Trace(raw: string): V8Trace {
       // line either before or right after the begin line).
       for (let j = deoptEvents.length - 1; j >= 0; j--) {
         const prev = deoptEvents[j];
-        if (!prev.raw.includes('begin')) break;
-        if (prev.reason === null) prev.reason = pendingReason;
-        break;
+        if (prev.raw.includes('begin')) {
+          if (prev.reason === null) prev.reason = pendingReason;
+          break; // found the begin event, stop searching
+        }
       }
       continue;
     }

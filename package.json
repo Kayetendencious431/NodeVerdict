@@ -12,7 +12,8 @@
     "build:cli": "esbuild cli/check.ts --bundle --platform=node --format=esm --outfile=cli/check.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "agent": "node server/live-agent.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",

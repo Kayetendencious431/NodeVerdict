@@ -7,6 +7,7 @@ import { EventRateChart } from './components/EventRateChart';
 import { useRootStore } from '../../stores';
 import { evaluateAlerts, buildMetricSnapshot } from '../../shared/engine';
 import { useI18n } from '../../shared/i18n/useI18n';
+import { useBackend, BackendOfflineBanner } from '../../shared/backend';
 
 interface WebSocketMessage {
   type?: string;
@@ -42,7 +43,37 @@ interface ChunkBuffer {
   received: number;
 }
 
+interface GcEventEntry {
+  kind: string;
+  durationMs: number;
+  reclaimedMb: number;
+  intervalMs: number;
+  rss: number;
+  heapUsed: number;
+  heapTotal: number;
+  timestamp: number;
+}
+
+interface ServerAlert {
+  id: string;
+  level: 'info' | 'warning' | 'critical';
+  metric: string;
+  value: number;
+  threshold: number;
+  message: string;
+  source: string;
+  timestamp: number;
+}
+
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+
+function gcKindColor(kind: string): string {
+  const lower = kind.toLowerCase();
+  if (lower.includes('inferred')) return '#0ea5e9';
+  if (lower.includes('scavenge') || lower.includes('minor')) return '#22c55e';
+  if (lower.includes('mark') || lower.includes('sweep') || lower.includes('compact')) return '#f97316';
+  return '#64748b';
+}
 
 type SnapState = 'idle' | 'receiving' | 'ready';
 type CpuProfileState = 'idle' | 'receiving' | 'ready';
@@ -55,6 +86,14 @@ export function LiveMonitorPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [agentPid, setAgentPid] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Backend capability detection — shows a "backend server required" banner
+  // when the Live Agent is not reachable, while preserving the manual connect UI.
+  const backend = useBackend({ host, port, retryIntervalMs: 5000 });
+  useEffect(() => {
+    backend.setHost(host);
+    backend.setPort(port);
+  }, [host, port]);
 
   // Log
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -80,6 +119,18 @@ export function LiveMonitorPage() {
   // Memory polling
   const [memPollingActive, setMemPollingActive] = useState(false);
   const [memPollingInterval, setMemPollingInterval] = useState(1000);
+
+  // GC monitoring
+  const [gcStarted, setGcStarted] = useState(false);
+  const [gcEvents, setGcEvents] = useState<GcEventEntry[]>([]);
+
+  // Leak detector
+  const [leakDetectorActive, setLeakDetectorActive] = useState(false);
+  const [leakRateMbPerSec, setLeakRateMbPerSec] = useState(2);
+  const [leakHeapPercent, setLeakHeapPercent] = useState(90);
+
+  // Backend-pushed alerts (GC churn, leak detector, ...)
+  const [serverAlerts, setServerAlerts] = useState<ServerAlert[]>([]);
 
   // Live Dashboard
   const [memoryHistory, setMemoryHistory] = useState<Array<{ time: number; rss: number; heapUsed: number; heapTotal: number; external: number }>>([]);
@@ -154,6 +205,12 @@ export function LiveMonitorPage() {
     // Try to detect and handle chunked file transfers
     tryExtractChunk(msg);
 
+    // Try to detect GC events (precise channel or heap-drop inference)
+    tryExtractGcEvent(msg);
+
+    // Try to detect backend-pushed alerts (GC churn, leak detector)
+    tryExtractServerAlert(msg);
+
     // Handle known protocol messages
     const msgType = msg.type ?? '';
     switch (msgType) {
@@ -190,6 +247,14 @@ export function LiveMonitorPage() {
         break;
       case 'chunk':
         // Already handled by tryExtractChunk above
+        break;
+      case 'gc-event':
+      case 'gc':
+        // Already handled by tryExtractGcEvent above
+        break;
+      case 'alert':
+      case 'alarm':
+        // Already handled by tryExtractServerAlert above
         break;
       default:
          // Silently ignore unknown types — no noisy logs
@@ -293,6 +358,53 @@ export function LiveMonitorPage() {
     return false;
   }
 
+  /** Attempt to extract GC events (precise or inferred) from any message shape */
+  function tryExtractGcEvent(msg: Record<string, any>) {
+    const data = msg.data ?? msg;
+    const kind = msg.kind ?? data.kind ?? data.gcType;
+    const reclaimedMb = data.reclaimedMb ?? data.reclaimed ?? data.gcBytes / (1024 * 1024);
+    const heapUsed = data.heapUsed ?? data.heap_used;
+    const isGcType = msg.type?.includes('gc-event') || msg.type === 'gc';
+
+    if (isGcType || (kind && (heapUsed != null || reclaimedMb != null))) {
+      setGcEvents(prev => [{
+        kind: String(kind),
+        durationMs: Number(data.durationMs ?? data.duration ?? 0),
+        reclaimedMb: Number(reclaimedMb ?? 0),
+        intervalMs: Number(data.intervalMs ?? 0),
+        rss: Number(data.rss ?? 0),
+        heapUsed: Number(heapUsed ?? 0),
+        heapTotal: Number(data.heapTotal ?? 0),
+        timestamp: Number(msg.timestamp ?? data.timestamp ?? Date.now()),
+      }, ...prev].slice(0, 100));
+      return true;
+    }
+    return false;
+  }
+
+  /** Attempt to extract backend-pushed alerts from any message shape */
+  function tryExtractServerAlert(msg: Record<string, any>) {
+    const data = msg.data ?? msg;
+    const level = msg.level ?? data.level;
+    const message = msg.message ?? data.message;
+    const isAlertType = msg.type === 'alert' || msg.type === 'alarm';
+
+    if (isAlertType || (level && message)) {
+      setServerAlerts(prev => [{
+        id: String(msg.id ?? data.id ?? `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+        level: (['info', 'warning', 'critical'].includes(level) ? level : 'warning'),
+        metric: String(msg.metric ?? data.metric ?? 'unknown'),
+        value: Number(data.value ?? msg.value ?? 0),
+        threshold: Number(data.threshold ?? msg.threshold ?? 0),
+        message: String(message),
+        source: String(msg.source ?? data.source ?? 'backend'),
+        timestamp: Number(msg.timestamp ?? data.timestamp ?? Date.now()),
+      }, ...prev].slice(0, 50));
+      return true;
+    }
+    return false;
+  }
+
   function msgTypeName(msg: Record<string, any>): string {
     return msg.type ?? msg.event ?? msg.name ?? 'message';
   }
@@ -328,9 +440,9 @@ export function LiveMonitorPage() {
     setAgentPid(null);
   }
 
-  function sendCommand(command: string) {
+  function sendCommand(command: string, extra: Record<string, any> = {}) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ command }));
+      wsRef.current.send(JSON.stringify({ command, ...extra }));
     }
   }
 
@@ -399,6 +511,36 @@ export function LiveMonitorPage() {
       sendCommand('start-memory-polling');
       setMemPollingActive(true);
       addLog(t('liveMonitor.startMemoryPolling') + ` (interval: ${memPollingInterval}ms)`);
+    }
+  }
+
+  // GC monitoring
+  function toggleGc() {
+    if (gcStarted) {
+      sendCommand('stop-gc');
+      setGcStarted(false);
+      addLog(t('liveMonitor.gc.stopped'));
+    } else {
+      setGcEvents([]);
+      sendCommand('start-gc');
+      setGcStarted(true);
+      addLog(t('liveMonitor.gc.started'));
+    }
+  }
+
+  // Leak detector
+  function toggleLeakDetector() {
+    if (leakDetectorActive) {
+      sendCommand('stop-leak-detector');
+      setLeakDetectorActive(false);
+      addLog(t('liveMonitor.leak.stopped'));
+    } else {
+      sendCommand('start-leak-detector', {
+        rateBps: leakRateMbPerSec * 1024 * 1024,
+        heapPercent: leakHeapPercent,
+      });
+      setLeakDetectorActive(true);
+      addLog(t('liveMonitor.leak.started'));
     }
   }
 
@@ -504,6 +646,10 @@ export function LiveMonitorPage() {
     eventRateEntries.push({ channel: k, count: v.count, color: v.color });
   });
 
+  const maxReclaimedMb = gcEvents.length > 0
+    ? Math.max(...gcEvents.map(e => e.reclaimedMb))
+    : 0;
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -512,6 +658,29 @@ export function LiveMonitorPage() {
           {t('liveMonitor.description')}
         </p>
       </div>
+
+      {/* Backend availability banner — shows "需要后端服务器" when no agent is running */}
+      {backend.status !== 'online' && (
+        <BackendOfflineBanner
+          status={backend.status}
+          info={backend.info}
+          error={backend.error}
+          host={backend.host}
+          port={backend.port}
+          onRetry={backend.retry}
+        />
+      )}
+      {backend.status === 'online' && (
+        <div className="mb-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          {t('backend.online')}
+          {backend.info?.pid ? (
+            <span className="text-xs text-emerald-700/70 dark:text-emerald-400/70">
+              · {backend.info.name} v{backend.info.version} · PID {backend.info.pid}
+            </span>
+          ) : null}
+        </div>
+      )}
 
       {/* Connection Panel */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
@@ -693,6 +862,140 @@ export function LiveMonitorPage() {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Backend Alerts */}
+          {serverAlerts.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('liveMonitor.backendAlerts')}</h2>
+                <button
+                  onClick={() => setServerAlerts([])}
+                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {t('common.clear')}
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {serverAlerts.slice(0, 8).map((a, idx) => (
+                  <div key={a.id ?? idx} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800">
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium shrink-0 ${
+                      a.level === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                        : a.level === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                    }`}>{a.level.toUpperCase()}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-gray-700 dark:text-gray-200 break-words">{a.message}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                        {a.source} · {formatTimestamp(a.timestamp)}
+                        {a.value > 0 ? ` · ${a.value.toFixed(1)} / ${a.threshold.toFixed(1)}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* GC & Leak Detection */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('liveMonitor.gc.title')}</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleGc}
+                  className="px-4 py-2 rounded-lg font-medium text-sm bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  {gcStarted ? t('liveMonitor.gc.stop') : t('liveMonitor.gc.start')}
+                </button>
+                <button
+                  onClick={toggleLeakDetector}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm text-white ${leakDetectorActive ? 'bg-red-600 hover:bg-red-700' : 'bg-violet-600 hover:bg-violet-700'}`}
+                >
+                  {leakDetectorActive ? t('liveMonitor.leak.stop') : t('liveMonitor.leak.start')}
+                </button>
+              </div>
+            </div>
+
+            {/* Leak thresholds */}
+            <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <label className="text-xs text-gray-500 dark:text-gray-400">
+                {t('liveMonitor.leak.rate')}
+                <input
+                  type="number"
+                  value={leakRateMbPerSec}
+                  onChange={e => setLeakRateMbPerSec(Number(e.target.value))}
+                  min={0.1}
+                  step={0.1}
+                  disabled={leakDetectorActive}
+                  className="ml-2 w-20 px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                />
+                <span className="ml-1">MB/s</span>
+              </label>
+              <label className="text-xs text-gray-500 dark:text-gray-400">
+                {t('liveMonitor.leak.heapPercent')}
+                <input
+                  type="number"
+                  value={leakHeapPercent}
+                  onChange={e => setLeakHeapPercent(Number(e.target.value))}
+                  min={10}
+                  max={100}
+                  disabled={leakDetectorActive}
+                  className="ml-2 w-20 px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                />
+                <span className="ml-1">%</span>
+              </label>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{t('liveMonitor.leak.desc')}</span>
+            </div>
+
+            {/* GC stats */}
+            {gcEvents.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <StatCard title={t('liveMonitor.gc.count')} value={String(gcEvents.length)} />
+                <StatCard title={t('liveMonitor.gc.maxReclaimed')} value={formatBytes(maxReclaimedMb * 1024 * 1024)} />
+                <StatCard title={t('liveMonitor.gc.longPauses')} value={String(gcEvents.filter(e => e.durationMs > 100).length)} />
+              </div>
+            )}
+
+            {/* GC event feed */}
+            {gcStarted && gcEvents.length > 0 && (
+              <div className="max-h-64 overflow-y-auto space-y-1.5">
+                {gcEvents.map((evt, idx) => (
+                  <div key={idx} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
+                    evt.intervalMs > 0 && evt.intervalMs < 250
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                      : 'bg-gray-50 dark:bg-gray-900/50 border-gray-100 dark:border-gray-800'
+                  }`}>
+                    <span className="px-2 py-0.5 rounded text-xs font-medium text-white shrink-0"
+                      style={{ backgroundColor: gcKindColor(evt.kind) }}
+                    >
+                      {evt.kind}
+                    </span>
+                    {evt.reclaimedMb > 0 && (
+                      <span className="text-xs text-gray-600 dark:text-gray-300 shrink-0">
+                        {formatBytes(evt.reclaimedMb * 1024 * 1024)}
+                      </span>
+                    )}
+                    {evt.durationMs > 0 && (
+                      <span className={`text-xs shrink-0 ${evt.durationMs > 100 ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {evt.durationMs.toFixed(1)}ms
+                      </span>
+                    )}
+                    {evt.intervalMs > 0 && (
+                      <span className={`text-xs shrink-0 ${evt.intervalMs < 250 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                        {t('liveMonitor.gc.interval')} {evt.intervalMs}ms
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto shrink-0 font-mono">
+                      {formatTimestamp(evt.timestamp)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {gcStarted && gcEvents.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t('liveMonitor.gc.waiting')}</p>
+            )}
           </div>
 
           {/* Tracing Panel */}

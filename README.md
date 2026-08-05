@@ -620,7 +620,7 @@ Sample data files are available in the [`examples/`](./examples) directory:
 10. **Memory Timeline** → Upload `examples/memory-timeline.json` to visualize external memory growth and RSS/heap trends over time
 11. **GC Log Analysis** → Upload `examples/gc-trace-gc.log` to analyze GC pause times and external memory pressure
 12. **String Leak Detection** → Upload `examples/heap-string-leak.heapsnapshot` in Heap Analyzer to see external memory stats and string analysis
-13. **Live Monitor** → Start `node server/live-agent.mjs --port 9876`, connect from the Live Monitor page, and monitor a running Node.js process in real-time
+13. **Live Monitor** → Start the backend with `npm run agent` (or `cd server && npm install && npx nodeverdict-agent`), then open the Live Monitor page — it auto-detects the backend and connects to `ws://localhost:9876` in real-time. Without a backend it shows a "Backend server required" panel with the start command. Once connected you can also **Start GC** (streams `node:v8.gc`/heap-inferred collection events with reclaimed sizes) and **Start Leak Detector** (alerts on live-set growth or heap limit) — both surface alerts in the Backend Alerts strip
 14. **Alert Rules** → Upload any trace, then create rules in Alert Rules (e.g. `errorRate > 5`, warning) and watch them light up
 15. **AI Root Cause** → Upload `examples/tracing-perf-before.json` in AI Root Cause, click **AI Diagnose** (or **Local heuristic analysis** without a key)
 16. **Performance Gate** → Run `node cli/check.mjs check examples/tracing-perf-before.json --threshold=p99MaxMs=250` in the terminal to see the gate fail

